@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Medallion.Shell.Streams;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,31 +11,21 @@ namespace Medallion.Shell
 {
     public abstract partial class Command
     {
+        internal Command() { }
+
         // TODO do we want this in the base class?
         public abstract Process Process { get; }
         public abstract IReadOnlyList<Process> Processes { get; }
 
-        public abstract Stream StandardInputStream { get; }
-        public abstract Stream StandardOutputStream { get; }
-        public abstract Stream StandardErrorStream { get; }
+        public abstract StreamWriter StandardInput { get; }
+        public abstract ProcessStreamReader StandardOutput { get; }
+        public abstract ProcessStreamReader StandardError { get; }
 
         public abstract Task<CommandResult> Task { get; }
 
         public Command PipeTo(Command command)
         {
             return this | command;
-        }
-
-        public Command PipeStandardOutputTo(Stream stream)
-        {
-            return this > stream;
-        }
-
-        public Command PipeStandardErrorTo(Stream stream)
-        {
-            Throw.IfNull(stream, "stream");
-            // TODO
-            return this;
         }
 
         public Command PipeStandardInputFrom(Stream stream)
@@ -53,7 +44,7 @@ namespace Medallion.Shell
             Throw.IfNull(command, "command");
             Throw.IfNull(stream, "stream");
 
-            // TODO
+            command.StandardOutput.PipeTo(stream);
 
             return command;
         }
@@ -68,6 +59,10 @@ namespace Medallion.Shell
             return command;
         }
 
+        // TODO should from string pipe IN the text? Probably better than the path
+        // Maybe use FileInfo instead... only issue with in from string is that we'd have to have out to string
+        // which doesn't make sense... could use StringBuilder instead I suppose
+        // Also, we should be careful to dispose any streams we open in these operators using Task.ContinueWith
         public static Command operator >(Command command, string path)
         {
             Throw.IfNull(command, "command");
@@ -103,7 +98,7 @@ namespace Medallion.Shell
 
         public static Command operator &(Command @this, Command that)
         {
-            throw new NotSupportedException("Bitwise & is not supported. It exists only to enable '&&'")
+            throw new NotSupportedException("Bitwise & is not supported. It exists only to enable '&&'");
         }
         #endregion
     }

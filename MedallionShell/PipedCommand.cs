@@ -19,6 +19,8 @@ namespace Medallion.Shell
 
             this.first = first;
             this.second = second;
+
+            this.first.StandardOutput.PipeTo(this.second.StandardInput.BaseStream);
         }
 
         public override Process Process
@@ -29,27 +31,27 @@ namespace Medallion.Shell
         private IReadOnlyList<Process> processes;
         public override IReadOnlyList<Process> Processes
         {
-            get { return this.processes ?? (this.processes = new[] { this.first.Process, this.second.Process }.Where(p => p != null).ToArray()); }
-        }
-
-        public override Stream StandardInputStream
-        {
-            get { return this.first.StandardInputStream; }
-        }
-
-        public override System.IO.Stream StandardOutputStream
-        {
-            get { return this.second.StandardOutputStream; }
-        }
-
-        public override System.IO.Stream StandardErrorStream
-        {
-            get { return this.second.StandardErrorStream; }
+            get { return this.processes ?? (this.processes = this.first.Processes.Concat(this.second.Processes).ToList().AsReadOnly()); }
         }
 
         public override Task<CommandResult> Task
         {
             get { return this.second.Task; }
+        }
+
+        public override StreamWriter StandardInput
+        {
+            get { return this.first.StandardInput; }
+        }
+
+        public override Streams.ProcessStreamReader StandardOutput
+        {
+            get { return this.second.StandardOutput; }
+        }
+
+        public override Streams.ProcessStreamReader StandardError
+        {
+            get { return this.second.StandardError; }
         }
     }
 }

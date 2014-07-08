@@ -14,7 +14,7 @@ namespace Medallion.Shell
         }
 
         private readonly int exitCode;
-        public int ExitCode { get; }
+        public int ExitCode { get { return this.exitCode; } }
 
         /// <summary>
         /// Returns true iff the exit code is 0 (indicating success)

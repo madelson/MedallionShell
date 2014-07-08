@@ -47,8 +47,9 @@
     <Compile Include="PipedCommand.cs" />
     <Compile Include="ProcessCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Streams\MultiStream.cs" />
+    <Compile Include="Shell.cs" />
     <Compile Include="Streams\ProcessStreamHandler.cs" />
+    <Compile Include="Streams\ProcessStreamReader.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

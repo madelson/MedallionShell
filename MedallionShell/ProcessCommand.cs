@@ -1,6 +1,9 @@
-﻿using System;
+﻿using Medallion.Shell.Streams;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,6 +19,15 @@ namespace Medallion.Shell
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
             this.processTask = CreateProcessTask(this.Process);
             this.Process.Start();
+
+            if (startInfo.RedirectStandardOutput)
+            {
+                this.standardOutputHandler = new ProcessStreamHandler(this.Process.StandardOutput.BaseStream);
+            }
+            if (startInfo.RedirectStandardError)
+            {
+                this.standardErrorHandler = new ProcessStreamHandler(this.process.StandardError.BaseStream);
+            }
         }
 
         private readonly Process process;
@@ -25,24 +37,30 @@ namespace Medallion.Shell
         }
 
         private IReadOnlyList<Process> processes;
-        public override IReadOnlyList<System.Diagnostics.Process> Processes
+        public override IReadOnlyList<Process> Processes
         {
-            get { return this.processes ?? (this.processes = new[] { this.Process }); }
+            get { return this.processes ?? (this.processes = new ReadOnlyCollection<Process>(new[] { this.Process })); }
         }
 
-        public override System.IO.Stream StandardInputStream
+        public override StreamWriter StandardInput
         {
-            get { return this.Process.StandardInput.BaseStream; }
+            get { return this.Process.StandardInput; }
         }
 
-        public override System.IO.Stream StandardOutputStream
+        private readonly ProcessStreamHandler standardOutputHandler;
+        public override ProcessStreamReader StandardOutput
         {
-            get { return this.Process.StandardOutput.BaseStream; }
+            get 
+            {
+                Throw<InvalidOperationException>.If(this.standardOutputHandler == null, "Standard output is not redirected");
+                return this.standardOutputHandler.Reader;
+            }
         }
 
-        public override System.IO.Stream StandardErrorStream
+        private readonly ProcessStreamHandler standardErrorHandler;
+        public override Streams.ProcessStreamReader StandardError
         {
-            get { return this.Process.StandardError.BaseStream; }
+            get { throw new NotImplementedException(); }
         }
 
         public override Task<CommandResult> Task
