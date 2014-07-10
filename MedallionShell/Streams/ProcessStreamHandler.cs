@@ -45,44 +45,69 @@ namespace Medallion.Shell.Streams
         /// The underlying output stream of the process
         /// </summary>
         private readonly Stream processStream;
-
-        private readonly AsyncLock @lock = new AsyncLock();
         /// <summary>
-        /// Acts as a buffer for data coming from <see cref="processStream"/>. 
-        /// Access to this is protected by <see cref="lock"/>
+        /// Acts as a buffer for data coming from <see cref="processStream"/>
+        /// Volatile just to be safe, since this is mutable in async contexts
         /// </summary>
-        private MemoryStream memoryStream;
-        
-        private Mode mode;
-        private Stream pipeStream;
-        private volatile ProcessStreamReader reader; // TODO use Lazy<T> to avoid locking in SetMode()
+        private volatile MemoryStream memoryStream;
+        /// <summary>
+        /// Protects reads and writes to all streams
+        /// </summary>
+        private readonly AsyncLock streamLock = new AsyncLock();
 
-        // TODO we should fire a finished event which can be used as a task completion source
-        private volatile bool finished;
+        /// <summary>
+        /// Protects access to <see cref="mode"/> and related variables
+        /// </summary>
+        private readonly object modeLock = new object();
+        /// <summary>
+        /// Represents the current mode of the handler
+        /// </summary>
+        private Mode mode;
+        /// <summary>
+        /// Represents an output stream for <see cref="Mode.Piped"/>
+        /// </summary>
+        private Stream pipeStream;
+
+        /// <summary>
+        /// Exposes the underlying stream
+        /// </summary>
+        private readonly ProcessStreamReader reader;
+
+        /// <summary>
+        /// Used to track when the stream is fully consumed, as well as errors that may occur in various tasks
+        /// </summary>
+        private readonly TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
 
         public ProcessStreamHandler(Stream stream)
         {
             Throw.IfNull(stream, "stream");
+
             this.processStream = stream;
+            this.reader = new InternalReader(this);
+            Task.Run(async () => await this.ReadLoop().ConfigureAwait(false))
+                .ContinueWith(t => {
+                    if (t.IsFaulted)
+                    {
+                        this.taskCompletionSource.TrySetException(t.Exception);
+                    }
+                    else
+                    {
+                        this.taskCompletionSource.TrySetResult(true);
+                    }
+                });
         }
 
         public ProcessStreamReader Reader
         {
-            get
-            {
-                if (this.reader == null)
-                {
-                    this.SetMode(Mode.BufferedManualRead);
-                }
-                return this.reader;
-            }
+            get { return this.reader; }
         }
 
         public void SetMode(Mode mode, Stream pipeStream = null)
         {
             Throw.If(mode == Mode.Piped != (pipeStream != null), "pipeStream: must be non-null if an only if switching to piped mode");
+            Throw.If(pipeStream != null && !pipeStream.CanWrite, "pipeStream: must be writable");
 
-            using (this.@lock.AcquireAsync().Result)
+            lock (this.modeLock)
             {
                 // when just buffering, you can switch to any other mode (important since we start
                 // in this mode)
@@ -92,12 +117,6 @@ namespace Medallion.Shell.Streams
                     // when in buffered read mode, you can always stop buffering
                     || (this.mode == Mode.BufferedManualRead && mode == Mode.ManualRead))
                 {
-                    // when we switch into manual read mode, create the manual read stream
-                    if (mode == Mode.ManualRead || mode == Mode.BufferedManualRead)
-                    {
-                        this.reader = new InternalReader(this);
-                    }
-
                     this.mode = mode;
                     this.pipeStream = pipeStream;
                 }
@@ -114,6 +133,10 @@ namespace Medallion.Shell.Streams
                                 ? "The stream is already being piped to a different stream"
                                 : "The stream is being piped to another stream, so it cannot be used in another mode";
                             break;
+                        case Mode.ManualRead:
+                        case Mode.BufferedManualRead:
+                            message = "The stream is already being read from, so it cannot be used in another mode";
+                            break;
                         default:
                             throw new NotImplementedException("Unexpected mode " + mode.ToString());
                     }
@@ -125,52 +148,81 @@ namespace Medallion.Shell.Streams
 
         private async Task ReadLoop()
         {
-            Mode mode;
             var localBuffer = new byte[512];
-            while (!this.finished)
+            while (true)
             {
-                using (await this.@lock.AcquireAsync().ConfigureAwait(false))
+                // safely capture the current mode
+                Mode mode;
+                lock (this.modeLock)
                 {
                     mode = this.mode;
+                }
 
-                    if (mode == Mode.Buffer || mode == Mode.BufferedManualRead)
-                    {
-                        var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
-                        if (bytesRead > 0)
+                switch (mode)
+                {
+                    case Mode.BufferedManualRead:
+                        // in buffered manual read mode, we read from the buffer periodically
+                        // to avoid the process blocking. Thus, we delay and then jump to the manual read
+                        // case
+                        await Task.Delay(millisecondsDelay: 100).ConfigureAwait(false);
+                        goto case Mode.ManualRead;
+                    case Mode.Buffer:
+                    case Mode.ManualRead:
+                        // grab the stream lock and read some bytes into the buffer
+                        using (await this.streamLock.AcquireAsync().ConfigureAwait(false))
                         {
+                            // initialized memory stream if necessary. Note that this can happen
+                            // more than once due to InternalStream "grabbing" the memory stream
                             if (this.memoryStream == null)
                             {
                                 this.memoryStream = new MemoryStream();
                             }
-                            this.memoryStream.Write(localBuffer, offset: 0, count: localBuffer.Length);
+
+                            // read from the process
+                            var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
+                            if (bytesRead < 0)
+                            {
+                                return; // end of stream
+                            }
+
+                            // write to the buffer
+                            this.memoryStream.Write(localBuffer, offset: 0, count: bytesRead);
                         }
-                        else if (bytesRead < 0)
+                        break;
+                    case Mode.DiscardContents:
+                        // grab the stream lock and just read to the end
+                        using (await this.streamLock.AcquireAsync().ConfigureAwait(false))
                         {
-                            this.finished = true;
+                            if (this.memoryStream != null)
+                            { 
+                                // free the memory stream
+                                this.memoryStream.Dispose();
+                                this.memoryStream = null;
+                            }
+                            while (true)
+                            {
+                                var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
+                                if (bytesRead < 0)
+                                {
+                                    return; // end of stream
+                                }
+                            }
                         }
-                    }
-                }
+                    case Mode.Piped:
+                        // grab the stream lock and copy the buffer + the stream to the output
+                        using (await this.streamLock.AcquireAsync().ConfigureAwait(false))
+                        {
+                            if (this.memoryStream != null)
+                            {
+                                // copy & free any buffered content
+                                this.memoryStream.CopyTo(this.pipeStream);
+                                this.memoryStream.Dispose();
+                                this.memoryStream = null;
+                            }
 
-                if (mode == Mode.Piped)
-                {
-                    await this.memoryStream.CopyToAsync(this.pipeStream).ConfigureAwait(false);
-                    await this.processStream.CopyToAsync(this.processStream).ConfigureAwait(false);
-                    this.finished = true;
-                }
-
-                else if (mode == Mode.DiscardContents)
-                {
-                    using (await this.@lock.AcquireAsync().ConfigureAwait(false))
-                    {
-                        this.memoryStream = null;
-                    }
-
-                    int readResult;
-                    do
-                    {
-                        readResult = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length);
-                    }
-                    while (readResult >= 0);
+                            await this.processStream.CopyToAsync(this.pipeStream).ConfigureAwait(false);
+                        }
+                        return; // end of stream
                 }
             }
         }
@@ -224,12 +276,13 @@ namespace Medallion.Shell.Streams
                 Throw.IfOutOfRange(offset, "offset", min: 0, max: buffer.Length);
                 Throw.IfOutOfRange(count, "count", min: 0, max: buffer.Length - offset);
 
-                using (this.handler.@lock.AcquireAsync().Result)
+                using (this.handler.streamLock.AcquireAsync().Result)
                 {
-                    if (this.handler.finished)
-                    {
-                        return -1;
-                    }
+                    // TODO
+                    //if (this.handler.finished)
+                    //{
+                    //    return -1;
+                    //}
 
                     // first read from the memory streams
                     var bytesReadFromMemoryStreams = this.ReadFromMemoryStreams(buffer, offset, count);
@@ -240,7 +293,8 @@ namespace Medallion.Shell.Streams
                         var bytesReadFromProcessStream = this.handler.processStream.Read(buffer, offset - bytesReadFromMemoryStreams, count - bytesReadFromMemoryStreams);
                         if (bytesReadFromProcessStream < 0)
                         {
-                            this.handler.finished = true;
+                            // TODO
+                            //this.handler.finished = true;
                             return -1;
                         }
                         return bytesReadFromMemoryStreams + bytesReadFromProcessStream;
@@ -258,12 +312,13 @@ namespace Medallion.Shell.Streams
                 Throw.IfOutOfRange(offset, "offset", min: 0, max: buffer.Length);
                 Throw.IfOutOfRange(count, "count", min: 0, max: buffer.Length - offset);
 
-                using (await this.handler.@lock.AcquireAsync().ConfigureAwait(false))
+                using (await this.handler.streamLock.AcquireAsync().ConfigureAwait(false))
                 {
-                    if (this.handler.finished)
-                    {
-                        return -1;
-                    }
+                    // TODO
+                    //if (this.handler.finished)
+                    //{
+                    //    return -1;
+                    //}
 
                     // first read from the memory streams
                     var bytesReadFromMemoryStreams = this.ReadFromMemoryStreams(buffer, offset, count);
@@ -275,7 +330,8 @@ namespace Medallion.Shell.Streams
                             .ConfigureAwait(false);
                         if (bytesReadFromProcessStream < 0)
                         {
-                            this.handler.finished = true;
+                            // TODO
+                            //this.handler.finished = true;
                             return -1;
                         }
                         return bytesReadFromMemoryStreams + bytesReadFromProcessStream;
