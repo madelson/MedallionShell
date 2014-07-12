@@ -9,20 +9,20 @@ namespace Medallion.Shell
 {
     public sealed class Shell
     {
-        private readonly Action<Builder> configuration;
+        private readonly Action<Options> configuration;
 
         public Shell()
         {
         }
 
-        public Shell(Action<Builder> configuration)
+        public Shell(Action<Options> configuration)
         {
             Throw.IfNull(configuration, "configuration");
             this.configuration = configuration;
         }
 
         #region ---- Instance API ----
-        public Command Run(string executable, IEnumerable<string> arguments = null, Action<Builder> options = null)
+        public Command Run(string executable, IEnumerable<string> arguments = null, Action<Options> options = null)
         {
             Throw.If(string.IsNullOrEmpty(executable), "executable is required");
 
@@ -60,9 +60,9 @@ namespace Medallion.Shell
         public static Shell Default { get { return DefaultShell; } }
         #endregion
 
-        private Builder GetOptions(Action<Builder> additionalConfiguration)
+        private Options GetOptions(Action<Options> additionalConfiguration)
         {
-            var builder = new Builder();
+            var builder = new Options();
             if (this.configuration != null)
             {
                 this.configuration(builder);
@@ -75,9 +75,9 @@ namespace Medallion.Shell
         }
 
         #region ---- Builder ----
-        public sealed class Builder
+        public sealed class Options
         {
-            public Builder()
+            public Options()
             {
                 this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
                 this.CommandInitializers = new List<Action<Command>>();
@@ -91,14 +91,14 @@ namespace Medallion.Shell
             /// <summary>
             /// Restores all settings to the default value
             /// </summary>
-            public Builder RestoreDefaults()
+            public Options RestoreDefaults()
             {
                 this.StartInfoInitializers.Clear();
                 this.CommandInitializers.Clear();
                 return this;
             }
 
-            public Builder StartInfo(Action<ProcessStartInfo> initializer)
+            public Options StartInfo(Action<ProcessStartInfo> initializer)
             {
                 Throw.IfNull(initializer, "initializer");
 
@@ -106,7 +106,7 @@ namespace Medallion.Shell
                 return this;
             }
 
-            public Builder Command(Action<Command> initializer)
+            public Options Command(Action<Command> initializer)
             {
                 Throw.IfNull(initializer, "initializer");
 
@@ -114,19 +114,19 @@ namespace Medallion.Shell
                 return this;
             }
 
-            public Builder WorkingDirectory(string path)
+            public Options WorkingDirectory(string path)
             {
                 return this.StartInfo(psi => psi.WorkingDirectory = path);
             }
 
-            public Builder EnvironmentVariable(string name, string value)
+            public Options EnvironmentVariable(string name, string value)
             {
                 Throw.If(string.IsNullOrEmpty(name), "name is required");
 
                 return this.StartInfo(psi => psi.EnvironmentVariables[name] = value);
             }
 
-            public Builder EnvironmentVariables(IEnumerable<KeyValuePair<string, string>> environmentVariables)
+            public Options EnvironmentVariables(IEnumerable<KeyValuePair<string, string>> environmentVariables)
             {
                 Throw.IfNull(environmentVariables, "environmentVariables");
 

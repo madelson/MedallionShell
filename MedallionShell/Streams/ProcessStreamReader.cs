@@ -7,16 +7,32 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
-    // TODO should probably wrap StreamReader instead of extending, since this way we get worse perf
-    // on async methods
-
     /// <summary>
-    /// An implementation of <see cref="StreamReader"/> with additional methods to control behavior. The 
+    /// An implementation of <see cref="TextReader"/> with additional methods to control behavior. The 
     /// </summary>
-    public abstract class ProcessStreamReader : StreamReader
+    public abstract class ProcessStreamReader : TextReader
     {
         // prevents external inheritors
-        internal ProcessStreamReader(Stream stream) : base(stream) { }
+        internal ProcessStreamReader() { }
+
+        /// <summary>
+        /// Provides access to the underlying stream
+        /// </summary>
+        public abstract Stream BaseStream { get; }
+
+        /// <summary>
+        /// Returns the full content output by the process as a string. Unlike <see cref="TextReader.ReadToEnd"/>, This will fail with
+        /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
+        /// reader have been read from via different methods).
+        /// </summary>
+        public abstract string Content { get; }
+
+        /// <summary>
+        /// Returns the full content output by the process as a byte array. Unlike <see cref="Stream.ReadToEnd"/>, This will fail with
+        /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
+        /// reader have been read from via different methods).
+        /// </summary>
+        public abstract byte[] GetContentBytes();
 
         /// <summary>
         /// Discards all output from the underlying stream. This prevents the process from blocking because

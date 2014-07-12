@@ -21,6 +21,7 @@ namespace Medallion.Shell
             this.second = second;
 
             this.first.StandardOutput.PipeTo(this.second.StandardInput.BaseStream);
+            this.first.Task.ContinueWith(_ => this.second.StandardInput.Close());
         }
 
         public override Process Process

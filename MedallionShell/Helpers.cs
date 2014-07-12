@@ -6,6 +6,14 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
+    internal static class Helpers
+    {
+        public static T As<T>(this T @this)
+        {
+            return @this;
+        }
+    }
+
     internal static class Throw
     {
         /// <summary>

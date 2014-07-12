@@ -12,22 +12,26 @@ namespace Medallion.Shell
 {
     internal sealed class ProcessCommand : Command
     {
-        private readonly Task processTask;
-
         internal ProcessCommand(ProcessStartInfo startInfo)
         {
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-            this.processTask = CreateProcessTask(this.Process);
+
+            var tasks = new List<Task>(capacity: 3) { CreateProcessTask(this.Process) };
             this.Process.Start();
 
             if (startInfo.RedirectStandardOutput)
             {
                 this.standardOutputHandler = new ProcessStreamHandler(this.Process.StandardOutput.BaseStream);
+                tasks.Add(this.standardOutputHandler.Task);
             }
             if (startInfo.RedirectStandardError)
             {
                 this.standardErrorHandler = new ProcessStreamHandler(this.process.StandardError.BaseStream);
+                tasks.Add(this.standardErrorHandler.Task);
             }
+
+            this.task = System.Threading.Tasks.Task.WhenAll(tasks)
+                .ContinueWith(_ => new CommandResult(this));
         }
 
         private readonly Process process;
@@ -63,17 +67,8 @@ namespace Medallion.Shell
             get { throw new NotImplementedException(); }
         }
 
-        public override Task<CommandResult> Task
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        private async Task<CommandResult> CreateTask()
-        {
-            await this.processTask;
-
-            return new CommandResult(this.Process.ExitCode);
-        }
+        private readonly Task<CommandResult> task;
+        public override Task<CommandResult> Task { get { return this.task; } }
 
         private static Task CreateProcessTask(Process process)
         {
