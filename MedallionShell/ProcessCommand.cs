@@ -73,7 +73,11 @@ namespace Medallion.Shell
         private static Task CreateProcessTask(Process process)
         {
             var taskCompletionSource = new TaskCompletionSource<bool>();
-            process.Exited += (o, e) => taskCompletionSource.SetResult(true);
+            process.Exited += (o, e) =>
+            {
+                taskCompletionSource.SetResult(true);
+                Log.WriteLine("Received exited event from {0}", process.Id);
+            };
             return taskCompletionSource.Task;
         }
     }

@@ -91,6 +91,7 @@ namespace Medallion.Shell.Streams
             Task.Run(() => this.ReadLoop())
                 .ContinueWith(t => 
                 {
+                    Log.WriteLine("ReadLoop finished for {0} (success = {1})", stream.GetHashCode(), !t.IsFaulted);
                     if (t.IsFaulted)
                     {
                         this.taskCompletionSource.TrySetException(t.Exception);
@@ -144,6 +145,9 @@ namespace Medallion.Shell.Streams
                         case Mode.BufferedManualRead:
                             message = "The stream is already being read from, so it cannot be used in another mode";
                             break;
+                        case Mode.Buffer:
+                            message = "The entire contents of the stream are being buffered, so it cannot be used in another mode";
+                            break;
                         default:
                             throw new NotImplementedException("Unexpected mode " + mode.ToString());
                     }
@@ -158,6 +162,8 @@ namespace Medallion.Shell.Streams
         /// </summary>
         private async Task ReadLoop()
         {
+            Log.WriteLine("ReadLoop started for {0}", this.processStream.GetHashCode());
+
             var localBuffer = new byte[512];
             while (true)
             {
@@ -194,8 +200,10 @@ namespace Medallion.Shell.Streams
                             }
 
                             // read from the process
+                            Log.WriteLine("ReadLoop about to read for buffering from {0}", this.processStream.GetHashCode());
                             var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
-                            if (bytesRead < 0)
+                            Log.WriteLine("ReadLoop read {0} from {1} for buffering", bytesRead, this.processStream.GetHashCode());
+                            if (bytesRead == 0)
                             {
                                 return; // end of stream
                             }
@@ -217,7 +225,7 @@ namespace Medallion.Shell.Streams
                             while (true)
                             {
                                 var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
-                                if (bytesRead < 0)
+                                if (bytesRead == 0)
                                 {
                                     return; // end of stream
                                 }
@@ -230,12 +238,15 @@ namespace Medallion.Shell.Streams
                             if (this.memoryStream != null)
                             {
                                 // copy & free any buffered content
+                                this.memoryStream.Seek(0, SeekOrigin.Begin);
+                                Log.WriteLine("About to copy {0} bytes of buffered content from {1} to pipe stream", this.memoryStream.Length, this.processStream.GetHashCode());
                                 this.memoryStream.CopyTo(this.pipeStream);
                                 this.memoryStream.Dispose();
                                 this.memoryStream = null;
                             }
 
                             await this.processStream.CopyToAsync(this.pipeStream).ConfigureAwait(false);
+                            Log.WriteLine("Finished piping from {0}", this.processStream.GetHashCode());
                         }
                         return; // end of stream
                 }
@@ -303,13 +314,9 @@ namespace Medallion.Shell.Streams
                     if (bytesReadFromMemoryStreams < count)
                     {
                         var bytesReadFromProcessStream = this.handler.processStream.Read(buffer, offset + bytesReadFromMemoryStreams, count - bytesReadFromMemoryStreams);
-                        if (bytesReadFromProcessStream < 0)
+                        if (bytesReadFromProcessStream == 0)
                         {
                             this.handler.taskCompletionSource.TrySetResult(true);
-                            if (bytesReadFromMemoryStreams == 0)
-                            {
-                                return -1;
-                            }
                         }
                         return bytesReadFromMemoryStreams + bytesReadFromProcessStream;
                     }
@@ -339,13 +346,10 @@ namespace Medallion.Shell.Streams
                     {
                         var bytesReadFromProcessStream = await this.handler.processStream.ReadAsync(buffer, offset + bytesReadFromMemoryStreams, count - bytesReadFromMemoryStreams)
                             .ConfigureAwait(false);
-                        if (bytesReadFromProcessStream < 0)
+                        if (bytesReadFromProcessStream == 0)
                         {
+                            // both the buffer and the process stream are exhausted: return false
                             this.handler.taskCompletionSource.TrySetResult(true);
-                            if (bytesReadFromMemoryStreams == 0)
-                            {
-                                return -1;
-                            }
                         }
                         return bytesReadFromMemoryStreams + bytesReadFromProcessStream;
                     }
@@ -434,7 +438,7 @@ namespace Medallion.Shell.Streams
 
             /// <summary>
             /// Attempts to read from the memory stream buffers if the are available.
-            /// Returns the number of bytes read (never -1)
+            /// Returns the number of bytes read
             /// </summary>
             private int ReadFromMemoryStreams(byte[] buffer, int offset, int count)
             {
@@ -464,7 +468,7 @@ namespace Medallion.Shell.Streams
                     return this.ReadFromMemoryStreams(buffer, offset, count);
                 }
 
-                // otherwise, we've exhausted all memory streams so return false
+                // otherwise, we've exhausted all memory streams so return 0 bytes read
                 return 0;
             }
 
@@ -530,6 +534,7 @@ namespace Medallion.Shell.Streams
                 }
             }
 
+
             public override byte[] GetContentBytes()
             {
                 this.handler.SetMode(Mode.Buffer);
@@ -537,6 +542,37 @@ namespace Medallion.Shell.Streams
                 using (this.handler.streamLock.AcquireAsync().Result)
                 {
                     return this.handler.memoryStream.ToArray();
+                }
+            }
+ 
+            public override IEnumerable<string> GetLines()
+            {
+                Mode mode;
+                lock (this.handler.modeLock)
+                {
+                    mode = this.handler.mode;
+                }
+
+                if (mode == Mode.Buffer)
+                {
+                    // we can still support this in buffer mode, but it's different; we grab the full
+                    // contents and read lines from that
+                    using (var reader = new StringReader(this.Content))
+                    {
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            yield return line;
+                        }
+                    }
+                }
+                else
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        yield return line;
+                    }
                 }
             }
 

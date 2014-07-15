@@ -20,5 +20,21 @@ namespace Medallion.Shell.Tests
             command.StandardInput.Close();
             command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
         }
+
+        [TestMethod]
+        public void TestPipedGrep()
+        {
+            Log.WriteLine("******** TestPipedGrep starting *********");
+
+            var command = (
+                Command.Run("SampleCommand", "grep", "a") < new[] { "abcd", "a", "ab", "abc" }
+                | Command.Run("SampleCommand", "grep", "b")
+                | Command.Run("SampleCommand", "grep", "c") 
+            );
+
+            var results = command.StandardOutput.GetLines().ToArray();
+
+            results.SequenceEqual(new[] { "abcd", "abc" }).ShouldEqual(true);
+        }
     }
 }

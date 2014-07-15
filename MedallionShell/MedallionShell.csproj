@@ -44,6 +44,7 @@
     <Compile Include="Command.cs" />
     <Compile Include="CommandResult.cs" />
     <Compile Include="Helpers.cs" />
+    <Compile Include="Log.cs" />
     <Compile Include="PipedCommand.cs" />
     <Compile Include="ProcessCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

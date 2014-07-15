@@ -35,6 +35,11 @@ namespace Medallion.Shell.Streams
         public abstract byte[] GetContentBytes();
 
         /// <summary>
+        /// Returns the lines of output as an <see cref="IEnumerable{string}"/>
+        /// </summary>
+        public abstract IEnumerable<string> GetLines();
+
+        /// <summary>
         /// Discards all output from the underlying stream. This prevents the process from blocking because
         /// the output pipe's buffer is full without wasting any memory on buffering the output
         /// </summary>
