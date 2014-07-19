@@ -14,6 +14,10 @@ namespace Medallion.Shell
         // TODO task management & error handling
         // => if the process finishes normally, but the input task fails, is that an overall failure?
         // => output tasks should definitely be a cause for failure
+        //
+        // If you call > BEFORE a command has completed or before the task was observed, the error
+        // should go as part of the task. Otherwise, this will FAIL because the content has already been wrapped
+        // up in string form alternatively, this could run synchronously at that point
 
         // TODO should be in the ProcessCommand class. All operator overloads should call virtual command methods
         // that each subclass can override
