@@ -22,6 +22,7 @@ namespace Medallion.Shell
         }
 
         #region ---- Instance API ----
+        // TODO should take IEnumerable<object>
         public Command Run(string executable, IEnumerable<string> arguments = null, Action<Options> options = null)
         {
             Throw.If(string.IsNullOrEmpty(executable), "executable is required");
@@ -47,6 +48,7 @@ namespace Medallion.Shell
             return command;
         }
 
+        // TODO should take object[]
         public Command Run(string executable, params string[] arguments)
         {
             Throw.IfNull(arguments, "arguments");
@@ -55,6 +57,7 @@ namespace Medallion.Shell
         }
         #endregion
 
+        // TODO Run static methods, change instance to Execute
         #region ---- Static API ----
         private static readonly Shell DefaultShell = new Shell();
         public static Shell Default { get { return DefaultShell; } }
