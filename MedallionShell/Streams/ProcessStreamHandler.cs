@@ -489,7 +489,7 @@ namespace Medallion.Shell.Streams
 
             protected override void Dispose(bool disposing)
             {
-                // no-op
+                // TODO we should handle Dispose() for both the stream and the reader
             }
         }
         #endregion
