@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
+    // TODO command should be disposable
+
     public abstract partial class Command
     {
         // TODO task management & error handling
@@ -18,6 +20,8 @@ namespace Medallion.Shell
         // If you call > BEFORE a command has completed or before the task was observed, the error
         // should go as part of the task. Otherwise, this will FAIL because the content has already been wrapped
         // up in string form alternatively, this could run synchronously at that point
+        //
+        // Another note: when piping TO a process like HEAD that will cut you off, 
 
         // TODO should be in the ProcessCommand class. All operator overloads should call virtual command methods
         // that each subclass can override
@@ -29,7 +33,7 @@ namespace Medallion.Shell
         public abstract Process Process { get; }
         public abstract IReadOnlyList<Process> Processes { get; }
 
-        public abstract StreamWriter StandardInput { get; }
+        public abstract ProcessStreamWriter StandardInput { get; }
         public abstract ProcessStreamReader StandardOutput { get; }
         public abstract ProcessStreamReader StandardError { get; }
 
@@ -129,7 +133,18 @@ namespace Medallion.Shell
             Throw.IfNull(command, "command");
             Throw.IfNull(lines, "lines");
 
-            var pipeLinesTask = command.PipeLinesFromEnumerableAsync(lines);
+            var pipeLinesTask = command.PipeLinesFromEnumerableAsync(lines)
+                .ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                    {
+                        Log.WriteLine("Piping failed: {0}", t.Exception);
+                    }
+                    else
+                    {
+                        Log.WriteLine("Piping finished normally!");
+                    }
+                });
             // TODO error handling
             return command;
         }

@@ -29,6 +29,10 @@ namespace Medallion.Shell
                 this.standardErrorHandler = new ProcessStreamHandler(this.process.StandardError.BaseStream);
                 tasks.Add(this.standardErrorHandler.Task);
             }
+            if (startInfo.RedirectStandardInput)
+            {
+                this.standardInput = new ProcessStreamWriter(this.process.StandardInput);
+            }
 
             this.task = System.Threading.Tasks.Task.WhenAll(tasks)
                 .ContinueWith(_ => new CommandResult(this));
@@ -46,9 +50,14 @@ namespace Medallion.Shell
             get { return this.processes ?? (this.processes = new ReadOnlyCollection<Process>(new[] { this.Process })); }
         }
 
-        public override StreamWriter StandardInput
+        private readonly ProcessStreamWriter standardInput;
+        public override ProcessStreamWriter StandardInput
         {
-            get { return this.Process.StandardInput; }
+            get 
+            {
+                Throw<InvalidOperationException>.If(this.standardInput == null, "Standard input is not redirected");
+                return this.standardInput;
+            }
         }
 
         private readonly ProcessStreamHandler standardOutputHandler;

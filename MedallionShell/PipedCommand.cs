@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Medallion.Shell.Streams;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -43,7 +44,7 @@ namespace Medallion.Shell
             get { return this.second.Task; }
         }
 
-        public override StreamWriter StandardInput
+        public override ProcessStreamWriter StandardInput
         {
             get { return this.first.StandardInput; }
         }
