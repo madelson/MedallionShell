@@ -56,12 +56,22 @@ namespace Medallion.Shell.Streams
         /// Pipes the output of the underlying stream to the given stream. This occurs asynchronously, so this
         /// method returns before all content has been written
         /// </summary>
-        public abstract void PipeTo(Stream stream);
+        public abstract Task PipeToAsync(Stream stream, bool leaveReaderOpen = false, bool leaveStreamOpen = false);
 
         /// <summary>
         /// Pipes the output of the reader to the given writer. This occurs asynchronously, so this
         /// method returns before all content has been written
         /// </summary>
-        public abstract void PipeTo(TextWriter writer);
+        public abstract Task PipeToAsync(TextWriter writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false);
+
+        public Task PipeToAsync(FileInfo file, bool leaveReaderOpen = false)
+        {
+            Throw.IfNull(file, "file");
+
+            // used over FileInfo.OpenWrite to get read file share, which seems potentially useful and
+            // not that harmful
+            var stream = new FileStream(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
+            return this.PipeToAsync(stream, leaveReaderOpen: leaveReaderOpen, leaveStreamOpen: false);
+        }
     }
 }

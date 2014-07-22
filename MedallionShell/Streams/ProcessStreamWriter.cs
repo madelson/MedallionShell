@@ -31,8 +31,16 @@ namespace Medallion.Shell.Streams
         {
             try
             {
-                await this.writer.FlushAsync(); // flush any content buffered in the writer
-                await stream.CopyToAsync(this.BaseStream);
+                // flush any content buffered in the writer, since we'll be using the raw stream
+                await this.writer.FlushAsync().ConfigureAwait(false);
+                await stream.CopyToAsync(this.BaseStream).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                if (!ex.IsExpectedPipeException())
+                {
+                    throw;
+                }
             }
             finally
             {
@@ -47,11 +55,11 @@ namespace Medallion.Shell.Streams
             }
         }
 
-        public Task PipeFromAsync(IEnumerable<string> lines, bool leaveOpen = false)
+        public Task PipeFromAsync(IEnumerable<string> lines, bool leaveWriterOpen = false)
         {
             Throw.IfNull(lines, "lines");
 
-            return this.PipeFromAsyncInternal(lines, leaveOpen);
+            return this.PipeFromAsyncInternal(lines, leaveWriterOpen);
         }
 
         private async Task PipeFromAsyncInternal(IEnumerable<string> lines, bool leaveOpen)
@@ -60,7 +68,14 @@ namespace Medallion.Shell.Streams
             {
                 foreach (var line in lines)
                 {
-                    await this.writer.WriteLineAsync(line);
+                    await this.writer.WriteLineAsync(line).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (!ex.IsExpectedPipeException())
+                {
+                    throw;
                 }
             }
             finally
@@ -70,6 +85,21 @@ namespace Medallion.Shell.Streams
                     this.Dispose();
                 }
             }
+        }
+
+        public Task PipeFromAsync(TextReader reader, bool leaveWriterOpen = false, bool leaveReaderOpen = false)
+        {
+            Throw.IfNull(reader, "reader");
+
+            return reader.CopyToAsync(this.writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
+        }
+
+        public Task PipeFromAsync(FileInfo file, bool leaveWriterOpen = false) 
+        {
+            Throw.IfNull(file, "file");
+
+            var stream = file.OpenRead();
+            return this.PipeFromAsync(stream, leaveWriterOpen: leaveWriterOpen, leaveStreamOpen: false);
         }
         #endregion
 

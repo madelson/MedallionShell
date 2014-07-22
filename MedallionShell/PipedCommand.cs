@@ -21,7 +21,7 @@ namespace Medallion.Shell
             this.first = first;
             this.second = second;
 
-            this.first.StandardOutput.PipeTo(this.second.StandardInput.BaseStream);
+            this.first.StandardOutput.PipeToAsync(this.second.StandardInput.BaseStream);
             this.first.Task.ContinueWith(_ => {
                 Log.WriteLine("PipedCommand: closing input to {0}", this.second.Processes[0].Id);
                 this.second.StandardInput.Close();

@@ -14,19 +14,28 @@ namespace SampleCommand
         static void Main(string[] args)
         {
             Log("started");
+
+            string line;
             switch (args[0])
             {
                 case "grep":
                     var regex = new Regex(args[1]);
-                    string line;
                     while ((line = Console.ReadLine()) != null)
                     {
-                        Log("Read '{0}'", line);
+                        //Log("Read '{0}'", line);
                         if (regex.Match(line).Success)
                         {
                             Console.WriteLine(line);
-                            Log("Wrote '{0}'", line);
+                            //Log("Wrote '{0}'", line);
                         }
+                    }
+                    break;
+                case "head":
+                    var count = int.Parse(args[1]);
+                    var i = 0;
+                    while ((i++) < count && (line = Console.ReadLine()) != null)
+                    {
+                        Console.WriteLine(line);
                     }
                     break;
                 default:
@@ -40,7 +49,7 @@ namespace SampleCommand
 
         public static void Log(string format, params object[] args)
         {
-            var baseText = string.Format("{0} ({1}): ", Process.GetCurrentProcess().Id, string.Join(" ", Environment.GetCommandLineArgs()));
+            var baseText = string.Format("{0:h:m:ss.fff} {1} ({2}): ", DateTime.Now, Process.GetCurrentProcess().Id, string.Join(" ", Environment.GetCommandLineArgs()));
             var text = baseText + string.Format(format, args);
 
             using (var fs = new FileStream("log.txt", FileMode.Append, FileAccess.Write, FileShare.ReadWrite))

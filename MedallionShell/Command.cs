@@ -23,10 +23,6 @@ namespace Medallion.Shell
         //
         // Another note: when piping TO a process like HEAD that will cut you off, 
 
-        // TODO should be in the ProcessCommand class. All operator overloads should call virtual command methods
-        // that each subclass can override
-        private Task inputTask;
-
         // prevent external inheritors
         internal Command() { }
 
@@ -39,15 +35,11 @@ namespace Medallion.Shell
 
         public abstract Task<CommandResult> Task { get; }
 
-        public Command PipeTo(Command command)
+        public Task PipeToAsync(Command command)
         {
-            return this | command;
-        }
+            Throw.IfNull(command, "command");
 
-        // TODO put this in ProcessStreamWriter
-        public Command PipeStandardInputFrom(Stream stream)
-        {
-            return this < stream;
+            return command.StandardInput.PipeFromAsync(this.StandardOutput.BaseStream);
         }
 
         #region ---- Operator overloads ----
@@ -62,48 +54,28 @@ namespace Medallion.Shell
             Throw.IfNull(command, "command");
             Throw.IfNull(stream, "stream");
 
-            command.StandardOutput.PipeTo(stream);
-
-            return command;
+            return new IoCommand(command, command.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true));
         }
 
         public static Command operator <(Command command, Stream stream)
         {
             Throw.IfNull(command, "command");
-            Throw.IfNull(stream, "stream");
 
-            // TODO don't allow this if this process has already exited?
-            // TODO error handling
-            command.inputTask = System.Threading.Tasks.Task.Run(async () =>
-            {
-                await stream.CopyToAsync(command.StandardInput.BaseStream).ConfigureAwait(false);
-                Log.WriteLine("Stream input redirect: closing input to {0}", command.Processes[0].Id);
-                command.StandardInput.Close();
-            });
-
-            return command;
+            return new IoCommand(command, command.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true));
         }
 
         public static Command operator >(Command command, FileInfo file)
         {
             Throw.IfNull(command, "command");
-            Throw.IfNull(file, "file");
 
-            // used over FileInfo.OpenWrite to get read file share, which seems potentially useful and
-            // not that harmful
-            var stream = new FileStream(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
-            command.Task.ContinueWith(_ => stream.Close());
-            return command > stream;
+            return new IoCommand(command, command.StandardOutput.PipeToAsync(file));
         }
 
         public static Command operator <(Command command, FileInfo file)
         {
             Throw.IfNull(command, "command");
-            Throw.IfNull(file, "file");
 
-            var stream = file.OpenRead();
-            command.Task.ContinueWith(_ => stream.Close());
-            return command < stream;
+            return new IoCommand(command, command.StandardInput.PipeFromAsync(file));
         }
 
         public static Command operator >(Command command, IEnumerable<string> lines)
@@ -131,31 +103,8 @@ namespace Medallion.Shell
         public static Command operator <(Command command, IEnumerable<string> lines)
         {
             Throw.IfNull(command, "command");
-            Throw.IfNull(lines, "lines");
 
-            var pipeLinesTask = command.PipeLinesFromEnumerableAsync(lines)
-                .ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                    {
-                        Log.WriteLine("Piping failed: {0}", t.Exception);
-                    }
-                    else
-                    {
-                        Log.WriteLine("Piping finished normally!");
-                    }
-                });
-            // TODO error handling
-            return command;
-        }
-
-        private async Task PipeLinesFromEnumerableAsync(IEnumerable<string> lines)
-        {
-            foreach (var line in lines)
-            {
-                await this.StandardInput.WriteLineAsync(line).ConfigureAwait(false);
-            }
-            this.StandardInput.Close();
+            return new IoCommand(command, command.StandardInput.PipeFromAsync(lines));
         }
         #endregion
 

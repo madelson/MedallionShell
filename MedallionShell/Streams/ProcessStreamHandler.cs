@@ -20,7 +20,7 @@ namespace Medallion.Shell.Streams
             Default = 0,
             /// <summary>
             /// The contents of the stream is buffered internally so that the process will never be blocked because
-            /// the pipe is full. This is the default mode.
+            /// the pipe is full. This is behaviorally equivalent to the default mode
             /// </summary>
             Buffer,
             /// <summary>
@@ -42,7 +42,7 @@ namespace Medallion.Shell.Streams
             /// <summary>
             /// The contents of the stream is piped to another stream
             /// </summary>
-            Piped,
+            Piped, // TODO remove
         }
 
         /// <summary>
@@ -164,7 +164,7 @@ namespace Medallion.Shell.Streams
         {
             Log.WriteLine("ReadLoop started for {0}", this.processStream.GetHashCode());
 
-            var localBuffer = new byte[512];
+            var localBuffer = new byte[Constants.ByteBufferSize];
             while (true)
             {
                 // safely capture the current mode
@@ -295,6 +295,7 @@ namespace Medallion.Shell.Streams
                 set { throw new NotSupportedException(MethodBase.GetCurrentMethod().Name); }
             }
 
+            #region ---- Read ----
             public override int Read(byte[] buffer, int offset, int count)
             {
                 // TODO keep this in sync with the other Read method
@@ -358,6 +359,7 @@ namespace Medallion.Shell.Streams
                     return bytesReadFromMemoryStreams;
                 }
             }
+            #endregion
 
             #region ---- Begin and End Read ----
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
@@ -376,43 +378,43 @@ namespace Medallion.Shell.Streams
 
             private class BeginReadResult : IAsyncResult
             {
-                private readonly Task<int> _readAsyncTask;
-                private readonly object _state;
+                private readonly Task<int> readAsyncTask;
+                private readonly object state;
 
                 public BeginReadResult(Task<int> readAsyncTask, AsyncCallback callback, object state)
                 {
-                    this._readAsyncTask = readAsyncTask;
-                    this._state = state;
+                    this.readAsyncTask = readAsyncTask;
+                    this.state = state;
 
                     if (callback != null)
                     {
-                        this._readAsyncTask.ContinueWith(t => callback(this));
+                        this.readAsyncTask.ContinueWith(t => callback(this));
                     }
                 }
 
                 public int EndRead()
                 {
-                    return this._readAsyncTask.Result;
+                    return this.readAsyncTask.Result;
                 }
 
                 object IAsyncResult.AsyncState
                 {
-                    get { return this._state; }
+                    get { return this.state; }
                 }
 
                 WaitHandle IAsyncResult.AsyncWaitHandle
                 {
-                    get { return this._readAsyncTask.As<IAsyncResult>().AsyncWaitHandle; }
+                    get { return this.readAsyncTask.As<IAsyncResult>().AsyncWaitHandle; }
                 }
 
                 bool IAsyncResult.CompletedSynchronously
                 {
-                    get { return this._readAsyncTask.As<IAsyncResult>().CompletedSynchronously; }
+                    get { return this.readAsyncTask.As<IAsyncResult>().CompletedSynchronously; }
                 }
 
                 bool IAsyncResult.IsCompleted
                 {
-                    get { return this._readAsyncTask.IsCompleted; }
+                    get { return this.readAsyncTask.IsCompleted; }
                 }
             }
             #endregion
@@ -534,7 +536,6 @@ namespace Medallion.Shell.Streams
                 }
             }
 
-
             public override byte[] GetContentBytes()
             {
                 this.handler.SetMode(Mode.Buffer);
@@ -556,7 +557,9 @@ namespace Medallion.Shell.Streams
                 if (mode == Mode.Buffer)
                 {
                     // we can still support this in buffer mode, but it's different; we grab the full
-                    // contents and read lines from that
+                    // contents and read lines from that. This is unlikely to cause extra blocking, since
+                    // we already called one of the other methods that sets the mode to buffer and those
+                    // methods are blocking
                     using (var reader = new StringReader(this.Content))
                     {
                         string line;
@@ -586,39 +589,44 @@ namespace Medallion.Shell.Streams
                 this.handler.SetMode(Mode.ManualRead);
             }
 
-            public override void PipeTo(Stream stream)
+            public override Task PipeToAsync(Stream stream, bool leaveReaderOpen, bool leaveStreamOpen)
             {
                 Throw.IfNull(stream, "stream");
 
-                this.handler.SetMode(Mode.Piped, stream);
+                return this.PipeToAsyncInternal(stream, leaveReaderOpen: leaveReaderOpen, leaveStreamOpen: leaveStreamOpen);
             }
 
-            public override void PipeTo(TextWriter writer)
+            private async Task PipeToAsyncInternal(Stream stream, bool leaveReaderOpen, bool leaveStreamOpen)
+            {
+                try
+                {
+                    await this.BaseStream.CopyToAsync(stream).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (!ex.IsExpectedPipeException())
+                    {
+                        throw;
+                    }
+                }
+                finally
+                {
+                    if (!leaveReaderOpen)
+                    {
+                        this.Dispose();
+                    }
+                    if (!leaveStreamOpen)
+                    {
+                        stream.Dispose();
+                    }
+                }
+            }
+
+            public override Task PipeToAsync(TextWriter writer, bool leaveReaderOpen, bool leaveWriterOpen)
             {
                 Throw.IfNull(writer, "writer");
 
-                var pipeTask = this.PipeToWriterAsync(writer);
-                pipeTask.ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                    {
-                        this.handler.taskCompletionSource.TrySetException(t.Exception);
-                    }
-                });
-            }
-
-            private async Task PipeToWriterAsync(TextWriter writer)
-            {
-                var buffer = new char[512];
-                while (true)
-                {
-                    var bytesRead = await this.ReadAsync(buffer, index: 0, count: buffer.Length).ConfigureAwait(false);
-                    if (bytesRead < 0)
-                    {
-                        break;
-                    }
-                    await writer.WriteAsync(buffer, index: 0, count: buffer.Length);
-                }
+                return this.reader.CopyToAsync(writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
             }
             #endregion
 

@@ -2,8 +2,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell.Tests
@@ -36,5 +38,27 @@ namespace Medallion.Shell.Tests
 
             results.SequenceEqual(new[] { "abcd", "abc" }).ShouldEqual(true);
         }
+
+        [TestMethod]
+        public void TestHead()
+        {
+            var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
+            var command = shell.Run("SampleCommand", "head", "10") < Enumerable.Range(0, 100).Select(i => i.ToString());
+            command.Task.Result.StandardOutput.Trim().ShouldEqual(string.Join(Environment.NewLine, Enumerable.Range(0, 10)));
+        }
+
+        [TestMethod]
+        public void TestCloseStandardOutput()
+        {
+            var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
+            var command = shell.Run("SampleCommand", "grep", "a");
+            command.Process.StandardOutput.BaseStream.Dispose();
+            var ignored = command < Enumerable.Repeat(new string('a', 1000), 1000);
+            command.Task.Wait();
+            command.Task.Result.StandardOutput.ShouldEqual(string.Empty);
+        }
+
+        // TODO error handling tests
+        // TODO "head" type test
     }
 }
