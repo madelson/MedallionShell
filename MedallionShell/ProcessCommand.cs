@@ -12,11 +12,11 @@ namespace Medallion.Shell
 {
     internal sealed class ProcessCommand : Command
     {
-        internal ProcessCommand(ProcessStartInfo startInfo)
+        internal ProcessCommand(ProcessStartInfo startInfo, bool throwOnError)
         {
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
-            var tasks = new List<Task>(capacity: 3) { CreateProcessTask(this.Process) };
+            var tasks = new List<Task>(capacity: 3) { CreateProcessTask(this.Process, throwOnError: throwOnError) };
             this.Process.Start();
 
             if (startInfo.RedirectStandardOutput)
@@ -34,8 +34,16 @@ namespace Medallion.Shell
                 this.standardInput = new ProcessStreamWriter(this.process.StandardInput);
             }
 
-            this.task = System.Threading.Tasks.Task.WhenAll(tasks)
-                .ContinueWith(_ => new CommandResult(this));
+            this.task = this.CreateCombinedTask(tasks);
+        }
+
+        private async Task<CommandResult> CreateCombinedTask(List<Task> tasks)
+        {
+            foreach (var task in tasks)
+            {
+                await task.ConfigureAwait(false);
+            }
+            return new CommandResult(this);
         }
 
         private readonly Process process;
@@ -79,13 +87,21 @@ namespace Medallion.Shell
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
 
-        private static Task CreateProcessTask(Process process)
+        private static Task CreateProcessTask(Process process, bool throwOnError)
         {
             var taskCompletionSource = new TaskCompletionSource<bool>();
             process.Exited += (o, e) =>
             {
-                taskCompletionSource.SetResult(true);
                 Log.WriteLine("Received exited event from {0}", process.Id);
+
+                if (throwOnError && process.ExitCode != 0)
+                {
+                    taskCompletionSource.SetException(new ErrorExitCodeException(process));
+                }
+                else
+                {
+                    taskCompletionSource.SetResult(true);
+                }
             };
             return taskCompletionSource.Task;
         }

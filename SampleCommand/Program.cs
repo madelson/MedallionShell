@@ -38,6 +38,10 @@ namespace SampleCommand
                         Console.WriteLine(line);
                     }
                     break;
+                case "exit":
+                    var code = int.Parse(args[1]);
+                    Environment.Exit(code);
+                    break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);
                     Environment.Exit(-1);

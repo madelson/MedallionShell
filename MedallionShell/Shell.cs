@@ -22,8 +22,7 @@ namespace Medallion.Shell
         }
 
         #region ---- Instance API ----
-        // TODO should take IEnumerable<object>
-        public Command Run(string executable, IEnumerable<string> arguments = null, Action<Options> options = null)
+        public Command Run(string executable, IEnumerable<object> arguments = null, Action<Options> options = null)
         {
             Throw.If(string.IsNullOrEmpty(executable), "executable is required");
 
@@ -31,8 +30,9 @@ namespace Medallion.Shell
 
             var processStartInfo = new ProcessStartInfo
             {
-                // TODO syntax
-                Arguments = arguments != null ? string.Join(" ", arguments) : string.Empty,
+                Arguments = arguments != null 
+                    ? finalOptions.CommandLineSyntax.CreateArgumentString(arguments.Select(Convert.ToString))
+                    : string.Empty,
                 CreateNoWindow = true,
                 FileName = executable,
                 RedirectStandardError = true,
@@ -42,14 +42,13 @@ namespace Medallion.Shell
             };
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 
-            var command = new ProcessCommand(processStartInfo);
+            var command = new ProcessCommand(processStartInfo, throwOnError: finalOptions.ThrowExceptionOnError);
             finalOptions.CommandInitializers.ForEach(a => a(command));
 
             return command;
         }
 
-        // TODO should take object[]
-        public Command Run(string executable, params string[] arguments)
+        public Command Run(string executable, params object[] arguments)
         {
             Throw.IfNull(arguments, "arguments");
 
@@ -77,18 +76,18 @@ namespace Medallion.Shell
             return builder;
         }
 
-        #region ---- Builder ----
+        #region ---- Options ----
         public sealed class Options
         {
             public Options()
             {
-                this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
-                this.CommandInitializers = new List<Action<Command>>();
                 this.RestoreDefaults();
             }
 
             internal List<Action<ProcessStartInfo>> StartInfoInitializers { get; private set; }
             internal List<Action<Command>> CommandInitializers { get; private set; }
+            internal CommandLineSyntax CommandLineSyntax { get; private set; }
+            internal bool ThrowExceptionOnError { get; set; }
 
             #region ---- Builder methods ----
             /// <summary>
@@ -96,8 +95,10 @@ namespace Medallion.Shell
             /// </summary>
             public Options RestoreDefaults()
             {
-                this.StartInfoInitializers.Clear();
-                this.CommandInitializers.Clear();
+                this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
+                this.CommandInitializers = new List<Action<Command>>();
+                this.CommandLineSyntax = new WindowsCommandLineSyntax();
+                this.ThrowExceptionOnError = false;
                 return this;
             }
 
@@ -135,6 +136,20 @@ namespace Medallion.Shell
 
                 var environmentVariablesList = environmentVariables.ToList();
                 return this.StartInfo(psi => environmentVariablesList.ForEach(kvp => psi.EnvironmentVariables[kvp.Key] = kvp.Value));
+            }
+
+            public Options ThrowOnError(bool value = true)
+            {
+                this.ThrowExceptionOnError = value;
+                return this;
+            }
+
+            public Options Syntax(CommandLineSyntax syntax)
+            {
+                Throw.IfNull(syntax, "syntax");
+
+                this.CommandLineSyntax = syntax;
+                return this;
             }
             #endregion
         }

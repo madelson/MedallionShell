@@ -23,8 +23,8 @@ namespace Medallion.Shell
         /// </summary>
         public bool Success { get { return this.ExitCode == 0; } }
 
-        public string StandardOutput { get { return this.Command.StandardOutput.Content; } }
+        public string StandardOutput { get { return this.Command.StandardOutput.GetContent(); } }
 
-        public string StandardError { get { return this.Command.StandardError.Content; } }
+        public string StandardError { get { return this.Command.StandardError.GetContent(); } }
     }
 }

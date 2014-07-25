@@ -58,6 +58,26 @@ namespace Medallion.Shell.Tests
             command.Task.Result.StandardOutput.ShouldEqual(string.Empty);
         }
 
+        [TestMethod]
+        public void TestExitCode()
+        {
+            if (!Command.Run("SampleCommand", "exit", 0))
+            {
+                Assert.Fail("Should have worked");
+            }
+            if (Command.Run("SampleCommand", "exit", 1))
+            {
+                Assert.Fail("Should have failed");
+            }
+
+            var shell = new Shell(o => o.ThrowOnError());
+            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => shell.Run("SampleCommand", "exit", -1).Task.Wait());
+            ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
+                .ShouldEqual(true);
+
+            shell.Run("SampleCommand", "exit", 0).Task.Wait();
+        }
+
         // TODO error handling tests
         // TODO "head" type test
     }

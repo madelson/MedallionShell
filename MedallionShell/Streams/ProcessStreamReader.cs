@@ -25,7 +25,7 @@ namespace Medallion.Shell.Streams
         /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
         /// reader have been read from via different methods).
         /// </summary>
-        public abstract string Content { get; }
+        public abstract string GetContent();
 
         /// <summary>
         /// Returns the full content output by the process as a byte array. Unlike <see cref="Stream.ReadToEnd"/>, This will fail with
@@ -63,6 +63,8 @@ namespace Medallion.Shell.Streams
         /// method returns before all content has been written
         /// </summary>
         public abstract Task PipeToAsync(TextWriter writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false);
+
+        public abstract Task PipeToAsync(ICollection<string> lines, bool leaveReaderOpen = false);
 
         public Task PipeToAsync(FileInfo file, bool leaveReaderOpen = false)
         {

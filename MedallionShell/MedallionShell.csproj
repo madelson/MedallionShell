@@ -44,6 +44,7 @@
     <Compile Include="Command.cs" />
     <Compile Include="CommandResult.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="ErrorExitCodeException.cs" />
     <Compile Include="ExceptionHelpers.cs" />
     <Compile Include="Helpers.cs" />
     <Compile Include="IoCommand.cs" />
@@ -56,6 +57,8 @@
     <Compile Include="Streams\ProcessStreamReader.cs" />
     <Compile Include="Streams\ProcessStreamWriter.cs" />
     <Compile Include="Streams\PipeHelpers.cs" />
+    <Compile Include="CommandLineSyntax.cs" />
+    <Compile Include="WindowsCommandLineSyntax.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

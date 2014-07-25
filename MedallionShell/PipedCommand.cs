@@ -12,20 +12,21 @@ namespace Medallion.Shell
     internal sealed class PipedCommand : Command
     {
         private readonly Command first, second;
+        private readonly Task<CommandResult> task;
 
         internal PipedCommand(Command first, Command second)
         {
-            Throw.IfNull(first, "first");
-            Throw.IfNull(second, "second");
-
             this.first = first;
             this.second = second;
 
-            this.first.StandardOutput.PipeToAsync(this.second.StandardInput.BaseStream);
-            this.first.Task.ContinueWith(_ => {
-                Log.WriteLine("PipedCommand: closing input to {0}", this.second.Processes[0].Id);
-                this.second.StandardInput.Close();
-            });
+            var pipeStreamsTask = this.first.StandardOutput.PipeToAsync(this.second.StandardInput.BaseStream);
+            this.task = this.CreateTask(pipeStreamsTask);
+        }
+
+        private async Task<CommandResult> CreateTask(Task pipeStreamsTask)
+        {
+            await pipeStreamsTask.ConfigureAwait(false);
+            return await this.second.Task.ConfigureAwait(false);
         }
 
         public override Process Process
@@ -41,7 +42,7 @@ namespace Medallion.Shell
 
         public override Task<CommandResult> Task
         {
-            get { return this.second.Task; }
+            get { return this.task; }
         }
 
         public override ProcessStreamWriter StandardInput

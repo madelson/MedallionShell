@@ -36,13 +36,9 @@ namespace Medallion.Shell.Streams
             /// </summary>
             ManualRead,
             /// <summary>
-            /// The contents of the stream is read and discarded
+            /// The contents of the stream is discarded. This is implemented by closing the underlying stream
             /// </summary>
             DiscardContents,
-            /// <summary>
-            /// The contents of the stream is piped to another stream
-            /// </summary>
-            Piped, // TODO remove
         }
 
         /// <summary>
@@ -67,10 +63,6 @@ namespace Medallion.Shell.Streams
         /// Represents the current mode of the handler
         /// </summary>
         private Mode mode;
-        /// <summary>
-        /// Represents an output stream for <see cref="Mode.Piped"/>
-        /// </summary>
-        private Stream pipeStream;
 
         /// <summary>
         /// Exposes the underlying stream
@@ -82,13 +74,17 @@ namespace Medallion.Shell.Streams
         /// </summary>
         private readonly TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
 
+        private readonly Task readLoopTask;
+
         public ProcessStreamHandler(Stream stream)
         {
             Throw.IfNull(stream, "stream");
 
             this.processStream = stream;
             this.reader = new InternalReader(this);
-            Task.Run(() => this.ReadLoop())
+            // we don't need Task.Run here since this reaches an await very
+            // quickly
+            this.readLoopTask = this.ReadLoop()
                 .ContinueWith(t => 
                 {
                     Log.WriteLine("ReadLoop finished for {0} (success = {1})", stream.GetHashCode(), !t.IsFaulted);
@@ -110,36 +106,35 @@ namespace Medallion.Shell.Streams
 
         public Task Task { get { return this.taskCompletionSource.Task; } }
 
-        private void SetMode(Mode mode, Stream pipeStream = null)
+        private void SetMode(Mode mode)
         {
-            Throw.If(mode == Mode.Piped != (pipeStream != null), "pipeStream: must be non-null if an only if switching to piped mode");
-            Throw.If(pipeStream != null && !pipeStream.CanWrite, "pipeStream: must be writable");
-
             lock (this.modeLock)
             {
                 // when in the default mode, you can switch to any other mode (important since we start
                 // in this mode)
                 if (this.mode == Mode.Default
+                    // can always go into discard mode
+                    || mode == Mode.DiscardContents
                     // when in manual read mode, you can always start buffering
                     || (this.mode == Mode.ManualRead && mode == Mode.BufferedManualRead)
                     // when in buffered read mode, you can always stop buffering
                     || (this.mode == Mode.BufferedManualRead && mode == Mode.ManualRead))
                 {
                     this.mode = mode;
-                    this.pipeStream = pipeStream;
+                    if (mode == Mode.DiscardContents && this.mode != mode)
+                    {
+                        // we don't do this actively in order to prevent deadlock/blocking from taking the stream
+                        // lock within the mode lock and to let any "current" stream operations finish first
+                        this.readLoopTask.ContinueWith(_ => this.DiscardContent());
+                    }
                 }
-                else if (this.mode != mode || pipeStream != this.pipeStream)
+                else if (this.mode != mode)
                 {
                     string message;
                     switch (this.mode)
                     {
                         case Mode.DiscardContents:
                             message = "The stream has been set to discard its contents, so it cannot be used in another mode";
-                            break;
-                        case Mode.Piped:
-                            message = pipeStream != this.pipeStream
-                                ? "The stream is already being piped to a different stream"
-                                : "The stream is being piped to another stream, so it cannot be used in another mode";
                             break;
                         case Mode.ManualRead:
                         case Mode.BufferedManualRead:
@@ -213,43 +208,34 @@ namespace Medallion.Shell.Streams
                         }
                         break;
                     case Mode.DiscardContents:
-                        // grab the stream lock and just read to the end
-                        using (await this.streamLock.AcquireAsync().ConfigureAwait(false))
-                        {
-                            if (this.memoryStream != null)
-                            { 
-                                // free the memory stream
-                                this.memoryStream.Dispose();
-                                this.memoryStream = null;
-                            }
-                            while (true)
-                            {
-                                var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
-                                if (bytesRead == 0)
-                                {
-                                    return; // end of stream
-                                }
-                            }
-                        }
-                    case Mode.Piped:
-                        // grab the stream lock and copy the buffer + the stream to the output
-                        using (await this.streamLock.AcquireAsync().ConfigureAwait(false))
-                        {
-                            if (this.memoryStream != null)
-                            {
-                                // copy & free any buffered content
-                                this.memoryStream.Seek(0, SeekOrigin.Begin);
-                                Log.WriteLine("About to copy {0} bytes of buffered content from {1} to pipe stream", this.memoryStream.Length, this.processStream.GetHashCode());
-                                this.memoryStream.CopyTo(this.pipeStream);
-                                this.memoryStream.Dispose();
-                                this.memoryStream = null;
-                            }
-
-                            await this.processStream.CopyToAsync(this.pipeStream).ConfigureAwait(false);
-                            Log.WriteLine("Finished piping from {0}", this.processStream.GetHashCode());
-                        }
-                        return; // end of stream
+                        return; // handled by a continuation
                 }
+            }
+        }
+
+        private void DiscardContent()
+        {
+            // grab the stream lock and close all streams
+            using (this.streamLock.AcquireAsync().Result)
+            {
+                if (this.memoryStream != null)
+                {
+                    // free the memory stream
+                    this.memoryStream.Dispose();
+                    this.memoryStream = null;
+                }
+
+                this.processStream.Dispose();
+
+                // we used to read to the end, but Dispose() seems to do the same thing
+                //while (true)
+                //{
+                //    var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
+                //    if (bytesRead == 0)
+                //    {
+                //        return; // end of stream
+                //    }
+                //}
             }
         }
 
@@ -264,6 +250,7 @@ namespace Medallion.Shell.Streams
                 this.handler = handler;
             }
 
+            #region ---- Stream flags ----
             public override bool CanRead
             {
                 get { return true; }
@@ -278,22 +265,7 @@ namespace Medallion.Shell.Streams
             {
                 get { return false; }
             }
-
-            public override void Flush()
-            {
-                // no-op, since we don't write
-            }
-
-            public override long Length
-            {
-                get { throw new NotSupportedException(MethodBase.GetCurrentMethod().Name); }
-            }
-
-            public override long Position
-            {
-                get { throw new NotSupportedException(MethodBase.GetCurrentMethod().Name); }
-                set { throw new NotSupportedException(MethodBase.GetCurrentMethod().Name); }
-            }
+            #endregion
 
             #region ---- Read ----
             public override int Read(byte[] buffer, int offset, int count)
@@ -359,7 +331,6 @@ namespace Medallion.Shell.Streams
                     return bytesReadFromMemoryStreams;
                 }
             }
-            #endregion
 
             #region ---- Begin and End Read ----
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
@@ -473,6 +444,29 @@ namespace Medallion.Shell.Streams
                 // otherwise, we've exhausted all memory streams so return 0 bytes read
                 return 0;
             }
+            #endregion
+
+            protected override void Dispose(bool disposing)
+            {
+                this.handler.SetMode(Mode.DiscardContents);
+            }
+
+            #region ---- Non-supported Stream methods ----
+            public override void Flush()
+            {
+                // no-op, since we don't write
+            }
+
+            public override long Length
+            {
+                get { throw new NotSupportedException(MethodBase.GetCurrentMethod().Name); }
+            }
+
+            public override long Position
+            {
+                get { throw new NotSupportedException(MethodBase.GetCurrentMethod().Name); }
+                set { throw new NotSupportedException(MethodBase.GetCurrentMethod().Name); }
+            }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
@@ -488,11 +482,7 @@ namespace Medallion.Shell.Streams
             {
                 throw new NotSupportedException(MethodBase.GetCurrentMethod().Name);
             }
-
-            protected override void Dispose(bool disposing)
-            {
-                // TODO we should handle Dispose() for both the stream and the reader
-            }
+            #endregion
         }
         #endregion
 
@@ -514,24 +504,21 @@ namespace Medallion.Shell.Streams
                 get { return this.reader.BaseStream; }
             }
 
-            private string content;
-            public override string Content
+            public override string GetContent()
             {
-                get
+                this.handler.SetMode(Mode.Buffer);
+                this.handler.Task.Wait();
+                using (this.handler.streamLock.AcquireAsync().Result)
                 {
-                    this.handler.SetMode(Mode.Buffer);
-                    this.handler.Task.Wait();
-                    using (this.handler.streamLock.AcquireAsync().Result)
+                    if (this.handler.memoryStream == null)
                     {
-                        if (this.content == null)
-                        {
-                            this.handler.memoryStream.Seek(0, SeekOrigin.Begin);
-                            using (var reader = new StreamReader(this.handler.memoryStream))
-                            {
-                                this.content = reader.ReadToEnd();
-                            }
-                        }
-                        return this.content;
+                        this.ThrowDisposed();
+                    }
+
+                    this.handler.memoryStream.Seek(0, SeekOrigin.Begin);
+                    using (var reader = new StreamReader(this.handler.memoryStream))
+                    {
+                        return reader.ReadToEnd();
                     }
                 }
             }
@@ -542,6 +529,11 @@ namespace Medallion.Shell.Streams
                 this.handler.Task.Wait();
                 using (this.handler.streamLock.AcquireAsync().Result)
                 {
+                    if (this.handler.memoryStream == null)
+                    {
+                        this.ThrowDisposed();
+                    }
+
                     return this.handler.memoryStream.ToArray();
                 }
             }
@@ -560,7 +552,7 @@ namespace Medallion.Shell.Streams
                     // contents and read lines from that. This is unlikely to cause extra blocking, since
                     // we already called one of the other methods that sets the mode to buffer and those
                     // methods are blocking
-                    using (var reader = new StringReader(this.Content))
+                    using (var reader = new StringReader(this.GetContent()))
                     {
                         string line;
                         while ((line = reader.ReadLine()) != null)
@@ -626,7 +618,40 @@ namespace Medallion.Shell.Streams
             {
                 Throw.IfNull(writer, "writer");
 
-                return this.reader.CopyToAsync(writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
+                return this.CopyToAsync(writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
+            }
+
+            public override Task PipeToAsync(ICollection<string> lines, bool leaveReaderOpen)
+            {
+                Throw.IfNull(lines, "lines");
+
+                return this.PipeToAsyncInternal(lines, leaveReaderOpen: leaveReaderOpen);
+            }
+
+            private async Task PipeToAsyncInternal(ICollection<string> lines, bool leaveReaderOpen)
+            {
+                try
+                {
+                    string line;
+                    while ((line = await this.reader.ReadLineAsync().ConfigureAwait(false)) != null) 
+                    {
+                        lines.Add(line);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (!ex.IsExpectedPipeException())
+                    {
+                        throw;
+                    }
+                }
+                finally 
+                {
+                    if (!leaveReaderOpen) 
+                    {
+                        this.Dispose();
+                    }
+                }
             }
             #endregion
 
@@ -684,6 +709,14 @@ namespace Medallion.Shell.Streams
             public override Task<string> ReadToEndAsync()
             {
                 return this.reader.ReadToEndAsync();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    this.reader.Dispose();
+                }
             }
             #endregion
         }

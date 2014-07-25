@@ -127,16 +127,23 @@ namespace Medallion.Shell
         {
             throw new NotSupportedException("Bitwise & is not supported. It exists only to enable '&&'");
         }
+
+        public static bool operator !(Command command)
+        {
+            Throw.IfNull(command, "command");
+
+            return command ? false : true;
+        }
         #endregion
         #endregion
 
         #region ---- Static API ----
-        public static Command Run(string executable, IEnumerable<string> arguments, Action<Shell.Options> options = null)
+        public static Command Run(string executable, IEnumerable<object> arguments, Action<Shell.Options> options = null)
         {
             return Shell.Default.Run(executable, arguments, options);
         }
 
-        public static Command Run(string executable, params string[] arguments)
+        public static Command Run(string executable, params object[] arguments)
         {
             return Shell.Default.Run(executable, arguments);
         }
