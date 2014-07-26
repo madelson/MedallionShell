@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="GrepTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SyntaxTest.cs" />
     <Compile Include="UnitTestHelpers.cs" />
   </ItemGroup>
   <ItemGroup>

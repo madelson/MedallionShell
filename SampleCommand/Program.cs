@@ -13,7 +13,7 @@ namespace SampleCommand
     {
         static void Main(string[] args)
         {
-            Log("started");
+            Log("started: " + string.Join(", ", args.Select(a => "'" + a + "'")));
 
             string line;
             switch (args[0])
@@ -41,6 +41,12 @@ namespace SampleCommand
                 case "exit":
                     var code = int.Parse(args[1]);
                     Environment.Exit(code);
+                    break;
+                case "argecho":
+                    foreach (var argument in args.Skip(1))
+                    {
+                        Console.WriteLine(argument);
+                    }
                     break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);

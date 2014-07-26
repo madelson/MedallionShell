@@ -77,8 +77,6 @@ namespace Medallion.Shell.Tests
 
             shell.Run("SampleCommand", "exit", 0).Task.Wait();
         }
-
         // TODO error handling tests
-        // TODO "head" type test
     }
 }
