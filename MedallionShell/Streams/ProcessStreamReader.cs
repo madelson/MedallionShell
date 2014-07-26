@@ -28,14 +28,14 @@ namespace Medallion.Shell.Streams
         public abstract string GetContent();
 
         /// <summary>
-        /// Returns the full content output by the process as a byte array. Unlike <see cref="Stream.ReadToEnd"/>, This will fail with
+        /// Returns the full content output by the process as a byte array. Unlike <see cref="TextReader.ReadToEnd"/>, This will fail with
         /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
         /// reader have been read from via different methods).
         /// </summary>
         public abstract byte[] GetContentBytes();
 
         /// <summary>
-        /// Returns the lines of output as an <see cref="IEnumerable{string}"/>
+        /// Returns the lines of output as an <see cref="IEnumerable{String}"/>
         /// </summary>
         public abstract IEnumerable<string> GetLines();
 
@@ -64,8 +64,17 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public abstract Task PipeToAsync(TextWriter writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false);
 
+        /// <summary>
+        /// Asynchronously copies each line of output to the given collection
+        /// </summary>
         public abstract Task PipeToAsync(ICollection<string> lines, bool leaveReaderOpen = false);
 
+        /// <summary>
+        /// Asynchronously writes all output to the given file
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="leaveReaderOpen"></param>
+        /// <returns></returns>
         public Task PipeToAsync(FileInfo file, bool leaveReaderOpen = false)
         {
             Throw.IfNull(file, "file");

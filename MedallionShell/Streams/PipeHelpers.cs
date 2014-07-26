@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
-    public static class PipeHelpers
+    internal static class PipeHelpers
     {
         public static async Task CopyToAsync(this TextReader reader, TextWriter writer, bool leaveReaderOpen, bool leaveWriterOpen)
         {

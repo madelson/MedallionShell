@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
+    /// <summary>
+    /// Represents a process that failed with a non-zero exit code. This will be thrown by a <see cref="Command"/>
+    /// created with <see cref="Shell.Options.ThrowOnError"/> called
+    /// </summary>
     public sealed class ErrorExitCodeException : Exception
     {
         internal ErrorExitCodeException(Process process)
@@ -15,6 +19,9 @@ namespace Medallion.Shell
             this.ExitCode = process.ExitCode;
         }
 
+        /// <summary>
+        /// The exit code of the process
+        /// </summary>
         public int ExitCode { get; private set; }
     }
 }

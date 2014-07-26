@@ -52,5 +52,11 @@ namespace Medallion.Shell
         {
             get { return this.task; }
         }
+
+        protected override void DisposeInternal()
+        {
+            this.command.Dispose();
+            this.task.Dispose();
+        }
     }
 }

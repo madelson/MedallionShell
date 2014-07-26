@@ -7,8 +7,14 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
+    /// <summary>
+    /// Provides <see cref="CommandLineSyntax"/> functionality for windows
+    /// </summary>
     public sealed class WindowsCommandLineSyntax : CommandLineSyntax
     {
+        /// <summary>
+        /// Provides <see cref="CommandLineSyntax"/> functionality for windows
+        /// </summary>
         public override string CreateArgumentString(IEnumerable<string> arguments)
         {
             Throw.IfNull(arguments, "arguments");

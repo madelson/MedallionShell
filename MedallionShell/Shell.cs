@@ -7,14 +7,20 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
+    /// <summary>
+    /// Represents an object which can be used to dispatch <see cref="Command"/>s
+    /// </summary>
     public sealed class Shell
     {
         private readonly Action<Options> configuration;
 
-        public Shell()
+        private Shell()
         {
         }
 
+        /// <summary>
+        /// Creates a shell whose commands will receive the given configuration options
+        /// </summary>
         public Shell(Action<Options> configuration)
         {
             Throw.IfNull(configuration, "configuration");
@@ -22,6 +28,10 @@ namespace Medallion.Shell
         }
 
         #region ---- Instance API ----
+        /// <summary>
+        /// Executes the given <paramref name="executable"/> with the given <paramref name="arguments"/> and
+        /// <paramref name="options"/>
+        /// </summary>
         public Command Run(string executable, IEnumerable<object> arguments = null, Action<Options> options = null)
         {
             Throw.If(string.IsNullOrEmpty(executable), "executable is required");
@@ -48,6 +58,9 @@ namespace Medallion.Shell
             return command;
         }
 
+        /// <summary>
+        /// Executes the given <paramref name="executable"/> with the given <paramref name="arguments"/> 
+        /// </summary>
         public Command Run(string executable, params object[] arguments)
         {
             Throw.IfNull(arguments, "arguments");
@@ -59,6 +72,9 @@ namespace Medallion.Shell
         // TODO Run static methods, change instance to Execute
         #region ---- Static API ----
         private static readonly Shell DefaultShell = new Shell();
+        /// <summary>
+        /// A <see cref="Shell"/> that uses default options
+        /// </summary>
         public static Shell Default { get { return DefaultShell; } }
         #endregion
 
@@ -77,9 +93,13 @@ namespace Medallion.Shell
         }
 
         #region ---- Options ----
+        /// <summary>
+        /// Provides a builder interface for configuring the options for creating and executing
+        /// a <see cref="Command"/>
+        /// </summary>
         public sealed class Options
         {
-            public Options()
+            internal Options()
             {
                 this.RestoreDefaults();
             }
@@ -102,6 +122,10 @@ namespace Medallion.Shell
                 return this;
             }
 
+            /// <summary>
+            /// Specifies a function which can modify the <see cref="ProcessStartInfo"/>. Multiple such functions
+            /// can be specified this way
+            /// </summary>
             public Options StartInfo(Action<ProcessStartInfo> initializer)
             {
                 Throw.IfNull(initializer, "initializer");
@@ -110,6 +134,10 @@ namespace Medallion.Shell
                 return this;
             }
 
+            /// <summary>
+            /// Specifies a function which can modify the <see cref="Command"/>. Multiple such functions
+            /// can be specified this way
+            /// </summary>
             public Options Command(Action<Command> initializer)
             {
                 Throw.IfNull(initializer, "initializer");
@@ -118,11 +146,17 @@ namespace Medallion.Shell
                 return this;
             }
 
+            /// <summary>
+            /// Sets the initial working directory of the <see cref="Command"/> (defaults to the current working directory)
+            /// </summary>
             public Options WorkingDirectory(string path)
             {
                 return this.StartInfo(psi => psi.WorkingDirectory = path);
             }
 
+            /// <summary>
+            /// Specifies an environment variable to be passed to the <see cref="Command"/>
+            /// </summary>
             public Options EnvironmentVariable(string name, string value)
             {
                 Throw.If(string.IsNullOrEmpty(name), "name is required");

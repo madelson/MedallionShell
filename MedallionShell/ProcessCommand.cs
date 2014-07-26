@@ -105,5 +105,11 @@ namespace Medallion.Shell
             };
             return taskCompletionSource.Task;
         }
+
+        protected override void DisposeInternal()
+        {
+            this.process.Dispose();
+            this.task.Dispose();
+        }
     }
 }

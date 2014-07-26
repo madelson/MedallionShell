@@ -59,7 +59,7 @@ namespace Medallion.Shell
         where TException : Exception
     {
         /// <summary>
-        /// Throws an exception of type <see cref="TException"/> if the condition is true
+        /// Throws an exception of type <typeparamref name="TException"/> if the condition is true
         /// </summary>
         public static void If(bool condition, string message)
         {

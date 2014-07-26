@@ -7,6 +7,11 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
+    // TODO rethink this class
+
+    /// <summary>
+    /// The result of a <see cref="Command"/>
+    /// </summary>
     public sealed class CommandResult
     { 
         internal CommandResult(Command command)
@@ -14,8 +19,14 @@ namespace Medallion.Shell
             this.Command = command;
         }
 
+        /// <summary>
+        /// The command
+        /// </summary>
         public Command Command { get; private set; }
 
+        /// <summary>
+        /// The exit code of the command's process
+        /// </summary>
         public int ExitCode { get { return this.Command.Process.ExitCode; } }
 
         /// <summary>
@@ -23,8 +34,14 @@ namespace Medallion.Shell
         /// </summary>
         public bool Success { get { return this.ExitCode == 0; } }
 
+        /// <summary>
+        /// If available, the full standard output text of the command
+        /// </summary>
         public string StandardOutput { get { return this.Command.StandardOutput.GetContent(); } }
 
+        /// <summary>
+        /// If available, the full standard error text of the command
+        /// </summary>
         public string StandardError { get { return this.Command.StandardError.GetContent(); } }
     }
 }

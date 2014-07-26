@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
+    /// <summary>
+    /// Provides functionality similar to a <see cref="StreamWriter"/> but with additional methods to simplify
+    /// working with a process's standard input
+    /// </summary>
     public sealed class ProcessStreamWriter : TextWriter
     {
         private readonly StreamWriter writer;
@@ -18,8 +22,14 @@ namespace Medallion.Shell.Streams
         }
 
         #region ---- Custom methods ----
+        /// <summary>
+        /// Provides access to the underlying stream
+        /// </summary>
         public Stream BaseStream { get { return this.writer.BaseStream; } }
 
+        /// <summary>
+        /// Asynchronously copies <paramref name="stream"/> to this stream
+        /// </summary>
         public Task PipeFromAsync(Stream stream, bool leaveWriterOpen = false, bool leaveStreamOpen = false)
         {
             Throw.IfNull(stream, "stream");
@@ -55,6 +65,9 @@ namespace Medallion.Shell.Streams
             }
         }
 
+        /// <summary>
+        /// Asynchronously writes each item in <paramref name="lines"/> to this writer as a separate line
+        /// </summary>
         public Task PipeFromAsync(IEnumerable<string> lines, bool leaveWriterOpen = false)
         {
             Throw.IfNull(lines, "lines");
@@ -87,6 +100,9 @@ namespace Medallion.Shell.Streams
             }
         }
 
+        /// <summary>
+        /// Asynchronously writes all content from <paramref name="reader"/> to this writer
+        /// </summary>
         public Task PipeFromAsync(TextReader reader, bool leaveWriterOpen = false, bool leaveReaderOpen = false)
         {
             Throw.IfNull(reader, "reader");
@@ -94,6 +110,9 @@ namespace Medallion.Shell.Streams
             return reader.CopyToAsync(this.writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
         }
 
+        /// <summary>
+        /// Asynchronously writes all content from <paramref name="file"/> to this stream
+        /// </summary>
         public Task PipeFromAsync(FileInfo file, bool leaveWriterOpen = false) 
         {
             Throw.IfNull(file, "file");
