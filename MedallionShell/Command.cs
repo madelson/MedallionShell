@@ -195,11 +195,17 @@ namespace Medallion.Shell
         #endregion
 
         #region ---- Static API ----
+        /// <summary>
+        /// A convenience method for calling <see cref="Shell.Run(String, IEnumerable{Object}, Action{Shell.Options})"/> on <see cref="Shell.Default"/>
+        /// </summary>
         public static Command Run(string executable, IEnumerable<object> arguments, Action<Shell.Options> options = null)
         {
             return Shell.Default.Run(executable, arguments, options);
         }
 
+        /// <summary>
+        /// A convenience method for calling <see cref="Shell.Run(String, Object[])"/> on <see cref="Shell.Default"/>
+        /// </summary>
         public static Command Run(string executable, params object[] arguments)
         {
             return Shell.Default.Run(executable, arguments);

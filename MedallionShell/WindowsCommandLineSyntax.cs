@@ -32,6 +32,7 @@ namespace Medallion.Shell
             // http://stackoverflow.com/questions/5510343/escape-command-line-arguments-in-c-sharp
             // Note: at the time of this writing, the posted answer didn't quite work as written. There was a comment
             // mentioning the correction, and I've submitted it as an edit (the groupings in the original post are wrong)
+            // TODO the post also mentions another method that only quotes when necessary. Should we use that?
 
             // find each substring of 0-or-more \ followed by " and replace it by twice-as-many \, followed by \".
             var singleQuotesEscaped = Regex.Replace(argument, @"(\\*)" + "\"", @"$1$1\" + "\"");

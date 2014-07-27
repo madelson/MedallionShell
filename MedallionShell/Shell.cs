@@ -155,7 +155,7 @@ namespace Medallion.Shell
             }
 
             /// <summary>
-            /// Specifies an environment variable to be passed to the <see cref="Command"/>
+            /// Adds or overwrites an environment variable to be passed to the <see cref="Command"/>
             /// </summary>
             public Options EnvironmentVariable(string name, string value)
             {
@@ -164,6 +164,9 @@ namespace Medallion.Shell
                 return this.StartInfo(psi => psi.EnvironmentVariables[name] = value);
             }
 
+            /// <summary>
+            /// Adds or overwrites a set of environmental variables to be passed to the <see cref="Command"/>
+            /// </summary>
             public Options EnvironmentVariables(IEnumerable<KeyValuePair<string, string>> environmentVariables)
             {
                 Throw.IfNull(environmentVariables, "environmentVariables");
@@ -172,12 +175,20 @@ namespace Medallion.Shell
                 return this.StartInfo(psi => environmentVariablesList.ForEach(kvp => psi.EnvironmentVariables[kvp.Key] = kvp.Value));
             }
 
+            /// <summary>
+            /// If specified, a non-zero exit code will cause the <see cref="Command"/>'s <see cref="Task"/> to fail
+            /// with <see cref="ErrorExitCodeException"/>. Defaults to false
+            /// </summary>
             public Options ThrowOnError(bool value = true)
             {
                 this.ThrowExceptionOnError = value;
                 return this;
             }
 
+            /// <summary>
+            /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to an instance of
+            /// <see cref="WindowsCommandLineSyntax"/>
+            /// </summary>
             public Options Syntax(CommandLineSyntax syntax)
             {
                 Throw.IfNull(syntax, "syntax");
