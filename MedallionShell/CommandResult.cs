@@ -37,11 +37,11 @@ namespace Medallion.Shell
         /// <summary>
         /// If available, the full standard output text of the command
         /// </summary>
-        public string StandardOutput { get { return this.Command.StandardOutput.GetContent(); } }
+        public string StandardOutput { get { return this.Command.StandardOutput.ReadContent(); } }
 
         /// <summary>
         /// If available, the full standard error text of the command
         /// </summary>
-        public string StandardError { get { return this.Command.StandardError.GetContent(); } }
+        public string StandardError { get { return this.Command.StandardError.ReadContent(); } }
     }
 }

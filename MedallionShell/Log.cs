@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
-    // TODO conditional attribute
     internal static class Log
     {
+        [Conditional("TESTING")]
         public static void WriteLine(string format, params object[] args)
         {
             var text = string.Format("{0:h:m:ss.fff}: ", DateTime.Now) + string.Format(format, args);

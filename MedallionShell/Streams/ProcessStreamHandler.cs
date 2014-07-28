@@ -270,7 +270,7 @@ namespace Medallion.Shell.Streams
             #region ---- Read ----
             public override int Read(byte[] buffer, int offset, int count)
             {
-                // TODO keep this in sync with the other Read method
+                // NOTE keep this in sync with the other Read method
 
                 Throw.IfNull(buffer, "buffer");
                 // offset is allowed to be buffer.Length. See http://referencesource.microsoft.com/#mscorlib/system/io/memorystream.cs
@@ -301,7 +301,7 @@ namespace Medallion.Shell.Streams
             
             public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
-                // TODO keep this in sync with the other Read method
+                // NOTE keep this in sync with the other Read method
 
                 Throw.IfNull(buffer, "buffer");
                 // offset is allowed to be buffer.Length. See http://referencesource.microsoft.com/#mscorlib/system/io/memorystream.cs
@@ -504,7 +504,7 @@ namespace Medallion.Shell.Streams
                 get { return this.reader.BaseStream; }
             }
 
-            public override string GetContent()
+            public override string ReadContent()
             {
                 this.handler.SetMode(Mode.Buffer);
                 this.handler.Task.Wait();
@@ -523,7 +523,7 @@ namespace Medallion.Shell.Streams
                 }
             }
 
-            public override byte[] GetContentBytes()
+            public override byte[] ReadContentBytes()
             {
                 this.handler.SetMode(Mode.Buffer);
                 this.handler.Task.Wait();
@@ -552,7 +552,7 @@ namespace Medallion.Shell.Streams
                     // contents and read lines from that. This is unlikely to cause extra blocking, since
                     // we already called one of the other methods that sets the mode to buffer and those
                     // methods are blocking
-                    using (var reader = new StringReader(this.GetContent()))
+                    using (var reader = new StringReader(this.ReadContent()))
                     {
                         string line;
                         while ((line = reader.ReadLine()) != null)

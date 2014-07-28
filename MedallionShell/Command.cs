@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
-    // TODO command should be disposable
+    // TODO kill
+    // TODO dispose on exit (defaults to true)
 
     /// <summary>
     /// Represents an executing <see cref="Process"/> as well as related asynchronous activity (e. g. the piping of
@@ -17,16 +18,6 @@ namespace Medallion.Shell
     /// </summary>
     public abstract partial class Command : IDisposable
     {
-        // TODO task management & error handling
-        // => if the process finishes normally, but the input task fails, is that an overall failure?
-        // => output tasks should definitely be a cause for failure
-        //
-        // If you call > BEFORE a command has completed or before the task was observed, the error
-        // should go as part of the task. Otherwise, this will FAIL because the content has already been wrapped
-        // up in string form alternatively, this could run synchronously at that point
-        //
-        // Another note: when piping TO a process like HEAD that will cut you off, 
-
         // prevent external inheritors
         internal Command() { }
 

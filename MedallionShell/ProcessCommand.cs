@@ -39,10 +39,7 @@ namespace Medallion.Shell
 
         private async Task<CommandResult> CreateCombinedTask(List<Task> tasks)
         {
-            foreach (var task in tasks)
-            {
-                await task.ConfigureAwait(false);
-            }
+            await System.Threading.Tasks.Task.WhenAll(tasks).ConfigureAwait(false);
             return new CommandResult(this);
         }
 

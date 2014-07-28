@@ -25,14 +25,14 @@ namespace Medallion.Shell.Streams
         /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
         /// reader have been read from via different methods).
         /// </summary>
-        public abstract string GetContent();
+        public abstract string ReadContent();
 
         /// <summary>
         /// Returns the full content output by the process as a byte array. Unlike <see cref="TextReader.ReadToEnd"/>, This will fail with
         /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
         /// reader have been read from via different methods).
         /// </summary>
-        public abstract byte[] GetContentBytes();
+        public abstract byte[] ReadContentBytes();
 
         /// <summary>
         /// Returns the lines of output as an <see cref="IEnumerable{String}"/>
