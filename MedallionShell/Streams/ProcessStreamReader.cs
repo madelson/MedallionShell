@@ -20,6 +20,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public abstract Stream BaseStream { get; }
 
+        // TODO internal?
         /// <summary>
         /// Returns the full content output by the process as a string. Unlike <see cref="TextReader.ReadToEnd"/>, This will fail with
         /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
@@ -27,6 +28,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public abstract string ReadContent();
 
+        // TODO internal?
         /// <summary>
         /// Returns the full content output by the process as a byte array. Unlike <see cref="TextReader.ReadToEnd"/>, This will fail with
         /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or

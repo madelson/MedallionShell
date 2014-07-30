@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell
@@ -52,7 +53,12 @@ namespace Medallion.Shell
             };
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 
-            var command = new ProcessCommand(processStartInfo, throwOnError: finalOptions.ThrowExceptionOnError);
+            var command = new ProcessCommand(
+                processStartInfo, 
+                throwOnError: finalOptions.ThrowExceptionOnError,
+                disposeOnExit: finalOptions.DisposeProcessOnExit,
+                timeout: finalOptions.ProcessTimeout
+            );
             finalOptions.CommandInitializers.ForEach(a => a(command));
 
             return command;
@@ -108,6 +114,8 @@ namespace Medallion.Shell
             internal List<Action<Command>> CommandInitializers { get; private set; }
             internal CommandLineSyntax CommandLineSyntax { get; private set; }
             internal bool ThrowExceptionOnError { get; set; }
+            internal bool DisposeProcessOnExit { get; set; }
+            internal TimeSpan ProcessTimeout { get; set; }
 
             #region ---- Builder methods ----
             /// <summary>
@@ -119,6 +127,8 @@ namespace Medallion.Shell
                 this.CommandInitializers = new List<Action<Command>>();
                 this.CommandLineSyntax = new WindowsCommandLineSyntax();
                 this.ThrowExceptionOnError = false;
+                this.DisposeProcessOnExit = true;
+                this.ProcessTimeout = System.Threading.Timeout.InfiniteTimeSpan;
                 return this;
             }
 
@@ -186,6 +196,17 @@ namespace Medallion.Shell
             }
 
             /// <summary>
+            /// If specified, the underlying <see cref="Process"/> object for the command will be disposed when the process exits.
+            /// This means that there is no need to dispose of a <see cref="Command"/>. This also means that <see cref="Medallion.Shell.Command.Process"/> cannot be reliably accessed, 
+            /// since it may exit at any time. Defaults to true
+            /// </summary>
+            public Options DisposeOnExit(bool value = true)
+            {
+                this.DisposeProcessOnExit = value;
+                return this;
+            }
+
+            /// <summary>
             /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to an instance of
             /// <see cref="WindowsCommandLineSyntax"/>
             /// </summary>
@@ -194,6 +215,17 @@ namespace Medallion.Shell
                 Throw.IfNull(syntax, "syntax");
 
                 this.CommandLineSyntax = syntax;
+                return this;
+            }
+
+            /// <summary>
+            /// Specifies a timeout after which the process should be killed. Defaults to <see cref="System.Threading.Timeout.InfiniteTimeSpan"/>
+            /// </summary>
+            public Options Timeout(TimeSpan timeout)
+            {
+                Throw<ArgumentOutOfRangeException>.If(timeout < TimeSpan.Zero && timeout != System.Threading.Timeout.InfiniteTimeSpan, "timeout");
+
+                this.ProcessTimeout = timeout;
                 return this;
             }
             #endregion

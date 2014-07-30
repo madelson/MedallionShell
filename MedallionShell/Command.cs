@@ -205,15 +205,16 @@ namespace Medallion.Shell
 
         #region ---- Dispose ----
         /// <summary>
-        /// Releases all resources associated with this <see cref="Command"/>
+        /// Releases all resources associated with this <see cref="Command"/>. This is only required
+        /// if the <see cref="Shell.Options.DisposeOnExit"/> has been set to false
         /// </summary>
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             this.DisposeInternal();
         }
 
         /// <summary>
-        /// Subclass-specific implementation of <see cref="Dispose"/>
+        /// Subclass-specific implementation of <see cref="IDisposable.Dispose"/>
         /// </summary>
         protected abstract void DisposeInternal();
         #endregion

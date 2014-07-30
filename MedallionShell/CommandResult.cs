@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 namespace Medallion.Shell
 {
     // TODO rethink this class
+    // TODO how will ExitCode work on Dispose()?
 
     /// <summary>
     /// The result of a <see cref="Command"/>

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SampleCommand
@@ -47,6 +48,10 @@ namespace SampleCommand
                     {
                         Console.WriteLine(argument);
                     }
+                    break;
+                case "sleep":
+                    Log("Sleeping for " + args[1]);
+                    Thread.Sleep(int.Parse(args[1]));
                     break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);

@@ -6,22 +6,33 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using SystemTask = System.Threading.Tasks.Task;
 
 namespace Medallion.Shell
 {
     internal sealed class ProcessCommand : Command
     {
-        internal ProcessCommand(ProcessStartInfo startInfo, bool throwOnError)
+        private readonly bool disposeOnExit;
+
+        internal ProcessCommand(ProcessStartInfo startInfo, bool throwOnError, bool disposeOnExit, TimeSpan timeout)
         {
+            this.disposeOnExit = disposeOnExit;
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
-            var tasks = new List<Task>(capacity: 3) { CreateProcessTask(this.Process, throwOnError: throwOnError) };
-            this.Process.Start();
+            var processTask = CreateProcessTask(this.process, throwOnError: throwOnError, timeout: timeout);
+            if (this.disposeOnExit)
+            {
+                processTask.ContinueWith(_ => this.process.Dispose());
+            }
+
+            var tasks = new List<Task>(capacity: 3) { processTask };
+            this.process.Start();
 
             if (startInfo.RedirectStandardOutput)
             {
-                this.standardOutputHandler = new ProcessStreamHandler(this.Process.StandardOutput.BaseStream);
+                this.standardOutputHandler = new ProcessStreamHandler(this.process.StandardOutput.BaseStream);
                 tasks.Add(this.standardOutputHandler.Task);
             }
             if (startInfo.RedirectStandardError)
@@ -39,14 +50,21 @@ namespace Medallion.Shell
 
         private async Task<CommandResult> CreateCombinedTask(List<Task> tasks)
         {
-            await System.Threading.Tasks.Task.WhenAll(tasks).ConfigureAwait(false);
+            await SystemTask.WhenAll(tasks).ConfigureAwait(false);
             return new CommandResult(this);
         }
 
         private readonly Process process;
         public override System.Diagnostics.Process Process
         {
-            get { return this.process; }
+            get 
+            {
+                Throw<InvalidOperationException>.If(
+                    this.disposeOnExit,
+                    "Process can only be accessed when the command is not set to dispose on exit. This is to prevent non-deterministic code which may access the process before or after it exits"
+                );
+                return this.process; 
+            }
         }
 
         private IReadOnlyList<Process> processes;
@@ -84,7 +102,7 @@ namespace Medallion.Shell
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
 
-        private static Task CreateProcessTask(Process process, bool throwOnError)
+        private static Task CreateProcessTask(Process process, bool throwOnError, TimeSpan timeout)
         {
             var taskCompletionSource = new TaskCompletionSource<bool>();
             process.Exited += (o, e) =>
@@ -100,13 +118,32 @@ namespace Medallion.Shell
                     taskCompletionSource.SetResult(true);
                 }
             };
-            return taskCompletionSource.Task;
+            return timeout != Timeout.InfiniteTimeSpan
+                ? AddTimeout(taskCompletionSource.Task, process, timeout)
+                : taskCompletionSource.Task;
+        }
+
+        private static async Task AddTimeout(Task task, Process process, TimeSpan timeout)
+        {
+            // http://stackoverflow.com/questions/4238345/asynchronously-wait-for-taskt-to-complete-with-timeout
+            if (await SystemTask.WhenAny(task, SystemTask.Delay(timeout)).ConfigureAwait(false) != task) 
+            {
+                Log.WriteLine("Process timed out");
+                try 
+                {
+                    process.Kill();
+                }
+                catch (Exception ex) 
+                {
+                    Log.WriteLine("Exception killing process: " + ex);
+                }
+                throw new TimeoutException("Process killed after exceeding timeout of " + timeout);
+            }
         }
 
         protected override void DisposeInternal()
         {
             this.process.Dispose();
-            this.task.Dispose();
         }
     }
 }

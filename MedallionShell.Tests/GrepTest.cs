@@ -77,6 +77,15 @@ namespace Medallion.Shell.Tests
 
             shell.Run("SampleCommand", "exit", 0).Task.Wait();
         }
+
+        [TestMethod]
+        public void TestTimeout()
+        {
+            var willTimeout = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.FromMilliseconds(200)));
+            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => willTimeout.Task.Wait());
+            Assert.IsInstanceOfType(ex.InnerException, typeof(TimeoutException));
+        }
+
         // TODO error handling tests
     }
 }
