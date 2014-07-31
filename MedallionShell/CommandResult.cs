@@ -7,28 +7,24 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
-    // TODO rethink this class
-    // TODO how will ExitCode work on Dispose()?
-
     /// <summary>
     /// The result of a <see cref="Command"/>
     /// </summary>
     public sealed class CommandResult
     { 
-        internal CommandResult(Command command)
-        {
-            this.Command = command;
-        }
+        private readonly Lazy<string> standardOutput, standardError;
 
-        /// <summary>
-        /// The command
-        /// </summary>
-        public Command Command { get; private set; }
+        internal CommandResult(int exitCode, Command command)
+        {
+            this.ExitCode = exitCode;
+            this.standardOutput = new Lazy<string>(() => command.StandardOutput.ReadContent());
+            this.standardError = new Lazy<string>(() => command.StandardError.ReadContent());
+        }
 
         /// <summary>
         /// The exit code of the command's process
         /// </summary>
-        public int ExitCode { get { return this.Command.Process.ExitCode; } }
+        public int ExitCode { get; private set; }
 
         /// <summary>
         /// Returns true iff the exit code is 0 (indicating success)
@@ -38,11 +34,11 @@ namespace Medallion.Shell
         /// <summary>
         /// If available, the full standard output text of the command
         /// </summary>
-        public string StandardOutput { get { return this.Command.StandardOutput.ReadContent(); } }
+        public string StandardOutput { get { return this.standardOutput.Value; } }
 
         /// <summary>
         /// If available, the full standard error text of the command
         /// </summary>
-        public string StandardError { get { return this.Command.StandardError.ReadContent(); } }
+        public string StandardError { get { return this.standardError.Value; } }
     }
 }

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
+    // TODO ReadFullContent/Bytes should use the underlying read method somehow (e. g. enforce single call to readtoend)
+
     /// <summary>
     /// An implementation of <see cref="TextReader"/> with additional methods to control behavior. The 
     /// </summary>

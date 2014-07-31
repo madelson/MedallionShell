@@ -76,18 +76,18 @@ namespace Medallion.Shell.Streams
 
         private readonly Task readLoopTask;
 
-        public ProcessStreamHandler(Stream stream)
+        public ProcessStreamHandler(StreamReader reader)
         {
-            Throw.IfNull(stream, "stream");
+            Throw.IfNull(reader, "reader");
 
-            this.processStream = stream;
-            this.reader = new InternalReader(this);
+            this.processStream = reader.BaseStream;
+            this.reader = new InternalReader(this, reader.CurrentEncoding);
             // we don't need Task.Run here since this reaches an await very
             // quickly
             this.readLoopTask = this.ReadLoop()
                 .ContinueWith(t => 
                 {
-                    Log.WriteLine("ReadLoop finished for {0} (success = {1})", stream.GetHashCode(), !t.IsFaulted);
+                    Log.WriteLine("ReadLoop finished for {0} (success = {1})", reader.GetHashCode(), !t.IsFaulted);
                     if (t.IsFaulted)
                     {
                         this.taskCompletionSource.TrySetException(t.Exception);
@@ -321,7 +321,6 @@ namespace Medallion.Shell.Streams
                             .ConfigureAwait(false);
                         if (bytesReadFromProcessStream == 0)
                         {
-                            // both the buffer and the process stream are exhausted: return false
                             this.handler.taskCompletionSource.TrySetResult(true);
                         }
                         return bytesReadFromMemoryStreams + bytesReadFromProcessStream;
@@ -365,7 +364,9 @@ namespace Medallion.Shell.Streams
 
                 public int EndRead()
                 {
-                    return this.readAsyncTask.Result;
+                    var result = this.readAsyncTask.Result;
+                    this.readAsyncTask.Dispose();
+                    return result;
                 }
 
                 object IAsyncResult.AsyncState
@@ -385,7 +386,7 @@ namespace Medallion.Shell.Streams
 
                 bool IAsyncResult.IsCompleted
                 {
-                    get { return this.readAsyncTask.IsCompleted; }
+                    get { return this.readAsyncTask.As<IAsyncResult>().IsCompleted; }
                 }
             }
             #endregion
@@ -415,34 +416,42 @@ namespace Medallion.Shell.Streams
             /// </summary>
             private int ReadFromMemoryStreams(byte[] buffer, int offset, int count)
             {
-                // if we have memory stream, try to read from that
-                if (this.memoryStream != null)
+                var bytesRead = 0;
+                while (bytesRead < count)
                 {
-                    var result = this.memoryStream.Read(buffer, offset, count);
+                    // if we have no memory stream, try to take one from the handler
+                    if (this.memoryStream == null)
+                    {
+                        var handlerStream = this.handler.memoryStream;
+                        if (handlerStream != null && handlerStream.Length > 0)
+                        {
+                            handlerStream.Seek(0, SeekOrigin.Begin);
+                            this.memoryStream = handlerStream;
+                            this.handler.memoryStream = null;
+                            // fall through
+                        }
+                        else
+                        {
+                            // nothing more to read
+                            break;
+                        }
+                    }
+
+                    // read from our memory stream
+                    var result = this.memoryStream.Read(buffer, offset + bytesRead, count - bytesRead);
                     if (result > 0)
                     {
-                        return result;
+                        bytesRead += result;
                     }
                     else
                     {
+                        // our stream is exhausted: clean it up
                         this.memoryStream.Dispose();
                         this.memoryStream = null;
-                        // fall through
                     }
                 }
 
-                // if the handler has a memory stream, copy it to our memory
-                // stream and call again
-                if (this.handler.memoryStream != null)
-                {
-                    this.memoryStream = this.handler.memoryStream;
-                    this.handler.memoryStream = null;
-                    this.memoryStream.Seek(0, SeekOrigin.Begin);
-                    return this.ReadFromMemoryStreams(buffer, offset, count);
-                }
-
-                // otherwise, we've exhausted all memory streams so return 0 bytes read
-                return 0;
+                return bytesRead;
             }
             #endregion
 
@@ -492,10 +501,10 @@ namespace Medallion.Shell.Streams
             private readonly ProcessStreamHandler handler;
             private readonly StreamReader reader;
 
-            public InternalReader(ProcessStreamHandler handler)
+            public InternalReader(ProcessStreamHandler handler, Encoding encoding)
             {
                 this.handler = handler;
-                this.reader = new StreamReader(new InternalStream(handler));
+                this.reader = new StreamReader(new InternalStream(handler), encoding);
             }
 
             #region ---- ProcessStreamReader implementation ----

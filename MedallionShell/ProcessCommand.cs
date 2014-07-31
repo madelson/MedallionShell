@@ -22,36 +22,40 @@ namespace Medallion.Shell
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
             var processTask = CreateProcessTask(this.process, throwOnError: throwOnError, timeout: timeout);
-            if (this.disposeOnExit)
-            {
-                processTask.ContinueWith(_ => this.process.Dispose());
-            }
 
-            var tasks = new List<Task>(capacity: 3) { processTask };
             this.process.Start();
 
+            var ioTasks = new List<Task>(capacity: 2);
             if (startInfo.RedirectStandardOutput)
             {
-                this.standardOutputHandler = new ProcessStreamHandler(this.process.StandardOutput.BaseStream);
-                tasks.Add(this.standardOutputHandler.Task);
+                this.standardOutputHandler = new ProcessStreamHandler(this.process.StandardOutput);
+                ioTasks.Add(this.standardOutputHandler.Task);
             }
             if (startInfo.RedirectStandardError)
             {
-                this.standardErrorHandler = new ProcessStreamHandler(this.process.StandardError.BaseStream);
-                tasks.Add(this.standardErrorHandler.Task);
+                this.standardErrorHandler = new ProcessStreamHandler(this.process.StandardError);
+                ioTasks.Add(this.standardErrorHandler.Task);
             }
             if (startInfo.RedirectStandardInput)
             {
                 this.standardInput = new ProcessStreamWriter(this.process.StandardInput);
             }
 
-            this.task = this.CreateCombinedTask(tasks);
+            this.task = this.CreateCombinedTask(processTask, ioTasks);
         }
 
-        private async Task<CommandResult> CreateCombinedTask(List<Task> tasks)
+        private async Task<CommandResult> CreateCombinedTask(Task processTask, List<Task> ioTasks)
         {
-            await SystemTask.WhenAll(tasks).ConfigureAwait(false);
-            return new CommandResult(this);
+            await processTask.ConfigureAwait(false);
+            var exitCode = this.process.ExitCode;
+            if (this.disposeOnExit)
+            {
+                // clean up the process AFTER we capture the exit code
+                this.process.Dispose();
+            }
+
+            await SystemTask.WhenAll(ioTasks).ConfigureAwait(false);
+            return new CommandResult(exitCode, this);
         }
 
         private readonly Process process;
@@ -96,7 +100,11 @@ namespace Medallion.Shell
         private readonly ProcessStreamHandler standardErrorHandler;
         public override Streams.ProcessStreamReader StandardError
         {
-            get { throw new NotImplementedException(); }
+            get 
+            {
+                Throw<InvalidOperationException>.If(this.standardErrorHandler == null, "Standard error is not redirected");
+                return this.standardOutputHandler.Reader;
+            }
         }
 
         private readonly Task<CommandResult> task;
