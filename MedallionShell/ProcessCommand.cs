@@ -46,13 +46,20 @@ namespace Medallion.Shell
 
         private async Task<CommandResult> CreateCombinedTask(Task processTask, List<Task> ioTasks)
         {
-            await processTask.ConfigureAwait(false);
-            var exitCode = this.process.ExitCode;
-            if (this.disposeOnExit)
+            int exitCode;
+            try
             {
-                // clean up the process AFTER we capture the exit code
-                this.process.Dispose();
+                await processTask.ConfigureAwait(false);
+                exitCode = this.process.ExitCode;
             }
+            finally
+            {
+                if (this.disposeOnExit)
+                {
+                    // clean up the process AFTER we capture the exit code
+                    this.process.Dispose();
+                }
+            }            
 
             await SystemTask.WhenAll(ioTasks).ConfigureAwait(false);
             return new CommandResult(exitCode, this);

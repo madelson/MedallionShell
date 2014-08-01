@@ -455,10 +455,12 @@ namespace Medallion.Shell.Streams
             }
             #endregion
 
+            #region ---- Other Stream methods ----
             protected override void Dispose(bool disposing)
             {
                 this.handler.SetMode(Mode.DiscardContents);
             }
+            #endregion
 
             #region ---- Non-supported Stream methods ----
             public override void Flush()

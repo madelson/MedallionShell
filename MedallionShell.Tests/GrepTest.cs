@@ -40,6 +40,43 @@ namespace Medallion.Shell.Tests
         }
 
         [TestMethod]
+        public void TestLongWriteWithInfrequentReads()
+        {
+            var lines = Enumerable.Range(0, 100).Select(i => i.ToString())
+                .ToArray();
+
+            var command = Command.Run("SampleCommand", "grep", ".") < lines;
+            var outputLines = new List<string>();
+            var readTask = Task.Run(() =>
+            {
+                var rand = new Random(12345);
+                while (true)
+                {
+                    if (rand.Next(10) == 0)
+                    {
+                        Thread.Sleep(200);
+                    }
+                    else
+                    {
+                        var line = command.StandardOutput.ReadLine();
+                        if (line == null)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            outputLines.Add(line);
+                        }
+                    }
+                }
+            });
+
+            Task.WaitAll(command.Task, readTask);
+
+            string.Join("/", outputLines).ShouldEqual(string.Join("/", lines));
+        }
+
+        [TestMethod]
         public void TestHead()
         {
             var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
