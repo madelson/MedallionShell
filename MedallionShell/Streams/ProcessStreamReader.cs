@@ -60,33 +60,83 @@ namespace Medallion.Shell.Streams
         /// Pipes the output of the underlying stream to the given stream. This occurs asynchronously, so this
         /// method returns before all content has been written
         /// </summary>
-        public abstract Task PipeToAsync(Stream stream, bool leaveReaderOpen = false, bool leaveStreamOpen = false);
+        public Task PipeToAsync(Stream stream, bool leaveReaderOpen = false, bool leaveStreamOpen = false)
+        {
+            Throw.IfNull(stream, "stream");
+
+            return this.PipeAsync(
+                () => this.BaseStream.CopyToAsync(stream),
+                leaveOpen: leaveReaderOpen,
+                extraDisposeAction: leaveStreamOpen ? default(Action) : () => stream.Dispose()
+            );
+        }
 
         /// <summary>
         /// Pipes the output of the reader to the given writer. This occurs asynchronously, so this
         /// method returns before all content has been written
         /// </summary>
-        public abstract Task PipeToAsync(TextWriter writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false);
+        public Task PipeToAsync(TextWriter writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false)
+        {
+            Throw.IfNull(writer, "writer");
+
+            return this.CopyToAsync(writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
+        }
 
         /// <summary>
         /// Asynchronously copies each line of output to the given collection
         /// </summary>
-        public abstract Task PipeToAsync(ICollection<string> lines, bool leaveReaderOpen = false);
+        public Task PipeToAsync(ICollection<string> lines, bool leaveReaderOpen = false)
+        {
+            Throw.IfNull(lines, "lines");
+
+            return this.PipeAsync(
+                async () =>
+                {
+                    string line;
+                    while ((line = await this.ReadLineAsync().ConfigureAwait(false)) != null)
+                    {
+                        lines.Add(line);
+                    }
+                },
+                leaveOpen: leaveReaderOpen
+            );
+        }
 
         /// <summary>
         /// Asynchronously writes all output to the given file
         /// </summary>
-        /// <param name="file"></param>
-        /// <param name="leaveReaderOpen"></param>
-        /// <returns></returns>
         public Task PipeToAsync(FileInfo file, bool leaveReaderOpen = false)
         {
             Throw.IfNull(file, "file");
-
+            
             // used over FileInfo.OpenWrite to get read file share, which seems potentially useful and
             // not that harmful
             var stream = new FileStream(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
             return this.PipeToAsync(stream, leaveReaderOpen: leaveReaderOpen, leaveStreamOpen: false);
+        }
+
+        /// <summary>
+        /// Asynchronously copies each charater to the given collection
+        /// </summary>
+        public Task PipeToAsync(ICollection<char> chars, bool leaveReaderOpen = false)
+        {
+            Throw.IfNull(chars, "chars");
+
+            return this.PipeAsync(
+                async () =>
+                {
+                    var buffer = new char[Constants.CharBufferSize];
+                    int bytesRead;
+                    while ((bytesRead = await this.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) != 0)
+                    {
+                        for (var i = 0; i < bytesRead; ++i) 
+                        {
+                            chars.Add(buffer[i]);
+                        }
+                    }
+                },
+                leaveOpen: leaveReaderOpen
+            );
         }
     }
 }

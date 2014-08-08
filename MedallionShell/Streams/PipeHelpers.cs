@@ -9,16 +9,28 @@ namespace Medallion.Shell.Streams
 {
     internal static class PipeHelpers
     {
-        public static async Task CopyToAsync(this TextReader reader, TextWriter writer, bool leaveReaderOpen, bool leaveWriterOpen)
+        public static Task CopyToAsync(this TextReader reader, TextWriter writer, bool leaveReaderOpen, bool leaveWriterOpen)
+        {
+            return reader.PipeAsync(
+                async () =>
+                {
+                    var buffer = new char[Constants.CharBufferSize];
+                    int charsRead;
+                    while ((charsRead = await reader.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                    {
+                        await writer.WriteAsync(buffer, 0, charsRead).ConfigureAwait(false);
+                    }
+                },
+                leaveOpen: leaveReaderOpen,
+                extraDisposeAction: leaveWriterOpen ? default(Action) : () => writer.Dispose()
+            );
+        }
+ 
+        public static async Task PipeAsync(this IDisposable @this, Func<Task> pipeTaskFactory, bool leaveOpen, Action extraDisposeAction = null)
         {
             try
             {
-                var buffer = new char[Constants.CharBufferSize];
-                int charsRead;
-                while ((charsRead = await reader.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0) 
-                {
-                    await writer.WriteAsync(buffer, 0, charsRead).ConfigureAwait(false);
-                }
+                await pipeTaskFactory().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -29,15 +41,15 @@ namespace Medallion.Shell.Streams
             }
             finally
             {
-                if (!leaveReaderOpen)
+                if (!leaveOpen)
                 {
-                    reader.Dispose();
+                    @this.Dispose();
                 }
-                if (!leaveWriterOpen)
+                if (extraDisposeAction != null)
                 {
-                    writer.Dispose();
+                    extraDisposeAction();
                 }
             }
-        } 
+        }
     }
 }

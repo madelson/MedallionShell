@@ -34,35 +34,16 @@ namespace Medallion.Shell.Streams
         {
             Throw.IfNull(stream, "stream");
 
-            return this.PipeFromAsyncInternal(stream, leaveWriterOpen: leaveWriterOpen, leaveStreamOpen: leaveStreamOpen);
-        }
-
-        private async Task PipeFromAsyncInternal(Stream stream, bool leaveWriterOpen, bool leaveStreamOpen)
-        {
-            try
-            {
-                // flush any content buffered in the writer, since we'll be using the raw stream
-                await this.writer.FlushAsync().ConfigureAwait(false);
-                await stream.CopyToAsync(this.BaseStream).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                if (!ex.IsExpectedPipeException())
+            return this.PipeAsync(
+                async () => 
                 {
-                    throw;
-                }
-            }
-            finally
-            {
-                if (!leaveWriterOpen)
-                {
-                    this.Dispose();
-                }
-                if (!leaveStreamOpen)
-                {
-                    stream.Dispose();
-                }
-            }
+                    // flush any content buffered in the writer, since we'll be using the raw stream
+                    await this.writer.FlushAsync().ConfigureAwait(false);
+                    await stream.CopyToAsync(this.BaseStream).ConfigureAwait(false);
+                },
+                leaveOpen: leaveWriterOpen,
+                extraDisposeAction: leaveStreamOpen ? default(Action) : () => stream.Dispose()
+            );
         }
 
         /// <summary>
@@ -72,32 +53,17 @@ namespace Medallion.Shell.Streams
         {
             Throw.IfNull(lines, "lines");
 
-            return this.PipeFromAsyncInternal(lines, leaveWriterOpen);
-        }
-
-        private async Task PipeFromAsyncInternal(IEnumerable<string> lines, bool leaveOpen)
-        {
-            try
-            {
-                foreach (var line in lines)
+            return this.PipeAsync(
+                // wrap in Task.Run since GetEnumerator() or MoveNext() might block
+                () => Task.Run(async () =>
                 {
-                    await this.writer.WriteLineAsync(line).ConfigureAwait(false);
-                }
-            }
-            catch (Exception ex)
-            {
-                if (!ex.IsExpectedPipeException())
-                {
-                    throw;
-                }
-            }
-            finally
-            {
-                if (!leaveOpen)
-                {
-                    this.Dispose();
-                }
-            }
+                    foreach (var line in lines)
+                    {
+                        await this.WriteLineAsync(line).ConfigureAwait(false);
+                    }
+                }),
+                leaveOpen: leaveWriterOpen
+            );
         }
 
         /// <summary>
@@ -119,6 +85,32 @@ namespace Medallion.Shell.Streams
 
             var stream = file.OpenRead();
             return this.PipeFromAsync(stream, leaveWriterOpen: leaveWriterOpen, leaveStreamOpen: false);
+        }
+
+        /// <summary>
+        /// Asynchronously writes all content from <paramref name="chars"/> to this writer
+        /// </summary>
+        public Task PipeFromAsync(IEnumerable<char> chars, bool leaveWriterOpen = false)
+        {
+            Throw.IfNull(chars, "chars");
+
+            var @string = chars as string;      
+            return this.PipeAsync(
+                @string != null
+                    // special-case string since we can use the built-in WriteAsync
+                    ? new Func<Task>(() => this.WriteAsync(@string))
+                    // when enumerating, layer on a Task.Run since GetEnumerator() or MoveNext() might block
+                    : () => Task.Run(async () =>
+                    {
+                        var buffer = new char[Constants.CharBufferSize];
+                        // TODO really fill
+                        foreach (var ch in chars)
+                        {
+                            await this.WriteAsync(ch).ConfigureAwait(false);
+                        }
+                    }),
+                leaveOpen: leaveWriterOpen
+            );
         }
         #endregion
 
