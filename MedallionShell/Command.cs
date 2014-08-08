@@ -138,6 +138,35 @@ namespace Medallion.Shell
 
             return new IoCommand(command, command.StandardInput.PipeFromAsync(lines));
         }
+
+        /// <summary>
+        /// Standard output redirection as in bash. The chars of <see cref="Command"/>'s standard output are added to the given
+        /// collection (<paramref name="chars"/> MUST be an instance of <see cref="ICollection{Char}"/>; the use of the <see cref="IEnumerable{Character}"/>. 
+        /// type is to provide the required parity with the input redirection operator. Returns a new <see cref="Command"/> 
+        /// whose <see cref="Command.Task"/> tracks the progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public static Command operator >(Command command, IEnumerable<char> chars)
+        {
+            Throw.IfNull(command, "command");
+            Throw.IfNull(chars, "chars");
+
+            var charCollection = chars as ICollection<char>;
+            Throw<ArgumentException>.If(charCollection == null, "chars: must implement ICollection<char> in order to receive output");
+
+            return new IoCommand(command, command.StandardOutput.PipeToAsync(charCollection));
+        }
+
+        /// <summary>
+        /// Standard input redirection as in bash. The items in <paramref name="chars"/> are written to the <see cref="Command"/>'s 
+        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the 
+        /// progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public static Command operator <(Command command, IEnumerable<char> chars)
+        {
+            Throw.IfNull(command, "command");
+
+            return new IoCommand(command, command.StandardInput.PipeFromAsync(chars));
+        }
         #endregion
 
         #region ---- && and || support ----
