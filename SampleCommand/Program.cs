@@ -19,6 +19,10 @@ namespace SampleCommand
             string line;
             switch (args[0])
             {
+                case "echo":
+                    var input = Console.In.ReadToEnd();
+                    Console.Out.Write(input);
+                    break;
                 case "grep":
                     var regex = new Regex(args[1]);
                     while ((line = Console.ReadLine()) != null)

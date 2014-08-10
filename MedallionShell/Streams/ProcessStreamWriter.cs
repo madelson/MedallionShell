@@ -103,10 +103,24 @@ namespace Medallion.Shell.Streams
                     : () => Task.Run(async () =>
                     {
                         var buffer = new char[Constants.CharBufferSize];
-                        // TODO really fill
-                        foreach (var ch in chars)
+                        using (var enumerator = chars.GetEnumerator())
                         {
-                            await this.WriteAsync(ch).ConfigureAwait(false);
+                            while (true)
+                            {
+                                var i = 0;
+                                while (i < buffer.Length && enumerator.MoveNext())
+                                {
+                                    buffer[i++] = enumerator.Current;
+                                }
+                                if (i > 0)
+                                {
+                                    await this.WriteAsync(buffer, 0, count: i).ConfigureAwait(false);
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
                         }
                     }),
                 leaveOpen: leaveWriterOpen
