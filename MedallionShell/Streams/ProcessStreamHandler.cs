@@ -15,14 +15,10 @@ namespace Medallion.Shell.Streams
         private enum Mode
         {
             /// <summary>
-            /// As <see cref="Mode.Buffer"/>, but can transition to other modes
-            /// </summary>
-            Default = 0,
-            /// <summary>
             /// The contents of the stream is buffered internally so that the process will never be blocked because
-            /// the pipe is full. This is behaviorally equivalent to the default mode
+            /// the pipe is full. This is the default mode
             /// </summary>
-            Buffer,
+            Buffer = 0,
             /// <summary>
             /// The contents of the stream can be accessed manually via <see cref="Stream"/>
             /// operations. However, internal buffering ensures that the process will never be blocked because
@@ -74,6 +70,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         private readonly TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
 
+        // TODO we don't really need this
         private readonly Task readLoopTask;
 
         public ProcessStreamHandler(StreamReader reader)
@@ -110,9 +107,14 @@ namespace Medallion.Shell.Streams
         {
             lock (this.modeLock)
             {
-                // when in the default mode, you can switch to any other mode (important since we start
+                if (this.mode == mode)
+                {
+                    return;
+                }
+
+                // when in the default (buffer) mode, you can switch to any other mode (important since we start
                 // in this mode)
-                if (this.mode == Mode.Default
+                if (this.mode == Mode.Buffer
                     // can always go into discard mode
                     || mode == Mode.DiscardContents
                     // when in manual read mode, you can always start buffering
@@ -121,33 +123,26 @@ namespace Medallion.Shell.Streams
                     || (this.mode == Mode.BufferedManualRead && mode == Mode.ManualRead))
                 {
                     this.mode = mode;
-                    if (mode == Mode.DiscardContents && this.mode != mode)
+
+                    if (mode == Mode.DiscardContents)
                     {
                         // we don't do this actively in order to prevent deadlock/blocking from taking the stream
                         // lock within the mode lock and to let any "current" stream operations finish first
                         this.readLoopTask.ContinueWith(_ => this.DiscardContent());
                     }
                 }
-                else if (this.mode != mode)
+                else
                 {
-                    string message;
                     switch (this.mode)
                     {
                         case Mode.DiscardContents:
-                            message = "The stream has been set to discard its contents, so it cannot be used in another mode";
-                            break;
+                            throw new ObjectDisposedException("process stream", "The stream has been set to discard its contents, so it cannot be used in another mode");
                         case Mode.ManualRead:
                         case Mode.BufferedManualRead:
-                            message = "The stream is already being read from, so it cannot be used in another mode";
-                            break;
-                        case Mode.Buffer:
-                            message = "The entire contents of the stream are being buffered, so it cannot be used in another mode";
-                            break;
+                            throw new InvalidOperationException("The stream is already being read from, so it cannot be used in another mode");
                         default:
                             throw new NotImplementedException("Unexpected mode " + mode.ToString());
                     }
-
-                    throw new InvalidOperationException(message);
                 }
             }
         }
@@ -182,7 +177,6 @@ namespace Medallion.Shell.Streams
                         // to avoid the process blocking
                         await Task.Delay(millisecondsDelay: delayTimeMillis).ConfigureAwait(false);
                         goto case Mode.Buffer;
-                    case Mode.Default:
                     case Mode.Buffer:
                         // grab the stream lock and read some bytes into the buffer
                         using (await this.streamLock.AcquireAsync().ConfigureAwait(false))
@@ -215,6 +209,8 @@ namespace Medallion.Shell.Streams
 
         private void DiscardContent()
         {
+            Log.WriteLine("Discarding content");
+
             // grab the stream lock and close all streams
             using (this.streamLock.AcquireAsync().Result)
             {
@@ -237,6 +233,8 @@ namespace Medallion.Shell.Streams
                 //    }
                 //}
             }
+
+            Log.WriteLine("Finished discarding content");
         }
 
         #region ---- Stream implementation ----
@@ -513,73 +511,6 @@ namespace Medallion.Shell.Streams
             public override Stream BaseStream
             {
                 get { return this.reader.BaseStream; }
-            }
-
-            public override string ReadContent()
-            {
-                this.handler.SetMode(Mode.Buffer);
-                this.handler.Task.Wait();
-                using (this.handler.streamLock.AcquireAsync().Result)
-                {
-                    if (this.handler.memoryStream == null)
-                    {
-                        this.ThrowDisposed();
-                    }
-
-                    this.handler.memoryStream.Seek(0, SeekOrigin.Begin);
-                    using (var reader = new StreamReader(this.handler.memoryStream))
-                    {
-                        return reader.ReadToEnd();
-                    }
-                }
-            }
-
-            public override byte[] ReadContentBytes()
-            {
-                this.handler.SetMode(Mode.Buffer);
-                this.handler.Task.Wait();
-                using (this.handler.streamLock.AcquireAsync().Result)
-                {
-                    if (this.handler.memoryStream == null)
-                    {
-                        this.ThrowDisposed();
-                    }
-
-                    return this.handler.memoryStream.ToArray();
-                }
-            }
- 
-            public override IEnumerable<string> GetLines()
-            {
-                Mode mode;
-                lock (this.handler.modeLock)
-                {
-                    mode = this.handler.mode;
-                }
-
-                if (mode == Mode.Buffer)
-                {
-                    // we can still support this in buffer mode, but it's different; we grab the full
-                    // contents and read lines from that. This is unlikely to cause extra blocking, since
-                    // we already called one of the other methods that sets the mode to buffer and those
-                    // methods are blocking
-                    using (var reader = new StringReader(this.ReadContent()))
-                    {
-                        string line;
-                        while ((line = reader.ReadLine()) != null)
-                        {
-                            yield return line;
-                        }
-                    }
-                }
-                else
-                {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
-                    {
-                        yield return line;
-                    }
-                }
             }
 
             public override void Discard()

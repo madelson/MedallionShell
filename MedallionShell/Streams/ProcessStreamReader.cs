@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
@@ -22,26 +23,48 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public abstract Stream BaseStream { get; }
 
-        // TODO internal?
         /// <summary>
-        /// Returns the full content output by the process as a string. Unlike <see cref="TextReader.ReadToEnd"/>, This will fail with
-        /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
-        /// reader have been read from via different methods).
+        /// Enumerates each remaining line of output. The enumerable cannot be re-used
         /// </summary>
-        public abstract string ReadContent();
+        public IEnumerable<string> GetLines()
+        {
+            return new LinesEnumerable(this);
+        }
 
-        // TODO internal?
-        /// <summary>
-        /// Returns the full content output by the process as a byte array. Unlike <see cref="TextReader.ReadToEnd"/>, This will fail with
-        /// <see cref="InvalidOperationException"/> if the full content is not available (e. g. if the stream or
-        /// reader have been read from via different methods).
-        /// </summary>
-        public abstract byte[] ReadContentBytes();
+        private class LinesEnumerable : IEnumerable<string>
+        {
+            private readonly TextReader reader;
+            private int consumed;
 
-        /// <summary>
-        /// Returns the lines of output as an <see cref="IEnumerable{String}"/>
-        /// </summary>
-        public abstract IEnumerable<string> GetLines();
+            public LinesEnumerable(TextReader reader)
+            {
+                this.reader = reader;
+            }
+
+            IEnumerator<string> IEnumerable<string>.GetEnumerator()
+            {
+                Throw<InvalidOperationException>.If(
+                    Interlocked.Exchange(ref this.consumed, 1) != 0, 
+                    "The enumerable returned by GetLines() can only be enumerated once"
+                );
+
+                return this.GetEnumeratorInternal();
+            }
+
+            private IEnumerator<string> GetEnumeratorInternal()
+            {
+                string line;
+                while ((line = this.reader.ReadLine()) != null)
+                {
+                    yield return line;
+                }
+            }
+
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+            {
+                return this.AsEnumerable().GetEnumerator();
+            }
+        }
 
         /// <summary>
         /// Discards all output from the underlying stream. This prevents the process from blocking because

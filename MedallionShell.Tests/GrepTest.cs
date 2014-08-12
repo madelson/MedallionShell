@@ -88,11 +88,12 @@ namespace Medallion.Shell.Tests
         public void TestCloseStandardOutput()
         {
             var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
-            var command = shell.Run("SampleCommand", "grep", "a");
-            command.Process.StandardOutput.BaseStream.Dispose();
-            var ignored = command < Enumerable.Repeat(new string('a', 1000), 1000);
-            command.Task.Wait();
-            command.Task.Result.StandardOutput.ShouldEqual(string.Empty);
+            var command = shell.Run("SampleCommand", "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
+            command.StandardOutput.BaseStream.ReadByte();
+            command.StandardOutput.BaseStream.Dispose();
+            // TODO stream should throw if disposed
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.BaseStream.ReadByte());
         }
 
         [TestMethod]

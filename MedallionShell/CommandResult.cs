@@ -17,8 +17,8 @@ namespace Medallion.Shell
         internal CommandResult(int exitCode, Command command)
         {
             this.ExitCode = exitCode;
-            this.standardOutput = new Lazy<string>(() => command.StandardOutput.ReadContent());
-            this.standardError = new Lazy<string>(() => command.StandardError.ReadContent());
+            this.standardOutput = new Lazy<string>(() => command.StandardOutput.ReadToEnd());
+            this.standardError = new Lazy<string>(() => command.StandardError.ReadToEnd());
         }
 
         /// <summary>
