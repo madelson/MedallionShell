@@ -99,11 +99,11 @@ namespace Medallion.Shell.Tests
         [TestMethod]
         public void TestExitCode()
         {
-            if (!Command.Run("SampleCommand", "exit", 0))
+            if (!Command.Run("SampleCommand", "exit", 0).Result.Success)
             {
                 Assert.Fail("Should have worked");
             }
-            if (Command.Run("SampleCommand", "exit", 1))
+            if (Command.Run("SampleCommand", "exit", 1).Result.Success)
             {
                 Assert.Fail("Should have failed");
             }

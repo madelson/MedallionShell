@@ -182,50 +182,6 @@ namespace Medallion.Shell
             return new IoCommand(command, command.StandardInput.PipeFromAsync(chars));
         }
         #endregion
-
-        #region ---- && and || support ----
-        /// <summary>
-        /// Provides support for use of boolean operators with processes as in bash.
-        /// The boolean value of the command is based on the process exit code
-        /// </summary>
-        public static bool operator true(Command command)
-        {
-            Throw.IfNull(command, "command");
-
-            return command.Task.Result.Success;
-        }
-
-        /// <summary>
-        /// Provides support for use of boolean operators with processes as in bash.
-        /// The boolean value of the command is based on the process exit code
-        /// </summary>
-        public static bool operator false(Command command)
-        {
-            Throw.IfNull(command, "command");
-
-            return !command.Task.Result.Success;
-        }
-
-        /// <summary>
-        /// This is required to support boolean AND but should never be called. This will always
-        /// throw a <see cref="NotSupportedException"/>
-        /// </summary>
-        public static Command operator &(Command @this, Command that)
-        {
-            throw new NotSupportedException("Bitwise & is not supported. It exists only to enable '&&'");
-        }
-
-        /// <summary>
-        /// Provides support for use of boolean operators with processes as in bash.
-        /// The boolean value of the command is based on the process exit code
-        /// </summary>
-        public static bool operator !(Command command)
-        {
-            Throw.IfNull(command, "command");
-
-            return command ? false : true;
-        }
-        #endregion
         #endregion
 
         #region ---- Static API ----
@@ -245,6 +201,12 @@ namespace Medallion.Shell
             return Shell.Default.Run(executable, arguments);
         }
         #endregion
+
+        // NOTE: we used to also override true, false, ! and & to support boolean conditions as in bash. The problem with
+        // this is that a statement like a || b || c uses "|" to evaluate a || b before combining it with c. We already override
+        // "|" to be the pipe operator, so this doesn't end up doing what we'd like. Rather than sacrifice piping (which is useful),
+        // I'm choosing to sacrifice boolean overloads, which are cool but not particularly useful given that you can just do
+        // .Result.Success
 
         #region ---- Dispose ----
         /// <summary>

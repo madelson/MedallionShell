@@ -57,6 +57,14 @@ namespace SampleCommand
                     Log("Sleeping for " + args[1]);
                     Thread.Sleep(int.Parse(args[1]));
                     break;
+                case "bool":
+                    Console.WriteLine(args[2]);
+                    Console.Out.Flush();
+                    if (!bool.Parse(args[1]))
+                    {
+                        Environment.Exit(1);
+                    }
+                    break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);
                     Environment.Exit(-1);
@@ -66,6 +74,7 @@ namespace SampleCommand
             Log("Exited normally");
         }
 
+        [Conditional("TESTING")]
         public static void Log(string format, params object[] args)
         {
             var baseText = string.Format("{0:h:m:ss.fff} {1} ({2}): ", DateTime.Now, Process.GetCurrentProcess().Id, string.Join(" ", Environment.GetCommandLineArgs()));
