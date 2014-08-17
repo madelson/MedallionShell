@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace Medallion.Shell.Tests
 {
     [TestClass]
-    public class GrepTest
+    public class GeneralTest
     {
         [TestMethod]
         public void TestGrep()

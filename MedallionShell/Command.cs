@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 namespace Medallion.Shell
 {
     // TODO kill
-    // TODO dispose on exit (defaults to true)
 
     /// <summary>
     /// Represents an executing <see cref="Process"/> as well as related asynchronous activity (e. g. the piping of
@@ -23,11 +22,13 @@ namespace Medallion.Shell
 
         /// <summary>
         /// The <see cref="Process"/> associated with this <see cref="Command"/>. In a multi-process command,
-        /// this will be the final <see cref="Process"/> in the chain
+        /// this will be the final <see cref="Process"/> in the chain. NOTE: this property cannot be accessed when using
+        /// the DisposeOnExit option
         /// </summary>
         public abstract Process Process { get; }
         /// <summary>
-        /// All <see cref="Process"/>es associated with this <see cref="Command"/>
+        /// All <see cref="Process"/>es associated with this <see cref="Command"/>. NOTE: this property cannot be accessed when using
+        /// the DisposeOnExit option
         /// </summary>
         public abstract IReadOnlyList<Process> Processes { get; }
 
