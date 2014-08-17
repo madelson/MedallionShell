@@ -45,6 +45,19 @@ namespace Medallion.Shell
         public abstract ProcessStreamReader StandardError { get; }
 
         /// <summary>
+        /// A convenience method for <code>command.Task.Wait()</code>
+        /// </summary>
+        public void Wait()
+        {
+            this.Task.Wait();
+        }
+
+        /// <summary>
+        /// A convenience method for <code>command.Task.Result</code>
+        /// </summary>
+        public CommandResult Result { get { return this.Task.Result; } }
+
+        /// <summary>
         /// A <see cref="Task"/> representing the progress of this <see cref="Command"/>
         /// </summary>
         public abstract Task<CommandResult> Task { get; }
