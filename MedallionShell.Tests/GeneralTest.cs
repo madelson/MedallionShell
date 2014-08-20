@@ -124,6 +124,57 @@ namespace Medallion.Shell.Tests
             Assert.IsInstanceOfType(ex.InnerException, typeof(TimeoutException));
         }
 
+        [TestMethod]
+        public void TestErrorHandling()
+        {
+            var command = Command.Run("SampleCommand", "echo") < "abc" > new char[0];
+            UnitTestHelpers.AssertThrows<AggregateException>(() => command.Wait());
+
+            var command2 = Command.Run("SampleCommand", "echo") < this.ErrorLines();
+            UnitTestHelpers.AssertThrows<AggregateException>(() => command.Wait());
+        }
+
+        [TestMethod]
+        public void TestStopBufferingAndDiscard()
+        {
+            var command = Command.Run("SampleCommand", "pipe");
+            command.StandardOutput.StopBuffering();
+            var line = new string('a', 100);
+            var state = 0;
+            while (state < 2)
+            {
+                Log.WriteLine("Write to unbuffered command");
+                var task = command.StandardInput.WriteLineAsync(line);
+                if (!task.Wait(TimeSpan.FromSeconds(1)))
+                {
+                    if (state == 0)
+                    {
+                        Log.WriteLine("Buffer full: read one line");
+                        var outLine = command.StandardOutput.ReadLine();
+                        outLine.ShouldEqual(line);
+                    }
+                    else
+                    {
+                        Log.WriteLine("Buffer full: discard content");
+                        command.StandardOutput.Discard();
+                    }
+                    
+                    task.Wait(TimeSpan.FromSeconds(.5)).ShouldEqual(true, "can finish after read");
+                    if (state == 1)
+                    {
+                        command.StandardInput.Close();
+                    }
+                    state++;
+                }
+            }
+        }
+
+        private IEnumerable<string> ErrorLines()
+        {
+            yield return "1";
+            throw new InvalidOperationException("Can't enumerate");
+        }
+
         // TODO error handling tests
     }
 }

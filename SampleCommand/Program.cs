@@ -65,6 +65,13 @@ namespace SampleCommand
                         Environment.Exit(1);
                     }
                     break;
+                case "pipe":
+                    string pipeLine;
+                    while ((pipeLine = Console.In.ReadLine()) != null)
+                    {
+                        Console.Out.WriteLine(pipeLine);
+                    }
+                    break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);
                     Environment.Exit(-1);
