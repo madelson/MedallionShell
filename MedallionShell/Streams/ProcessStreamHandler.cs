@@ -315,7 +315,7 @@ namespace Medallion.Shell.Streams
                     // if there are still bytes to be read, read from the underlying stream
                     if (bytesReadFromMemoryStreams < count)
                     {
-                        var bytesReadFromProcessStream = await this.handler.processStream.ReadAsync(buffer, offset + bytesReadFromMemoryStreams, count - bytesReadFromMemoryStreams)
+                        var bytesReadFromProcessStream = await this.handler.processStream.ReadAsync(buffer, offset + bytesReadFromMemoryStreams, count - bytesReadFromMemoryStreams, cancellationToken)
                             .ConfigureAwait(false);
                         if (bytesReadFromProcessStream == 0)
                         {
@@ -389,22 +389,27 @@ namespace Medallion.Shell.Streams
             }
             #endregion
 
-            // this is an optimization to avoid some logic on each read
-            private volatile bool modeEnsured;
+            // tracks whether we've checked the mode for the stream along with whether it has been disposed
+            private volatile sbyte modeCheckState;
+            private const sbyte ModeChecked = 1, Disposed = -1;
 
             private void EnsureManualReadMode()
             {
-                if (!this.modeEnsured)
+                switch (this.modeCheckState)
                 {
-                    lock (this.handler.modeLock)
-                    {
-                        var mode = this.handler.mode;
-                        if (mode != Mode.ManualRead && mode != Mode.BufferedManualRead)
+                    case default(sbyte):
+                        lock (this.handler.modeLock)
                         {
-                            this.handler.SetMode(Mode.BufferedManualRead);
+                            var mode = this.handler.mode;
+                            if (mode != Mode.ManualRead && mode != Mode.BufferedManualRead)
+                            {
+                                this.handler.SetMode(Mode.BufferedManualRead);
+                            }
                         }
-                    }
-                    this.modeEnsured = true;
+                        this.modeCheckState = ModeChecked;
+                        break;
+                    case Disposed:
+                        throw new ObjectDisposedException("Process stream");
                 }
             }
 
@@ -457,6 +462,7 @@ namespace Medallion.Shell.Streams
             protected override void Dispose(bool disposing)
             {
                 this.handler.SetMode(Mode.DiscardContents);
+                this.modeCheckState = Disposed;
             }
             #endregion
 

@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 namespace Medallion.Shell
 {
     // TODO kill
+    // TODO cancellation token support
+    // TODO README
 
     /// <summary>
     /// Represents an executing <see cref="Process"/> as well as related asynchronous activity (e. g. the piping of

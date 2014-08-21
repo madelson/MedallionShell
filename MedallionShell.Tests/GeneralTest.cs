@@ -91,9 +91,14 @@ namespace Medallion.Shell.Tests
             var command = shell.Run("SampleCommand", "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
             command.StandardOutput.BaseStream.ReadByte();
             command.StandardOutput.BaseStream.Dispose();
-            // TODO stream should throw if disposed
-            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
+            
             UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.BaseStream.ReadByte());
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
+
+            var command2 = shell.Run("SampleCommand", "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
+            command2.Wait();
+            command2.StandardOutput.Dispose();
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command2.StandardOutput.Read());
         }
 
         [TestMethod]
@@ -152,6 +157,7 @@ namespace Medallion.Shell.Tests
                         Log.WriteLine("Buffer full: read one line");
                         var outLine = command.StandardOutput.ReadLine();
                         outLine.ShouldEqual(line);
+                        // after this, we need to read more than one line to re-block since the readers buffer internally
                     }
                     else
                     {
