@@ -84,7 +84,6 @@ namespace Medallion.Shell.Streams
             this.readLoopTask = this.ReadLoop()
                 .ContinueWith(t => 
                 {
-                    Log.WriteLine("ReadLoop finished for {0} (success = {1})", reader.GetHashCode(), !t.IsFaulted);
                     if (t.IsFaulted)
                     {
                         this.taskCompletionSource.TrySetException(t.Exception);
@@ -152,8 +151,6 @@ namespace Medallion.Shell.Streams
         /// </summary>
         private async Task ReadLoop()
         {
-            Log.WriteLine("ReadLoop started for {0}", this.processStream.GetHashCode());
-
             var localBuffer = new byte[Constants.ByteBufferSize];
             while (true)
             {
@@ -189,9 +186,7 @@ namespace Medallion.Shell.Streams
                             }
 
                             // read from the process
-                            Log.WriteLine("ReadLoop about to read for buffering from {0}", this.processStream.GetHashCode());
                             var bytesRead = await this.processStream.ReadAsync(localBuffer, offset: 0, count: localBuffer.Length).ConfigureAwait(false);
-                            Log.WriteLine("ReadLoop read {0} from {1} for buffering", bytesRead, this.processStream.GetHashCode());
                             if (bytesRead == 0)
                             {
                                 return; // end of stream

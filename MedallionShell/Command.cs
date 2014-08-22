@@ -22,7 +22,7 @@ namespace Medallion.Shell
     /// Represents an executing <see cref="Process"/> as well as related asynchronous activity (e. g. the piping of
     /// input and output streams)
     /// </summary>
-    public abstract partial class Command : IDisposable
+    public abstract class Command : IDisposable
     {
         // prevent external inheritors
         internal Command() { }
