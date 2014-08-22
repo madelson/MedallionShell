@@ -10,7 +10,10 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
-    // TODO kill
+    // TODO better flushing handling (see TestNestedKill):
+        // one way we could address this is to have the PipeAsync generic logic incorporate
+        // periodic flushing. That way, if a Read is taking too long, we flush the output to keep data moving.
+        // Not clear how valuable this is, though
     // TODO cancellation token support
     // TODO ToString() implementations
     // TODO README

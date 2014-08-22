@@ -70,6 +70,7 @@ namespace SampleCommand
                     while ((pipeLine = Console.In.ReadLine()) != null)
                     {
                         Console.Out.WriteLine(pipeLine);
+                        Console.Out.Flush();
                     }
                     break;
                 default:
