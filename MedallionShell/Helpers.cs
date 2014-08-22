@@ -13,12 +13,6 @@ namespace Medallion.Shell
         {
             return @this;
         }
-
-        public static void ThrowDisposed<T>(this T @this)
-            where T : IDisposable
-        {
-            throw new ObjectDisposedException(@this.GetType().Name);
-        }
     }
 
     internal static class Throw

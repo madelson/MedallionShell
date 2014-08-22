@@ -181,6 +181,6 @@ namespace Medallion.Shell.Tests
             throw new InvalidOperationException("Can't enumerate");
         }
 
-        // TODO error handling tests
+        // TODO more error handling tests
     }
 }

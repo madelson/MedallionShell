@@ -70,6 +70,7 @@ namespace Medallion.Shell
         {
             get 
             {
+                this.ThrowIfDisposed();
                 Throw<InvalidOperationException>.If(
                     this.disposeOnExit,
                     "Process can only be accessed when the command is not set to dispose on exit. This is to prevent non-deterministic code which may access the process before or after it exits"

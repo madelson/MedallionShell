@@ -5,12 +5,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
     // TODO kill
     // TODO cancellation token support
+    // TODO ToString() implementations
     // TODO README
 
     /// <summary>
@@ -211,19 +213,32 @@ namespace Medallion.Shell
         // .Result.Success
 
         #region ---- Dispose ----
+        private int _disposed;
+
         /// <summary>
         /// Releases all resources associated with this <see cref="Command"/>. This is only required
         /// if the <see cref="Shell.Options.DisposeOnExit"/> has been set to false
         /// </summary>
         void IDisposable.Dispose()
         {
-            this.DisposeInternal();
+            if (Interlocked.Exchange(ref this._disposed, 1) == 0)
+            {
+                this.DisposeInternal();
+            }
         }
 
         /// <summary>
         /// Subclass-specific implementation of <see cref="IDisposable.Dispose"/>
         /// </summary>
         protected abstract void DisposeInternal();
+
+        /// <summary>
+        /// Throws <see cref="ObjectDisposedException"/> if the <see cref="Command"/> has been disposed
+        /// </summary>
+        protected void ThrowIfDisposed()
+        {
+            Throw<ObjectDisposedException>.If(Volatile.Read(ref this._disposed) != 0, () => this.ToString());
+        }
         #endregion
     }
 }
