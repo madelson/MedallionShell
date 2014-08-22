@@ -60,6 +60,12 @@ namespace Medallion.Shell
             get { return this.second.StandardError; }
         }
 
+        public override void Kill()
+        {
+            this.first.Kill();
+            this.second.Kill();
+        }
+
         protected override void DisposeInternal()
         {
             this.first.As<IDisposable>().Dispose();

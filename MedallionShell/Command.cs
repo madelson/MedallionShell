@@ -50,6 +50,11 @@ namespace Medallion.Shell
         public abstract ProcessStreamReader StandardError { get; }
 
         /// <summary>
+        /// Kills the <see cref="Process"/> if it is still executing
+        /// </summary>
+        public abstract void Kill();
+
+        /// <summary>
         /// A convenience method for <code>command.Task.Wait()</code>
         /// </summary>
         public void Wait()

@@ -118,6 +118,13 @@ namespace Medallion.Shell
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
 
+        public override void Kill()
+        {
+            this.ThrowIfDisposed();
+
+            TryKillProcess(this.process);
+        }
+
         private static Task CreateProcessTask(Process process, bool throwOnError, TimeSpan timeout)
         {
             var taskCompletionSource = new TaskCompletionSource<bool>();
@@ -145,15 +152,21 @@ namespace Medallion.Shell
             if (await SystemTask.WhenAny(task, SystemTask.Delay(timeout)).ConfigureAwait(false) != task) 
             {
                 Log.WriteLine("Process timed out");
-                try 
-                {
-                    process.Kill();
-                }
-                catch (Exception ex) 
-                {
-                    Log.WriteLine("Exception killing process: " + ex);
-                }
+                TryKillProcess(process);
                 throw new TimeoutException("Process killed after exceeding timeout of " + timeout);
+            }
+        }
+
+        private static void TryKillProcess(Process process)
+        {
+            try
+            {
+                // the try-catch is because Kill() will throw if the process is disposed
+                process.Kill();
+            }
+            catch (Exception ex)
+            {
+                Log.WriteLine("Exception killing process: " + ex);
             }
         }
 

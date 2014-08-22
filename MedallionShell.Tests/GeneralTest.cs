@@ -175,6 +175,30 @@ namespace Medallion.Shell.Tests
             }
         }
 
+        [TestMethod]
+        public void TestKill()
+        {
+            var command = Command.Run("SampleCommand", "pipe");
+            command.StandardInput.WriteLine("abc");
+            command.StandardInput.Flush();
+            Thread.Sleep(100);
+
+            command.Kill();
+            command.Result.Success.ShouldEqual(false);
+            command.Result.ExitCode.ShouldEqual(-1);
+
+            command.StandardOutput.ReadLine().ShouldEqual("abc");
+        }
+
+        [TestMethod]
+        public void TestKillAfterFinished()
+        {
+            var command = Command.Run("SampleCommand", "bool", true, "something");
+            command.Task.Wait();
+            command.Kill();
+            command.Result.Success.ShouldEqual(true);
+        }
+
         private IEnumerable<string> ErrorLines()
         {
             yield return "1";
