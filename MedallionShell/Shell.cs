@@ -22,10 +22,10 @@ namespace Medallion.Shell
         /// <summary>
         /// Creates a shell whose commands will receive the given configuration options
         /// </summary>
-        public Shell(Action<Options> configuration)
+        public Shell(Action<Options> options)
         {
-            Throw.IfNull(configuration, "configuration");
-            this.configuration = configuration;
+            Throw.IfNull(options, "configuration");
+            this.configuration = options;
         }
 
         #region ---- Instance API ----
@@ -158,7 +158,7 @@ namespace Medallion.Shell
 
             /// <summary>
             /// Sets the initial working directory of the <see cref="Command"/> (defaults to the current working directory)
-            /// </summary>
+            /// </summary>.
             public Options WorkingDirectory(string path)
             {
                 return this.StartInfo(psi => psi.WorkingDirectory = path);

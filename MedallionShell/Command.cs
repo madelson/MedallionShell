@@ -17,6 +17,10 @@ namespace Medallion.Shell
     // TODO cancellation token support
     // TODO ToString() implementations
     // TODO README
+    // TODO README links to NuGet, codeducky
+        // deadlocking
+    // TODO codeducky post
+    // TODO NUGET
 
     /// <summary>
     /// Represents an executing <see cref="Process"/> as well as related asynchronous activity (e. g. the piping of
