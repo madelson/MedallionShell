@@ -70,7 +70,6 @@ namespace Medallion.Shell.Streams
         /// </summary>
         private readonly TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
 
-        // TODO we don't really need this
         private readonly Task readLoopTask;
 
         public ProcessStreamHandler(StreamReader reader)

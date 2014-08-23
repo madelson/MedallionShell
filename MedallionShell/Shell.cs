@@ -75,7 +75,7 @@ namespace Medallion.Shell
         }
         #endregion
 
-        // TODO Run static methods, change instance to Execute
+        // TODO do we want to support static Run-type methods here as well?
         #region ---- Static API ----
         private static readonly Shell DefaultShell = new Shell();
         /// <summary>

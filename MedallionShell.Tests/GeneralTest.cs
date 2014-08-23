@@ -224,7 +224,5 @@ namespace Medallion.Shell.Tests
             yield return "1";
             throw new InvalidOperationException("Can't enumerate");
         }
-
-        // TODO more error handling tests
     }
 }
