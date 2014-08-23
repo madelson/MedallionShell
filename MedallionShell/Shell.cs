@@ -197,8 +197,12 @@ namespace Medallion.Shell
 
             /// <summary>
             /// If specified, the underlying <see cref="Process"/> object for the command will be disposed when the process exits.
-            /// This means that there is no need to dispose of a <see cref="Command"/>. This also means that <see cref="Medallion.Shell.Command.Process"/> cannot be reliably accessed, 
-            /// since it may exit at any time. Defaults to true
+            /// This means that there is no need to dispose of a <see cref="Command"/>. 
+            /// 
+            /// This also means that <see cref="Medallion.Shell.Command.Process"/> cannot be reliably accessed, 
+            /// since it may exit at any time. 
+            /// 
+            /// Defaults to true
             /// </summary>
             public Options DisposeOnExit(bool value = true)
             {
