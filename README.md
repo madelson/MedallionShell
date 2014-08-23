@@ -1,7 +1,11 @@
 MedallionShell
 ==============
 
-MedallionShell is a lightweight library that vastly simplifies working with processes in .NET apps. Built on top of the powerful, yet clunky [System.Diagnostics.Process API](http://msdn.microsoft.com/en-us/library/system.diagnostics.process(v=vs.110).aspx), the MedallionShell API streamlines common use-cases, removes pitfalls, and integrates Process handling with .NET [async/await](http://msdn.microsoft.com/en-us/library/hh191443.aspx) and [Tasks](http://msdn.microsoft.com/en-us/library/dd460717(v=vs.110).aspx).
+MedallionShell is a lightweight library that vastly simplifies working with processes in .NET apps. 
+
+[Download the NuGet package](https://www.nuget.org/packages/medallionshell)
+
+Built on top of the powerful, yet clunky [System.Diagnostics.Process API](http://msdn.microsoft.com/en-us/library/system.diagnostics.process(v=vs.110).aspx), the MedallionShell API streamlines common use-cases, removes pitfalls, and integrates Process handling with .NET [async/await](http://msdn.microsoft.com/en-us/library/hh191443.aspx) and [Tasks](http://msdn.microsoft.com/en-us/library/dd460717(v=vs.110).aspx).
 
 ```C#
 // processes are created and interacted with using the Command class
