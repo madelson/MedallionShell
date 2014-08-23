@@ -1,0 +1,28 @@
+﻿<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>MedallionShell</id>
+    <version>$version$</version>
+    <title>Medallion Shell</title>
+    <authors>Michael Adelson</authors>
+    <licenseUrl>https://raw.githubusercontent.com/madelson/MedallionShell/master/License.txt</licenseUrl>
+    <projectUrl>https://github.com/madelson/MedallionShell</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>
+      A lightweight library that simplifies working with processes in .NET
+    </summary>
+    <description>
+      A lightweight library that simplifies working with processes in .NET
+    </description>
+    <releaseNotes>
+      Initial release
+    </releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>process async</tags>
+    <dependencies>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin/Debug/MedallionShell.XML" />
+  </files>
+</package>
