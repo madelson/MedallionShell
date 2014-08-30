@@ -15,7 +15,7 @@
       A lightweight library that simplifies working with processes in .NET
     </description>
     <releaseNotes>
-      Initial release
+      Allowed for argument ommission in Command.Run(), other minor fixes
     </releaseNotes>
     <copyright>Copyright 2014</copyright>
     <tags>process async</tags>

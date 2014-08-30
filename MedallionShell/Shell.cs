@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -42,7 +43,7 @@ namespace Medallion.Shell
             var processStartInfo = new ProcessStartInfo
             {
                 Arguments = arguments != null 
-                    ? finalOptions.CommandLineSyntax.CreateArgumentString(arguments.Select(Convert.ToString))
+                    ? finalOptions.CommandLineSyntax.CreateArgumentString(arguments.Select(arg => Convert.ToString(arg, CultureInfo.InvariantCulture)))
                     : string.Empty,
                 CreateNoWindow = true,
                 FileName = executable,

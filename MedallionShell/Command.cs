@@ -201,7 +201,7 @@ namespace Medallion.Shell
         /// <summary>
         /// A convenience method for calling <see cref="Shell.Run(String, IEnumerable{Object}, Action{Shell.Options})"/> on <see cref="Shell.Default"/>
         /// </summary>
-        public static Command Run(string executable, IEnumerable<object> arguments, Action<Shell.Options> options = null)
+        public static Command Run(string executable, IEnumerable<object> arguments = null, Action<Shell.Options> options = null)
         {
             return Shell.Default.Run(executable, arguments, options);
         }
