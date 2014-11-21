@@ -28,7 +28,7 @@ var cmd = Command.Run("path_to_grep", "some REGEX") < new FileInfo("some path") 
 cmd.Wait();
 
 // and we can even chain commands together with the pipe operator
-var pipeline = Command.Run("path_to_grep, "some REGEX") | Command.Run("path_to_grep", "another REGEX");
+var pipeline = Command.Run("path_to_grep", "some REGEX") | Command.Run("path_to_grep", "another REGEX");
 
 // we can check a command's exit status using it's result
 if (cmd.Result.Success) { ... }
