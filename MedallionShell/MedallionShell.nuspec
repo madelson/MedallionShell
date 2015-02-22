@@ -15,7 +15,7 @@
       A lightweight library that simplifies working with processes in .NET
     </description>
     <releaseNotes>
-      Allowed for argument ommission in Command.Run(), other minor fixes
+      Fixed bug where timeout would suppress errors from ThrowOnError option
     </releaseNotes>
     <copyright>Copyright 2014</copyright>
     <tags>process async</tags>

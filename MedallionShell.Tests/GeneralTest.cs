@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -122,6 +123,15 @@ namespace Medallion.Shell.Tests
         }
 
         [TestMethod]
+        public void TestThrowOnErrorWithTimeout()
+        {
+            var command = Command.Run("SampleCommand", new object[] { "exit", 1 }, o => o.ThrowOnError().Timeout(TimeSpan.FromDays(1)));
+            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => command.Task.Wait());
+            ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
+                .ShouldEqual(true);
+        }
+
+        [TestMethod]
         public void TestTimeout()
         {
             var willTimeout = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.FromMilliseconds(200)));
@@ -217,6 +227,15 @@ namespace Medallion.Shell.Tests
             // This doesn't work right now due to our lack of flushing. There's not enought data so the single line gets caught
             // between pipes
             UnitTestHelpers.AssertThrows<ArgumentOutOfRangeException>(() => lines[0].ShouldEqual("a line"));
+        }
+
+        [TestMethod]
+        public void TestVersioning()
+        {
+            var version = typeof(Command).Assembly.GetName().Version.ToString();
+            var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute));
+            Assert.IsNotNull(informationalVersion);
+            version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
         }
 
         private IEnumerable<string> ErrorLines()

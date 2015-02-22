@@ -147,9 +147,16 @@ namespace Medallion.Shell
         }
 
         private static async Task AddTimeout(Task task, Process process, TimeSpan timeout)
-        {
+        { 
+            // wait for either the given task or the timeout to complete
             // http://stackoverflow.com/questions/4238345/asynchronously-wait-for-taskt-to-complete-with-timeout
-            if (await SystemTask.WhenAny(task, SystemTask.Delay(timeout)).ConfigureAwait(false) != task) 
+            var completed = await SystemTask.WhenAny(task, SystemTask.Delay(timeout)).ConfigureAwait(false);
+
+            // Task.WhenAny() swallows errors: wait for the completed task to propagate any errors that occurred
+            await completed.ConfigureAwait(false);
+
+            // if we timed out, kill the process
+            if (completed != task) 
             {
                 Log.WriteLine("Process timed out");
                 TryKillProcess(process);
