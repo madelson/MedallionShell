@@ -73,6 +73,15 @@ namespace SampleCommand
                         Console.Out.Flush();
                     }
                     break;
+                case "shortflush":
+                    Console.Out.Write(args[1]);
+                    Console.Out.Flush();
+                    // don't exit until stdin closes
+                    while (Console.ReadLine() != null)
+                    {
+                        Thread.Sleep(5);
+                    }
+                    break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);
                     Environment.Exit(-1);
