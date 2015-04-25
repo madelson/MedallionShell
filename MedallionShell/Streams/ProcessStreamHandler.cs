@@ -10,6 +10,15 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
+    // lock on stream
+    // lock on mem buffers / tcs
+    
+    // 1. lock on mem buffers => if read, exit
+    // 2. try-lock on stream
+    // 3. lock on mem buffers => if read, exit, otherwise, either 
+        // if has stream lock, read stream
+        // otherwise, create and wait (outside mem buffer lock) on tcs
+
     internal sealed class ProcessStreamHandler
     {
         private enum Mode

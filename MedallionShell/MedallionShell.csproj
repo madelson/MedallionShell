@@ -54,7 +54,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Async\AsyncLock.cs" />
-    <Compile Include="Async\AsyncSemaphore.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandResult.cs" />
     <Compile Include="Constants.cs" />
