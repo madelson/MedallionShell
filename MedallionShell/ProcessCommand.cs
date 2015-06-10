@@ -111,7 +111,7 @@ namespace Medallion.Shell
             get 
             {
                 Throw<InvalidOperationException>.If(this.standardErrorHandler == null, "Standard error is not redirected");
-                return this.standardOutputHandler.Reader;
+                return this.standardErrorHandler.Reader;
             }
         }
 
