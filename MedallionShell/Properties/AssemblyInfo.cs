@@ -33,10 +33,8 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 
-// 1.0.2: fixed bug where timeout would suppress errors from ThrowOnError option
-// 1.0.1.0: allowed for argument ommission in Command.Run(), other minor fixes
-[assembly: AssemblyInformationalVersion("1.0.2")]
-[assembly: AssemblyVersion("1.0.2.0")]
+[assembly: AssemblyInformationalVersion("1.0.3")]
+[assembly: AssemblyVersion("1.0.3.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
 [assembly: InternalsVisibleTo("MedallionShell.Tests")]
