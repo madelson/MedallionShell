@@ -238,6 +238,13 @@ namespace Medallion.Shell.Tests
             version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
         }
 
+        [TestMethod]
+        public void TestErrorEcho()
+        {
+            var command = Command.Run("SampleCommand", "errecho") < "abc";
+            command.Result.StandardError.ShouldEqual("abc");
+        }
+
         private IEnumerable<string> ErrorLines()
         {
             yield return "1";

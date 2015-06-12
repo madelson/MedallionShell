@@ -20,8 +20,9 @@ namespace SampleCommand
             switch (args[0])
             {
                 case "echo":
+                case "errecho":
                     var input = Console.In.ReadToEnd();
-                    Console.Out.Write(input);
+                    (args[0].StartsWith("err") ? Console.Error : Console.Out).Write(input);
                     break;
                 case "grep":
                     var regex = new Regex(args[1]);
