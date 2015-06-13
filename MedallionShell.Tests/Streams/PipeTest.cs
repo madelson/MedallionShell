@@ -18,7 +18,20 @@ namespace Medallion.Shell.Tests.Streams
             var pipe = new Pipe();
 
             pipe.WriteText("abc");
-            pipe.ReadText(3).ShouldEqual("abc");
+            pipe.ReadTextAsync(3).Result.ShouldEqual("abc");
+
+            pipe.WriteText("1");
+            pipe.WriteText("2");
+            pipe.WriteText("3");
+            pipe.ReadTextAsync(3).Result.ShouldEqual("123");
+
+            var asyncRead = pipe.ReadTextAsync(100);
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            pipe.WriteText("x");
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            pipe.WriteText(new string('y', 100));
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.Result.ShouldEqual("x" + new string('y', 99));
         }
     }
 
@@ -29,11 +42,16 @@ namespace Medallion.Shell.Tests.Streams
             new StreamWriter(@this.InputStream) { AutoFlush = true }.Write(text);
         }
 
-        public static string ReadText(this Pipe @this, int count)
+        public static async Task<string> ReadTextAsync(this Pipe @this, int count)
         {
-            var chars = new char[count];
-            new StreamReader(@this.OutputStream).ReadBlock(chars, 0, count);
-            return new string(chars);
+            var bytes = new byte[count];
+            var bytesRead = 0;
+            while (bytesRead < count)
+            {
+                bytesRead += await @this.OutputStream.ReadAsync(bytes, offset: bytesRead, count: count - bytesRead);
+            }
+
+            return new string(Encoding.Default.GetChars(bytes));
         }
     }
 }

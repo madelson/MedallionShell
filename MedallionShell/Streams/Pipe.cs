@@ -143,6 +143,15 @@ namespace Medallion.Shell.Streams
                 // if we have bytes, read them and return synchronously
                 if (this.count > 0)
                 {
+                    // respect cancellation in the sync flow by just returning a 
+                    // canceled task when appropriate
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        var taskCompletionSource = new TaskCompletionSource<int>();
+                        taskCompletionSource.SetCanceled();
+                        return taskCompletionSource.Task;
+                    }
+
                     return Task.FromResult(this.ReadNoLock(buffer, offset, count));
                 }
 
