@@ -115,7 +115,19 @@ namespace Medallion.Shell.Streams
         {
             lock (this.@lock)
             {
+                if (this.writerClosed)
+                {
+                    return;
+                }
+
                 this.writerClosed = true;
+
+                // unblock any waiters, since nothing more is coming
+                if (this.bytesAvailableSignal.CurrentCount == 0)
+                {
+                    this.bytesAvailableSignal.Release();
+                }
+
                 if (this.readerClosed)
                 {
                     this.CleanupNoLock();
@@ -152,7 +164,13 @@ namespace Medallion.Shell.Streams
                         return taskCompletionSource.Task;
                     }
 
-                    return Task.FromResult(this.ReadNoLock(buffer, offset, count));
+                    var result = Task.FromResult(this.ReadNoLock(buffer, offset, count));
+                    if (this.count == 0)
+                    {
+                        // if we consumed all the bytes, unset the signal
+                        this.bytesAvailableSignal.Wait();
+                    }
+                    return result;
                 }
 
                 // if we don't have bytes and no more are coming, return 0

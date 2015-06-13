@@ -65,7 +65,25 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.IsCanceled.ShouldEqual(true);
         }
 
-        // TODO cancel, close (each side)
+        [TestMethod]
+        public void TestCloseWriteSide()
+        {
+            var pipe = new Pipe();
+            pipe.WriteText("123456");
+            pipe.InputStream.Close();
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => pipe.InputStream.WriteByte(1));
+
+            pipe.ReadTextAsync(5).Result.ShouldEqual("12345");
+            pipe.ReadTextAsync(2).Result.ShouldEqual(null);
+
+            pipe = new Pipe();
+            var asyncRead = pipe.ReadTextAsync(1);
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            pipe.InputStream.Close();
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+        }
+
+        // TODO cancel, close (each side), overlapping reads
     }
 
     internal static class PipeExtensions
@@ -81,7 +99,9 @@ namespace Medallion.Shell.Tests.Streams
             var bytesRead = 0;
             while (bytesRead < count)
             {
-                bytesRead += await @this.OutputStream.ReadAsync(bytes, offset: bytesRead, count: count - bytesRead, cancellationToken: token);
+                var result = await @this.OutputStream.ReadAsync(bytes, offset: bytesRead, count: count - bytesRead, cancellationToken: token);
+                if (result == 0) { return null; }
+                bytesRead += result;
             }
 
             return new string(Encoding.Default.GetChars(bytes));
