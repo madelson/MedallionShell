@@ -103,9 +103,19 @@ namespace Medallion.Shell.Tests.Streams
             Assert.IsTrue(finalMemory - initialMemory < 10 * largeBytes.Length, "final = " + finalMemory + " initial = " + initialMemory);
 
             UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => pipe.OutputStream.ReadByte());
+
+            pipe.InputStream.Close();
         }
 
-        // TODO cancel, close (each side), overlapping reads
+        [TestMethod]
+        public void TestConcurrentReads()
+        {
+            var pipe = new Pipe();
+
+            var asyncRead = pipe.ReadTextAsync(1);
+            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => pipe.OutputStream.ReadByte());
+            pipe.InputStream.Close();
+        }
     }
 
     internal static class PipeExtensions

@@ -192,6 +192,7 @@ namespace Medallion.Shell.Streams
                 throw new TimeoutException("Timed out reading from the pipe");
             }
 
+            // we need to reacquire the lock after the await since we might have switched threads
             lock (this.@lock)
             {
                 var result = this.ReadNoLock(buffer, offset, count);
