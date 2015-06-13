@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell.Tests.Streams
@@ -44,6 +45,26 @@ namespace Medallion.Shell.Tests.Streams
             pipe.ReadTextAsync(2048).Result.ShouldEqual(new string('a', 2048));
         }
 
+        [TestMethod]
+        public void TestCancel()
+        {
+            var pipe = new Pipe();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            var asyncRead = pipe.ReadTextAsync(1, cancellationTokenSource.Token);
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            cancellationTokenSource.Cancel();
+            asyncRead.ContinueWith(_ => { }).Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.IsCanceled.ShouldEqual(true);
+
+            pipe.WriteText("aaa");
+            pipe.ReadTextAsync(2).Result.ShouldEqual("aa");
+
+            asyncRead = pipe.ReadTextAsync(1, cancellationTokenSource.Token);
+            asyncRead.ContinueWith(_ => { }).Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.IsCanceled.ShouldEqual(true);
+        }
+
         // TODO cancel, close (each side)
     }
 
@@ -54,13 +75,13 @@ namespace Medallion.Shell.Tests.Streams
             new StreamWriter(@this.InputStream) { AutoFlush = true }.Write(text);
         }
 
-        public static async Task<string> ReadTextAsync(this Pipe @this, int count)
+        public static async Task<string> ReadTextAsync(this Pipe @this, int count, CancellationToken token = default(CancellationToken))
         {
             var bytes = new byte[count];
             var bytesRead = 0;
             while (bytesRead < count)
             {
-                bytesRead += await @this.OutputStream.ReadAsync(bytes, offset: bytesRead, count: count - bytesRead);
+                bytesRead += await @this.OutputStream.ReadAsync(bytes, offset: bytesRead, count: count - bytesRead, cancellationToken: token);
             }
 
             return new string(Encoding.Default.GetChars(bytes));
