@@ -33,6 +33,18 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
             asyncRead.Result.ShouldEqual("x" + new string('y', 99));
         }
+
+        [TestMethod]
+        public void TimeoutTest()
+        {
+            var pipe = new Pipe { OutputStream = { ReadTimeout = 0 } };
+            UnitTestHelpers.AssertThrows<TimeoutException>(() => pipe.OutputStream.ReadByte());
+
+            pipe.WriteText(new string('a', 2048));
+            pipe.ReadTextAsync(2048).Result.ShouldEqual(new string('a', 2048));
+        }
+
+        // TODO cancel, close (each side)
     }
 
     internal static class PipeExtensions

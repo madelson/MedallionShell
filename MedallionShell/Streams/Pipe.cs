@@ -67,7 +67,7 @@ namespace Medallion.Shell.Streams
             this.EnsureCapacityNoLock(unchecked(this.count + count));
 
             var startToEnd = this.buffer.Length - start;
-            var spaceAtEnd = startToEnd - count;
+            var spaceAtEnd = startToEnd - this.count;
             if (spaceAtEnd > 0)
             {
                 Buffer.BlockCopy(src: buffer, srcOffset: offset, dst: this.buffer, dstOffset: this.start + this.count, count: Math.Min(spaceAtEnd, count));
