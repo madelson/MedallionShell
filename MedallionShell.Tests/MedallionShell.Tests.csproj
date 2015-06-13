@@ -63,6 +63,7 @@
     <Compile Include="GeneralTest.cs" />
     <Compile Include="PipeTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Streams\PipeTest.cs" />
     <Compile Include="SyntaxTest.cs" />
     <Compile Include="UnitTestHelpers.cs" />
   </ItemGroup>

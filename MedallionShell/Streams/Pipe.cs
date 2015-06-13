@@ -19,11 +19,22 @@ namespace Medallion.Shell.Streams
 
         private readonly SemaphoreSlim bytesAvailableSignal = new SemaphoreSlim(initialCount: 0, maxCount: 1);
         private readonly object @lock = new object();
+        private readonly PipeInputStream input;
+        private readonly PipeOutputStream output;
         
         private byte[] buffer = Empty;
         private int start, count;
         private bool writerClosed, readerClosed;
         private Task<int> readTask = CompletedZeroTask;
+
+        public Pipe()
+        {
+            this.input = new PipeInputStream(this);
+            this.output = new PipeOutputStream(this);
+        }
+
+        public Stream InputStream { get { return this.input; } }
+        public Stream OutputStream { get { return this.output; } }
 
         #region ---- Writing ----
         private void Write(byte[] buffer, int offset, int count)
@@ -59,7 +70,7 @@ namespace Medallion.Shell.Streams
             var spaceAtEnd = startToEnd - count;
             if (spaceAtEnd > 0)
             {
-                Buffer.BlockCopy(src: buffer, srcOffset: offset, dst: this.buffer, dstOffset: startToEnd + this.count, count: Math.Min(spaceAtEnd, count));
+                Buffer.BlockCopy(src: buffer, srcOffset: offset, dst: this.buffer, dstOffset: this.start + this.count, count: Math.Min(spaceAtEnd, count));
             }
             if (count > spaceAtEnd)
             {
@@ -173,29 +184,30 @@ namespace Medallion.Shell.Streams
             var countToRead = Math.Min(this.count, count);
 
             var startToEnd = this.buffer.Length - this.start;
+            var newStart = this.start;
             if (startToEnd > 0)
             {
                 int countToReadFromEnd;
                 if (startToEnd > countToRead)
                 {
                     countToReadFromEnd = countToRead;
-                    this.start += countToRead;
+                    newStart += countToRead;
                 }
                 else
                 {
                     countToReadFromEnd = startToEnd;
-                    this.start = 0;
+                    newStart = 0;
                 }
                 Buffer.BlockCopy(src: this.buffer, srcOffset: this.start, dst: buffer, dstOffset: offset, count: countToReadFromEnd);
-
             }
             if (startToEnd < countToRead)
             {
                 var countToReadFromBeginning = countToRead - startToEnd;
-                this.start += countToReadFromBeginning;
+                newStart += countToReadFromBeginning;
                 Buffer.BlockCopy(src: this.buffer, srcOffset: 0, dst: buffer, dstOffset: startToEnd, count: countToReadFromBeginning);
             }
 
+            this.start = newStart;
             this.count -= countToRead;
             return countToRead;
         }
@@ -252,11 +264,11 @@ namespace Medallion.Shell.Streams
         #endregion
 
         #region ---- Input Stream ----
-        private sealed class InputStream : Stream
+        private sealed class PipeInputStream : Stream
         {
             private readonly Pipe pipe;
 
-            public InputStream(Pipe pipe) { this.pipe = pipe; }
+            public PipeInputStream(Pipe pipe) { this.pipe = pipe; }
 
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
@@ -386,11 +398,11 @@ namespace Medallion.Shell.Streams
         #endregion
 
         #region ---- Output Stream ----
-        private sealed class OutputStream : Stream
+        private sealed class PipeOutputStream : Stream
         {
             private readonly Pipe pipe;
 
-            public OutputStream(Pipe pipe) { this.pipe = pipe; }
+            public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
 
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
@@ -408,9 +420,9 @@ namespace Medallion.Shell.Streams
             {
                 private readonly object state;
                 private readonly Task<int> readTask;
-                private readonly OutputStream stream;
+                private readonly PipeOutputStream stream;
 
-                public AsyncReadResult(object state, Task<int> readTask, OutputStream stream)
+                public AsyncReadResult(object state, Task<int> readTask, PipeOutputStream stream)
                 {
                     this.state = state;
                     this.readTask = readTask;
