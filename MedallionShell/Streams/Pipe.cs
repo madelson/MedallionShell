@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -252,307 +254,324 @@ namespace Medallion.Shell.Streams
         #region ---- Input Stream ----
         private sealed class InputStream : Stream
         {
+            private readonly Pipe pipe;
+
+            public InputStream(Pipe pipe) { this.pipe = pipe; }
+
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
-                return base.BeginRead(buffer, offset, count, callback, state);
+                throw WriteOnly();
             }
 
             public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
+                // ok since we don't have true async write
                 return base.BeginWrite(buffer, offset, count, callback, state);
             }
 
-            public override bool CanRead
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override bool CanRead { get { return false; } }
 
-            public override bool CanSeek
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override bool CanSeek { get { return false; } }
 
-            public override bool CanTimeout
-            {
-                get
-                {
-                    return base.CanTimeout;
-                }
-            }
+            public override bool CanTimeout { get { return false; } }
 
-            public override bool CanWrite
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override bool CanWrite { get { return true; } }
 
             public override void Close()
             {
-                base.Close();
+                base.Close(); // calls Dispose(true)
             }
 
             public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
             {
-                return base.CopyToAsync(destination, bufferSize, cancellationToken);
+                throw WriteOnly();
             }
 
             protected override void Dispose(bool disposing)
             {
-                base.Dispose(disposing);
+                if (disposing)
+                {
+                    this.pipe.CloseWriteSide();
+                }
             }
 
             public override int EndRead(IAsyncResult asyncResult)
             {
-                return base.EndRead(asyncResult);
+                throw WriteOnly();
             }
 
             public override void EndWrite(IAsyncResult asyncResult)
             {
-                base.EndWrite(asyncResult);
+                base.EndWrite(asyncResult); // no true async
             }
 
             public override void Flush()
             {
-                throw new NotImplementedException();
+                // no-op, since we have no buffer
             }
 
             public override Task FlushAsync(CancellationToken cancellationToken)
             {
+                // we have no true async support
                 return base.FlushAsync(cancellationToken);
             }
 
-            public override long Length
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override long Length { get { throw Throw.NotSupported(); } }
 
             public override long Position
             {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
+                get { throw Throw.NotSupported(); }
+                set { throw Throw.NotSupported(); }
             }
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                throw new NotImplementedException();
+                throw WriteOnly();
             }
 
             public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
-                return base.ReadAsync(buffer, offset, count, cancellationToken);
+                throw WriteOnly();
             }
 
             public override int ReadByte()
             {
-                return base.ReadByte();
+                throw WriteOnly();
             }
 
             public override int ReadTimeout
             {
-                get
-                {
-                    return base.ReadTimeout;
-                }
-                set
-                {
-                    base.ReadTimeout = value;
-                }
+                get { throw WriteOnly(); }
+                set { throw WriteOnly(); }
             }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                throw new NotImplementedException();
+                throw Throw.NotSupported();
             }
 
             public override void SetLength(long value)
             {
-                throw new NotImplementedException();
+                throw Throw.NotSupported();
             }
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                throw new NotImplementedException();
+                this.pipe.Write(buffer, offset, count);
             }
 
             public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
+                // no true async writes
                 return base.WriteAsync(buffer, offset, count, cancellationToken);
             }
 
             public override void WriteByte(byte value)
             {
+                // the base implementation is inefficient, but I don't think we care
                 base.WriteByte(value);
             }
 
             public override int WriteTimeout
             {
-                get
-                {
-                    return base.WriteTimeout;
-                }
-                set
-                {
-                    base.WriteTimeout = value;
-                }
+                get { throw Throw.NotSupported(); }
+                set { throw Throw.NotSupported(); }
+            }
+
+            private static NotSupportedException WriteOnly([CallerMemberName] string memberName = null)
+            {
+                throw new NotSupportedException(memberName + ": the stream is write only");
             }
         }
         #endregion
 
         #region ---- Output Stream ----
-        private sealed class OutputSteram : Stream
+        private sealed class OutputStream : Stream
         {
+            private readonly Pipe pipe;
+
+            public OutputStream(Pipe pipe) { this.pipe = pipe; }
+
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
-                return base.BeginRead(buffer, offset, count, callback, state);
+                // according to the docs, the callback is optional
+                var readTask = this.ReadAsync(buffer, offset, count, CancellationToken.None);
+                var readResult = new AsyncReadResult(state, readTask, this);
+                if (callback != null)
+                {
+                    readTask.ContinueWith(_ => callback(readResult));
+                }
+                return readResult;
+            }
+
+            private sealed class AsyncReadResult : IAsyncResult
+            {
+                private readonly object state;
+                private readonly Task<int> readTask;
+                private readonly OutputStream stream;
+
+                public AsyncReadResult(object state, Task<int> readTask, OutputStream stream)
+                {
+                    this.state = state;
+                    this.readTask = readTask;
+                    this.stream = stream;
+                }
+
+                public Task<int> ReadTask { get { return this.readTask; } }
+
+                public Stream Stream { get { return this.stream; } }
+
+                object IAsyncResult.AsyncState { get { return this.state; } }
+
+                WaitHandle IAsyncResult.AsyncWaitHandle { get { return this.readTask.As<IAsyncResult>().AsyncWaitHandle; } }
+
+                bool IAsyncResult.CompletedSynchronously { get { return this.readTask.As<IAsyncResult>().CompletedSynchronously; } }
+
+                bool IAsyncResult.IsCompleted { get { return this.readTask.IsCompleted; } }
             }
 
             public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
-                return base.BeginWrite(buffer, offset, count, callback, state);
+                throw ReadOnly();
             }
 
-            public override bool CanRead
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override bool CanRead { get { return true; } }
 
-            public override bool CanSeek
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override bool CanSeek { get { return false; } }
 
-            public override bool CanTimeout
-            {
-                get
-                {
-                    return base.CanTimeout;
-                }
-            }
+            public override bool CanTimeout { get { return true; } }
 
-            public override bool CanWrite
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override bool CanWrite { get { return false; } }
 
             public override void Close()
             {
-                base.Close();
+                base.Close(); // calls Dispose(true)
             }
 
             public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
             {
+                // the base implementation is reasonable
                 return base.CopyToAsync(destination, bufferSize, cancellationToken);
             }
 
             protected override void Dispose(bool disposing)
             {
-                base.Dispose(disposing);
+                if (disposing)
+                {
+                    this.pipe.CloseReadSide();
+                }
             }
 
             public override int EndRead(IAsyncResult asyncResult)
             {
-                return base.EndRead(asyncResult);
+                Throw.IfNull(asyncResult, "asyncResult");
+                var readResult = asyncResult as AsyncReadResult;
+                Throw.If(readResult == null || readResult.Stream != this, "asyncResult: must be created by this stream's BeginRead method");
+
+                return readResult.ReadTask.Result;
             }
 
             public override void EndWrite(IAsyncResult asyncResult)
             {
-                base.EndWrite(asyncResult);
+                throw ReadOnly();
             }
 
             public override void Flush()
             {
-                throw new NotImplementedException();
+                throw ReadOnly();
             }
 
             public override Task FlushAsync(CancellationToken cancellationToken)
             {
-                return base.FlushAsync(cancellationToken);
+                throw ReadOnly();
             }
 
-            public override long Length
-            {
-                get { throw new NotImplementedException(); }
-            }
+            public override long Length { get { throw Throw.NotSupported(); } }
 
             public override long Position
             {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
+                get { throw Throw.NotSupported(); }
+                set { throw Throw.NotSupported(); }
             }
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                throw new NotImplementedException();
+                try
+                {
+                    return this.pipe.ReadAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.ReadTimeout), CancellationToken.None).Result;
+                }
+                catch (AggregateException ex)
+                {
+                    // unwrap aggregate if we can
+                    if (ex.InnerExceptions.Count == 1)
+                    {
+                        ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                    }
+
+                    throw;
+                }
             }
 
             public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
-                return base.ReadAsync(buffer, offset, count, cancellationToken);
+                return this.pipe.ReadAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.ReadTimeout), cancellationToken);
             }
 
             public override int ReadByte()
             {
+                // this is inefficient, but I think that's ok
                 return base.ReadByte();
             }
 
+            private int readTimeout = Timeout.Infinite;
+
             public override int ReadTimeout
             {
-                get
-                {
-                    return base.ReadTimeout;
-                }
+                get { return this.readTimeout; }
                 set
                 {
-                    base.ReadTimeout = value;
+                    if (value != Timeout.Infinite)
+                    {
+                        Throw.IfOutOfRange(value, "ReadTimeout", min: 0);
+                    }
+                    this.readTimeout = value;
                 }
             }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                throw new NotImplementedException();
+                throw Throw.NotSupported();
             }
 
             public override void SetLength(long value)
             {
-                throw new NotImplementedException();
+                throw Throw.NotSupported();
             }
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                throw new NotImplementedException();
+                throw ReadOnly();
             }
 
             public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
-                return base.WriteAsync(buffer, offset, count, cancellationToken);
+                throw ReadOnly();
             }
 
             public override void WriteByte(byte value)
             {
-                base.WriteByte(value);
+                throw ReadOnly();
             }
 
             public override int WriteTimeout
             {
-                get
-                {
-                    return base.WriteTimeout;
-                }
-                set
-                {
-                    base.WriteTimeout = value;
-                }
+                get { throw ReadOnly(); }
+                set { throw ReadOnly(); }
+            }
+
+            private static NotSupportedException ReadOnly([CallerMemberName] string memberName = null)
+            {
+                throw new NotSupportedException(memberName + ": the stream is read only");
             }
         }
         #endregion

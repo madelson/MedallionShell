@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -67,6 +68,11 @@ namespace Medallion.Shell
             {
                 throw new ArgumentOutOfRangeException("the segment described by offset and count must be within buffer");
             }
+        }
+
+        public static NotSupportedException NotSupported([CallerMemberName] string memberName = null)
+        {
+            throw new NotSupportedException(memberName);
         }
     }
 
