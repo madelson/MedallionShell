@@ -48,6 +48,26 @@ namespace Medallion.Shell
                 throw new ArgumentOutOfRangeException(paramName, string.Format("Expected: <= {0}, but was {1}", max, value));
             }
         }
+
+        public static void IfInvalidBuffer<T>(T[] buffer, int offset, int count)
+        {
+            if (buffer == null)
+            {
+                throw new ArgumentNullException("buffer");
+            }
+            if (offset < 0)
+            {
+                throw new ArgumentOutOfRangeException("offset");
+            }
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException("count");
+            }
+            if (offset + count > buffer.Length)
+            {
+                throw new ArgumentOutOfRangeException("the segment described by offset and count must be within buffer");
+            }
+        }
     }
 
     internal static class Throw<TException>

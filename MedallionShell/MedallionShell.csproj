@@ -66,6 +66,7 @@
     <Compile Include="ProcessCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell.cs" />
+    <Compile Include="Streams\Pipe.cs" />
     <Compile Include="Streams\ProcessStreamHandler.cs" />
     <Compile Include="Streams\ProcessStreamReader.cs" />
     <Compile Include="Streams\ProcessStreamWriter.cs" />
