@@ -83,6 +83,28 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
+        [TestMethod]
+        public void TestCloseReadSide()
+        {
+            var pipe = new Pipe();
+            pipe.WriteText("abc");
+            pipe.ReadTextAsync(2).Result.ShouldEqual("ab");
+            pipe.OutputStream.Close();
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => pipe.OutputStream.ReadByte());
+
+            var largeBytes = new byte[10 * 1024];
+            var initialMemory = GC.GetTotalMemory(forceFullCollection: true);
+            for (var i = 0; i < int.MaxValue / 1024; ++i)
+            {
+                pipe.InputStream.Write(largeBytes, 0, largeBytes.Length);
+            }
+            var finalMemory = GC.GetTotalMemory(forceFullCollection: true);
+
+            Assert.IsTrue(finalMemory - initialMemory < 10 * largeBytes.Length, "final = " + finalMemory + " initial = " + initialMemory);
+
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => pipe.OutputStream.ReadByte());
+        }
+
         // TODO cancel, close (each side), overlapping reads
     }
 
