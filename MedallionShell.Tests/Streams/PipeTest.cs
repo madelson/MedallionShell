@@ -46,6 +46,30 @@ namespace Medallion.Shell.Tests.Streams
         }
 
         [TestMethod]
+        public void TestWriteTimeout()
+        {
+            var pipe = new Pipe { InputStream = { WriteTimeout = 0 } };
+            pipe.SetFixedLength();
+            pipe.WriteText(new string('a', 2 * Constants.ByteBufferSize));
+            var asyncWrite = pipe.InputStream.WriteAsync(new byte[1], 0, 1);
+            asyncWrite.ContinueWith(_ => { }).Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(true);
+            asyncWrite.IsFaulted.ShouldEqual(true);
+            Assert.IsInstanceOfType(asyncWrite.Exception.InnerException, typeof(TimeoutException));
+        }
+
+        [TestMethod]
+        public void TestPartialWriteDoesNotTimeout()
+        {
+            var pipe = new Pipe { InputStream = { WriteTimeout = 0 }, OutputStream = { ReadTimeout = 1000 } };
+            pipe.SetFixedLength();
+            var text = Enumerable.Repeat((byte)'t', 3 * Constants.ByteBufferSize).ToArray();
+            var asyncWrite = pipe.InputStream.WriteAsync(text, 0, text.Length);
+            asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+
+            pipe.ReadTextAsync(text.Length).Result.ShouldEqual(new string(text.Select(b => (char)b).ToArray()));
+        }
+
+        [TestMethod]
         public void TestCancel()
         {
             var pipe = new Pipe();
@@ -63,6 +87,49 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead = pipe.ReadTextAsync(1, cancellationTokenSource.Token);
             asyncRead.ContinueWith(_ => { }).Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
             asyncRead.IsCanceled.ShouldEqual(true);
+        }
+
+        [TestMethod]
+        public void TestCancelWrite()
+        {
+            var pipe = new Pipe();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            pipe.WriteText(new string('a', 2 * Constants.ByteBufferSize));
+
+            pipe.SetFixedLength();
+
+            var bytes = Enumerable.Repeat((byte)'b', Constants.ByteBufferSize).ToArray();
+            var asyncWrite = pipe.InputStream.WriteAsync(bytes, 0, bytes.Length, cancellationTokenSource.Token);
+            asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            cancellationTokenSource.Cancel();
+            asyncWrite.ContinueWith(_ => { }).Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncWrite.IsCanceled.ShouldEqual(true);
+        }
+
+        [TestMethod]
+        public void TestPartialWriteDoesNotCancel()
+        {
+            var pipe = new Pipe();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            pipe.WriteText(new string('a', 2 * Constants.ByteBufferSize));
+
+            var asyncRead = pipe.ReadTextAsync(1);
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.Result.ShouldEqual("a");
+            
+            pipe.SetFixedLength();
+
+            var bytes = Enumerable.Repeat((byte)'b', Constants.ByteBufferSize).ToArray();
+            var asyncWrite = pipe.InputStream.WriteAsync(bytes, 0, bytes.Length, cancellationTokenSource.Token);
+            asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            cancellationTokenSource.Cancel();
+            asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+
+            asyncRead = pipe.ReadTextAsync((3 * Constants.ByteBufferSize) - 1);
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.Result.ShouldEqual(new string('a', (2 * Constants.ByteBufferSize) - 1) + new string('b', Constants.ByteBufferSize));
         }
 
         [TestMethod]
@@ -158,22 +225,15 @@ namespace Medallion.Shell.Tests.Streams
         [TestMethod]
         public void TestPipeChainWithFixedLengthPipes()
         {
-            try
-            {
-                var pipes = CreatePipeChain(2);
-                var longText = new string('z', 8 * Constants.ByteBufferSize + 1);
-                pipes.ForEach(p => p.SetFixedLength());
-                var asyncWrite = pipes[0].WriteTextAsync(longText);
-                asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(false);
-                var asyncRead = pipes.Last().ReadTextAsync(longText.Length);
-                asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
-                asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
-                asyncRead.Result.ShouldEqual(longText);
-            }
-            finally
-            {
-                Pipe.PrintLog();
-            }
+            var pipes = CreatePipeChain(2);
+            var longText = new string('z', 8 * Constants.ByteBufferSize + 1);
+            pipes.ForEach(p => p.SetFixedLength());
+            var asyncWrite = pipes[0].WriteTextAsync(longText);
+            asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            var asyncRead = pipes.Last().ReadTextAsync(longText.Length);
+            asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.Result.ShouldEqual(longText);
         }
 
         private static List<Pipe> CreatePipeChain(int length)

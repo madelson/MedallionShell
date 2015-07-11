@@ -43,7 +43,7 @@ namespace Medallion.Shell.Streams
         public Stream InputStream { get { return this.input; } }
         public Stream OutputStream { get { return this.output; } }
 
-        #region ---- Fixed Length Mode ----
+        #region ---- Signals ----
         public void SetFixedLength()
         {
             lock (this.@lock)
@@ -63,6 +63,68 @@ namespace Medallion.Shell.Streams
         private int GetSpaceAvailableNoLock()
         {
             return Math.Max(this.buffer.Length, MaxStableSize) - this.count;
+        }
+
+        /// <summary>
+        /// MA: I used to have the signals updated in various ways and in various places
+        /// throughout the code. Now I have just one function that sets both signals to the correct
+        /// values. This is called from <see cref="ReadNoLock"/>, <see cref="WriteNoLock"/>, 
+        /// <see cref="InternalCloseReadSideNoLock"/>, and <see cref="InternalCloseWriteSideNoLock"/>.
+        /// 
+        /// While it may seem like this does extra work, nearly all cases are necessary. For example, we used
+        /// to say "signal bytes available if count > 0" at the end of <see cref="WriteNoLock"/>. The problem is
+        /// that we could have the following sequence of operations:
+        /// 1. <see cref="ReadNoLockAsync"/> blocks on <see cref="bytesAvailableSignal"/>
+        /// 2. <see cref="WriteNoLock"/> writes and signals
+        /// 3. <see cref="ReadNoLockAsync"/> wakes up
+        /// 4. Another <see cref="WriteNoLock"/> call writes and re-signals
+        /// 5. <see cref="ReadNoLockAsync"/> reads ALL content and returns, leaving <see cref="bytesAvailableSignal"/> signaled (invalid)
+        /// 
+        /// This new implementation avoids this because the <see cref="ReadNoLock"/> call inside <see cref="ReadNoLockAsync"/> will
+        /// properly unsignal after it consumes ALL the contents
+        /// </summary>
+        private void UpdateSignalsNoLock()
+        {
+            // update bytes available
+            switch (this.bytesAvailableSignal.CurrentCount) 
+            {
+                case 0:
+                    if (this.count > 0 || this.writerClosed)
+                    {
+                        this.bytesAvailableSignal.Release();
+                    }
+                    break;
+                case 1:
+                    if (this.count == 0 && !this.writerClosed)
+                    {
+                        this.bytesAvailableSignal.Wait();
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException("Should never get here");
+            }
+
+            // update space available
+            if (this.spaceAvailableSignal != null)
+            {
+                switch (this.spaceAvailableSignal.CurrentCount) 
+                {
+                    case 0:
+                        if (this.readerClosed || this.GetSpaceAvailableNoLock() > 0)
+                        {
+                            this.spaceAvailableSignal.Release();
+                        }
+                        break;
+                    case 1:
+                        if (!this.readerClosed && this.GetSpaceAvailableNoLock() == 0)
+                        {
+                            this.spaceAvailableSignal.Wait();
+                        }
+                        break;
+                    default:
+                        throw new InvalidOperationException("Should never get here");
+                }
+            }
         }
         #endregion
 
@@ -100,13 +162,6 @@ namespace Medallion.Shell.Streams
                     // if we're not limited by space, just write and return
                     this.WriteNoLock(buffer, offset, count);
 
-                    // if we used up all the space, unset the signal
-                    if (this.spaceAvailableSignal != null
-                        && this.GetSpaceAvailableNoLock() == 0)
-                    {
-                        this.spaceAvailableSignal.Wait();
-                    }
-
                     return CompletedZeroTask;
                 }
 
@@ -118,13 +173,24 @@ namespace Medallion.Shell.Streams
         private async Task WriteNoLockAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
         {
             var remainingCount = count;
-            var startUtc = DateTime.UtcNow;
             do
             {
+                // MA: we only use the timeout/token on the first time through, to avoid doing part of the write. This way, it's all or nothing
+                CancellationToken cancellationTokenToUse;
+                TimeSpan timeoutToUse;
+                if (remainingCount == count)
+                {
+                    timeoutToUse = timeout;
+                    cancellationTokenToUse = cancellationToken;
+                }
+                else
+                {
+                    timeoutToUse = Timeout.InfiniteTimeSpan;
+                    cancellationTokenToUse = CancellationToken.None;
+                }
+
                 // acquire the semaphore
-                var timeWaited = DateTime.UtcNow - startUtc;
-                var remainingTimeout = timeWaited > timeout ? TimeSpan.Zero : timeout - timeWaited;
-                var acquired = await this.spaceAvailableSignal.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+                var acquired = await this.spaceAvailableSignal.WaitAsync(timeoutToUse, cancellationTokenToUse).ConfigureAwait(false);
                 if (!acquired)
                 {
                     throw new TimeoutException("Timed out writing to the pipe");
@@ -144,13 +210,6 @@ namespace Medallion.Shell.Streams
                         this.WriteNoLock(buffer, offset + (count - remainingCount), countToWrite);
 
                         remainingCount -= countToWrite;
-                    }
-
-                    // on the way out, signal if there's space left or if the reader is gone
-                    if ((this.GetSpaceAvailableNoLock() > 0 || this.readerClosed)
-                        && this.spaceAvailableSignal.CurrentCount == 0)
-                    {
-                        this.spaceAvailableSignal.Release();
                     }
                 }
             } while (remainingCount > 0);
@@ -177,12 +236,7 @@ namespace Medallion.Shell.Streams
             }
             this.count += count;
 
-            // now that bytes are available, signal
-            if (this.bytesAvailableSignal.CurrentCount == 0)
-            {
-                this.Log("WNL: Releasing BAS with {0} left", this.count);
-                this.bytesAvailableSignal.Release();
-            }
+            this.UpdateSignalsNoLock();
         }
 
         private void EnsureCapacityNoLock(int capacity)
@@ -260,16 +314,11 @@ namespace Medallion.Shell.Streams
         private void InternalCloseWriteSideNoLock()
         {
             this.writerClosed = true;
+            this.UpdateSignalsNoLock();
             if (this.readerClosed)
             {
                 // if both sides are now closed, cleanup
                 this.CleanupNoLock();
-            }
-            else if (this.bytesAvailableSignal.CurrentCount == 0)
-            {
-                // release anyone waiting on the read side
-                this.Log("ICWS: Releasing BAS with {0} left", this.count);
-                this.bytesAvailableSignal.Release();
             }
         }
         #endregion
@@ -299,14 +348,7 @@ namespace Medallion.Shell.Streams
                 // if we have bytes, read them and return synchronously
                 if (this.count > 0)
                 {
-                    var result = Task.FromResult(this.ReadNoLock(buffer, offset, count));
-                    if (this.count == 0)
-                    {
-                        // if we consumed all the bytes, unset the signal
-                        this.bytesAvailableSignal.Wait();
-                        this.Log("RA: Consumed BAS with {0} left", this.count);
-                    }
-                    return result;
+                    return Task.FromResult(this.ReadNoLock(buffer, offset, count));
                 }
 
                 // if we don't have bytes and no more are coming, return 0
@@ -322,7 +364,6 @@ namespace Medallion.Shell.Streams
 
         private async Task<int> ReadNoLockAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            this.Log("RANL: Consuming BAS with {0} left", this.count);
             var acquired = await this.bytesAvailableSignal.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
             if (!acquired)
             {
@@ -332,18 +373,7 @@ namespace Medallion.Shell.Streams
             // we need to reacquire the lock after the await since we might have switched threads
             lock (this.@lock)
             {
-                this.Log("RANL: Consumed BAS: {0} left", this.count);
-                var result = this.ReadNoLock(buffer, offset, count);
-
-                // on the way out, signal if there are still bytes left or if the writer is gone
-                if ((this.count > 0 || this.writerClosed) 
-                    && this.bytesAvailableSignal.CurrentCount == 0)
-                {
-                    this.Log("RANL: Releasing BAS with {0} left", this.count);
-                    this.bytesAvailableSignal.Release();
-                }
-
-                return result;
+                return this.ReadNoLock(buffer, offset, count);
             }
         }
 
@@ -385,11 +415,7 @@ namespace Medallion.Shell.Streams
                 this.buffer = new byte[MaxStableSize];
             }
 
-            // signal that there's now space available
-            if (this.spaceAvailableSignal != null && this.spaceAvailableSignal.CurrentCount == 0)
-            {
-                this.spaceAvailableSignal.Release();
-            } 
+            this.UpdateSignalsNoLock();
 
             return countToRead;
         }
@@ -430,16 +456,11 @@ namespace Medallion.Shell.Streams
         private void InternalCloseReadSideNoLock()
         {
             this.readerClosed = true;
+            this.UpdateSignalsNoLock();
             if (this.writerClosed)
             {
                 // if both sides are now closed, cleanup
                 this.CleanupNoLock();
-            }
-            else if (this.spaceAvailableSignal != null
-                && this.spaceAvailableSignal.CurrentCount == 0)
-            {
-                // release anyone waiting on the write side
-                this.spaceAvailableSignal.Release();
             }
         }
         #endregion
@@ -847,24 +868,24 @@ namespace Medallion.Shell.Streams
         }
         #endregion
 
-        private static readonly StringBuilder log = new StringBuilder();
-        private static int nextId;
-        private int id = Interlocked.Increment(ref nextId);
-        private void Log(string format, params object[] args)
-        {
-            var formatted = this.id + ": " + string.Format(format, args);
-            lock (log)
-            {
-                log.AppendLine(formatted);
-            }
-        }
-        public static void PrintLog()
-        {
-            Console.WriteLine("**** LOG ****");
-            lock (log)
-            {
-                Console.WriteLine(log.ToString());
-            }
-        }
+        //private static readonly StringBuilder log = new StringBuilder();
+        //private static int nextId;
+        //private int id = Interlocked.Increment(ref nextId);
+        //private void Log(string format, params object[] args)
+        //{
+        //    var formatted = this.id + ": " + string.Format(format, args);
+        //    lock (log)
+        //    {
+        //        log.AppendLine(formatted);
+        //    }
+        //}
+        //public static void PrintLog()
+        //{
+        //    Console.WriteLine("**** LOG ****");
+        //    lock (log)
+        //    {
+        //        Console.WriteLine(log.ToString());
+        //    }
+        //}
     }
 }
