@@ -27,11 +27,11 @@ namespace Medallion.Shell.Tests.Streams
             pipe.ReadTextAsync(3).Result.ShouldEqual("123");
 
             var asyncRead = pipe.ReadTextAsync(100);
-            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false, asyncRead.IsCompleted ? "Found: " + (asyncRead.Result ?? "null") : "not complete");
             pipe.WriteText("x");
-            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false, asyncRead.IsCompleted ? "Found: " + (asyncRead.Result ?? "null") : "not complete");
             pipe.WriteText(new string('y', 100));
-            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true, asyncRead.IsCompleted ? "Found: " + (asyncRead.Result ?? "null") : "not complete");
             asyncRead.Result.ShouldEqual("x" + new string('y', 99));
         }
 
@@ -115,6 +115,83 @@ namespace Medallion.Shell.Tests.Streams
             var asyncRead = pipe.ReadTextAsync(1);
             UnitTestHelpers.AssertThrows<InvalidOperationException>(() => pipe.OutputStream.ReadByte());
             pipe.InputStream.Close();
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+        }
+
+        [TestMethod]
+        public void TestConcurrentWrites()
+        {
+            var pipe = new Pipe();
+            pipe.SetFixedLength();
+
+            var longText = new string('x', (2 * Constants.ByteBufferSize) + 1);
+            var asyncWrite = pipe.WriteTextAsync(longText);
+            asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => pipe.InputStream.WriteByte(101));
+            pipe.OutputStream.Close();
+            asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+        }
+
+        [TestMethod]
+        public void TestChainedPipes()
+        {
+            var pipes = CreatePipeChain(100);
+
+            // short write
+            pipes[0].InputStream.WriteByte(100);
+            var buffer = new byte[1];
+            pipes.Last().OutputStream.ReadAsync(buffer, 0, buffer.Length)
+                .Wait(TimeSpan.FromSeconds(5))
+                .ShouldEqual(true);
+
+            buffer[0].ShouldEqual((byte)100);
+
+            // long write
+            var longText = new string('y', 3 * Constants.CharBufferSize);
+            var asyncWrite = pipes[0].WriteTextAsync(longText);
+            asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            var asyncRead = pipes.Last().ReadTextAsync(longText.Length);
+            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncRead.Result.ShouldEqual(longText);
+        }
+
+        [TestMethod]
+        public void TestPipeChainWithFixedLengthPipes()
+        {
+            try
+            {
+                var pipes = CreatePipeChain(2);
+                var longText = new string('z', 8 * Constants.ByteBufferSize + 1);
+                pipes.ForEach(p => p.SetFixedLength());
+                var asyncWrite = pipes[0].WriteTextAsync(longText);
+                asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(false);
+                var asyncRead = pipes.Last().ReadTextAsync(longText.Length);
+                asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+                asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+                asyncRead.Result.ShouldEqual(longText);
+            }
+            finally
+            {
+                Pipe.PrintLog();
+            }
+        }
+
+        private static List<Pipe> CreatePipeChain(int length)
+        {
+            var pipes = Enumerable.Range(0, length).Select(_ => new Pipe())
+                .ToList();
+            for (var i = 0; i < pipes.Count - 1; ++i)
+            {
+                var fromPipe = pipes[i];
+                var toPipe = pipes[i + 1];
+                fromPipe.OutputStream.CopyToAsync(toPipe.InputStream)
+                    .ContinueWith(_ => {
+                        fromPipe.OutputStream.Close();
+                        toPipe.InputStream.Close();
+                    });
+            }
+
+            return pipes;
         }
     }
 
@@ -123,6 +200,11 @@ namespace Medallion.Shell.Tests.Streams
         public static void WriteText(this Pipe @this, string text)
         {
             new StreamWriter(@this.InputStream) { AutoFlush = true }.Write(text);
+        }
+
+        public static Task WriteTextAsync(this Pipe @this, string text)
+        {
+            return new StreamWriter(@this.InputStream) { AutoFlush = true }.WriteAsync(text);
         }
 
         public static async Task<string> ReadTextAsync(this Pipe @this, int count, CancellationToken token = default(CancellationToken))

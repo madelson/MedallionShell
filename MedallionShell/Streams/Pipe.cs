@@ -14,6 +14,11 @@ namespace Medallion.Shell.Streams
     {
         // From MemoryStream (see http://referencesource.microsoft.com/#mscorlib/system/io/memorystream.cs,1416df83d2368912)
         private const int MinSize = 256;
+        /// <summary>
+        /// The maximum size at which the pipe will be left empty. Using 2 * <see cref="Constants.ByteBufferSize"/>
+        /// helps prevent thrashing if data is being pushed through the pipe at that rate
+        /// </summary>
+        private const int MaxStableSize = 2 * Constants.ByteBufferSize;
         private static readonly byte[] Empty = new byte[0];
         private static Task<int> CompletedZeroTask = Task.FromResult(0);
 
@@ -25,7 +30,9 @@ namespace Medallion.Shell.Streams
         private byte[] buffer = Empty;
         private int start, count;
         private bool writerClosed, readerClosed;
+        private SemaphoreSlim spaceAvailableSignal;
         private Task<int> readTask = CompletedZeroTask;
+        private Task writeTask = CompletedZeroTask;
 
         public Pipe()
         {
@@ -36,34 +43,126 @@ namespace Medallion.Shell.Streams
         public Stream InputStream { get { return this.input; } }
         public Stream OutputStream { get { return this.output; } }
 
-        #region ---- Writing ----
-        private void Write(byte[] buffer, int offset, int count)
+        #region ---- Fixed Length Mode ----
+        public void SetFixedLength()
         {
-            Throw.IfInvalidBuffer(buffer, offset, count);
-
             lock (this.@lock)
             {
-                Throw<ObjectDisposedException>.If(this.writerClosed, "The write side of the pipe is closed");
-                
-                if (this.readerClosed)
+                if (this.spaceAvailableSignal == null
+                    && !this.readerClosed
+                    && !this.writerClosed)
                 {
-                    // if we can't read, just throw away the bytes since no one can observe them anyway
-                    return;
-                }
-
-                // write the bytes
-                this.WriteNoLock(buffer, offset, count);
-
-                // if we actually wrote something, unblock any waiters
-                if (count > 0 && this.bytesAvailableSignal.CurrentCount == 0)
-                {
-                    this.bytesAvailableSignal.Release();
+                    this.spaceAvailableSignal = new SemaphoreSlim(
+                        initialCount: this.GetSpaceAvailableNoLock() > 0 ? 1 : 0,
+                        maxCount: 1
+                    );
                 }
             }
         }
 
+        private int GetSpaceAvailableNoLock()
+        {
+            return Math.Max(this.buffer.Length, MaxStableSize) - this.count;
+        }
+        #endregion
+
+        #region ---- Writing ----
+        private Task WriteAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            Throw.IfInvalidBuffer(buffer, offset, count);
+
+            // always respect cancellation, even in the sync flow
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return CreateCanceledTask();
+            }
+
+            if (count == 0)
+            {
+                // if we didn't want to write anything, return immediately
+                return CompletedZeroTask;
+            }
+
+            lock (this.@lock)
+            {
+                Throw<ObjectDisposedException>.If(this.writerClosed, "The write side of the pipe is closed");
+                Throw<InvalidOperationException>.If(!this.writeTask.IsCompleted, "Concurrent writes are not allowed");
+
+                if (this.readerClosed)
+                {
+                    // if we can't read, just throw away the bytes since no one can observe them anyway
+                    return CompletedZeroTask;
+                }
+
+                if (this.spaceAvailableSignal == null
+                    || this.GetSpaceAvailableNoLock() >= count)
+                {
+                    // if we're not limited by space, just write and return
+                    this.WriteNoLock(buffer, offset, count);
+
+                    // if we used up all the space, unset the signal
+                    if (this.spaceAvailableSignal != null
+                        && this.GetSpaceAvailableNoLock() == 0)
+                    {
+                        this.spaceAvailableSignal.Wait();
+                    }
+
+                    return CompletedZeroTask;
+                }
+
+                // otherwise, create and return an async write task
+                return this.writeTask = this.WriteNoLockAsync(buffer, offset, count, timeout, cancellationToken);
+            }
+        }
+
+        private async Task WriteNoLockAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var remainingCount = count;
+            var startUtc = DateTime.UtcNow;
+            do
+            {
+                // acquire the semaphore
+                var timeWaited = DateTime.UtcNow - startUtc;
+                var remainingTimeout = timeWaited > timeout ? TimeSpan.Zero : timeout - timeWaited;
+                var acquired = await this.spaceAvailableSignal.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+                if (!acquired)
+                {
+                    throw new TimeoutException("Timed out writing to the pipe");
+                }
+
+                // we need to reacquire the lock after the await since we might have switched threads
+                lock (this.@lock)
+                {
+                    if (this.readerClosed)
+                    {
+                        // if the read side is gone, we're instantly done
+                        remainingCount = 0;
+                    }
+                    else
+                    {
+                        var countToWrite = Math.Min(this.GetSpaceAvailableNoLock(), remainingCount);
+                        this.WriteNoLock(buffer, offset + (count - remainingCount), countToWrite);
+
+                        remainingCount -= countToWrite;
+                    }
+
+                    // on the way out, signal if there's space left or if the reader is gone
+                    if ((this.GetSpaceAvailableNoLock() > 0 || this.readerClosed)
+                        && this.spaceAvailableSignal.CurrentCount == 0)
+                    {
+                        this.spaceAvailableSignal.Release();
+                    }
+                }
+            } while (remainingCount > 0);
+        }
+
         private void WriteNoLock(byte[] buffer, int offset, int count)
         {
+            if (count <= 0)
+            {
+                throw new InvalidOperationException("Sanity check: WriteNoLock requires positive count");
+            }
+
             this.EnsureCapacityNoLock(unchecked(this.count + count));
 
             var startToEnd = this.buffer.Length - start;
@@ -77,6 +176,13 @@ namespace Medallion.Shell.Streams
                 Buffer.BlockCopy(src: buffer, srcOffset: count - spaceAtEnd, dst: this.buffer, dstOffset: this.count - startToEnd, count: count - spaceAtEnd);
             }
             this.count += count;
+
+            // now that bytes are available, signal
+            if (this.bytesAvailableSignal.CurrentCount == 0)
+            {
+                this.Log("WNL: Releasing BAS with {0} left", this.count);
+                this.bytesAvailableSignal.Release();
+            }
         }
 
         private void EnsureCapacityNoLock(int capacity)
@@ -92,6 +198,12 @@ namespace Medallion.Shell.Streams
                 return;
             }
 
+            if (this.spaceAvailableSignal != null
+                && capacity > MaxStableSize)
+            {
+                throw new InvalidOperationException("Sanity check: pipe should not attempt to expand beyond stable size in fixed length mode");
+            }
+
             int newCapacity;
             if (currentCapacity < MinSize)
             {
@@ -100,13 +212,15 @@ namespace Medallion.Shell.Streams
             else
             {
                 var doubleCapacity = 2L * currentCapacity;
-                newCapacity = (int)Math.Min(doubleCapacity, int.MaxValue);
+                newCapacity = capacity >= doubleCapacity 
+                    ? capacity
+                    :(int)Math.Min(doubleCapacity, int.MaxValue);
             }
 
             var newBuffer = new byte[newCapacity];
-            var startToEndCount = this.buffer.Length - start;
+            var startToEndCount = Math.Min(this.buffer.Length - this.start, this.count);
             Buffer.BlockCopy(src: this.buffer, srcOffset: this.start, dst: newBuffer, dstOffset: 0, count: startToEndCount);
-            Buffer.BlockCopy(src: this.buffer, srcOffset: 0, dst: newBuffer, dstOffset: startToEndCount, count: count - startToEndCount);
+            Buffer.BlockCopy(src: this.buffer, srcOffset: 0, dst: newBuffer, dstOffset: startToEndCount, count: this.count - startToEndCount);
             this.buffer = newBuffer;
             this.start = 0;
         }
@@ -115,23 +229,47 @@ namespace Medallion.Shell.Streams
         {
             lock (this.@lock)
             {
+                // no-op if we're already closed
                 if (this.writerClosed)
                 {
                     return;
                 }
 
-                this.writerClosed = true;
-
-                // unblock any waiters, since nothing more is coming
-                if (this.bytesAvailableSignal.CurrentCount == 0)
+                // if we don't have an active write task, close now
+                if (this.writeTask.IsCompleted)
                 {
-                    this.bytesAvailableSignal.Release();
+                    this.InternalCloseWriteSideNoLock();
+                    return;
                 }
 
-                if (this.readerClosed)
-                {
-                    this.CleanupNoLock();
-                }
+                // otherwise, close as a continuation on the write task
+                this.writeTask = this.writeTask.ContinueWith(
+                    (t, state) =>
+                    {
+                        var @this = (Pipe)state;
+                        lock (@this.@lock)
+                        {
+                            @this.InternalCloseWriteSideNoLock();
+                        }
+                    }
+                    , state: this
+                );
+            }
+        }
+
+        private void InternalCloseWriteSideNoLock()
+        {
+            this.writerClosed = true;
+            if (this.readerClosed)
+            {
+                // if both sides are now closed, cleanup
+                this.CleanupNoLock();
+            }
+            else if (this.bytesAvailableSignal.CurrentCount == 0)
+            {
+                // release anyone waiting on the read side
+                this.Log("ICWS: Releasing BAS with {0} left", this.count);
+                this.bytesAvailableSignal.Release();
             }
         }
         #endregion
@@ -141,7 +279,13 @@ namespace Medallion.Shell.Streams
         {
             Throw.IfInvalidBuffer(buffer, offset, count);
 
-            // if we didn't want to write anything, return immediately
+            // always respect cancellation, even in the sync flow
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return CreateCanceledTask();
+            }
+
+            // if we didn't want to read anything, return immediately
             if (count == 0) 
             { 
                 return CompletedZeroTask; 
@@ -155,20 +299,12 @@ namespace Medallion.Shell.Streams
                 // if we have bytes, read them and return synchronously
                 if (this.count > 0)
                 {
-                    // respect cancellation in the sync flow by just returning a 
-                    // canceled task when appropriate
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        var taskCompletionSource = new TaskCompletionSource<int>();
-                        taskCompletionSource.SetCanceled();
-                        return taskCompletionSource.Task;
-                    }
-
                     var result = Task.FromResult(this.ReadNoLock(buffer, offset, count));
                     if (this.count == 0)
                     {
                         // if we consumed all the bytes, unset the signal
                         this.bytesAvailableSignal.Wait();
+                        this.Log("RA: Consumed BAS with {0} left", this.count);
                     }
                     return result;
                 }
@@ -186,6 +322,7 @@ namespace Medallion.Shell.Streams
 
         private async Task<int> ReadNoLockAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
         {
+            this.Log("RANL: Consuming BAS with {0} left", this.count);
             var acquired = await this.bytesAvailableSignal.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
             if (!acquired)
             {
@@ -195,11 +332,14 @@ namespace Medallion.Shell.Streams
             // we need to reacquire the lock after the await since we might have switched threads
             lock (this.@lock)
             {
+                this.Log("RANL: Consumed BAS: {0} left", this.count);
                 var result = this.ReadNoLock(buffer, offset, count);
 
-                // on the way out, signal if there are still bytes left
-                if (this.count > 0 && this.bytesAvailableSignal.CurrentCount == 0)
+                // on the way out, signal if there are still bytes left or if the writer is gone
+                if ((this.count > 0 || this.writerClosed) 
+                    && this.bytesAvailableSignal.CurrentCount == 0)
                 {
+                    this.Log("RANL: Releasing BAS with {0} left", this.count);
                     this.bytesAvailableSignal.Release();
                 }
 
@@ -237,6 +377,20 @@ namespace Medallion.Shell.Streams
 
             this.start = newStart;
             this.count -= countToRead;
+
+            // ensure that an empty pipe never stays above the max stable size
+            if (this.count == 0
+                && this.buffer.Length > MaxStableSize)
+            {
+                this.buffer = new byte[MaxStableSize];
+            }
+
+            // signal that there's now space available
+            if (this.spaceAvailableSignal != null && this.spaceAvailableSignal.CurrentCount == 0)
+            {
+                this.spaceAvailableSignal.Release();
+            } 
+
             return countToRead;
         }
 
@@ -254,6 +408,7 @@ namespace Medallion.Shell.Streams
                 if (this.readTask.IsCompleted)
                 {
                     this.InternalCloseReadSideNoLock();
+                    return;
                 }
 
                 // otherwise, close as a continuation on the read task
@@ -277,7 +432,14 @@ namespace Medallion.Shell.Streams
             this.readerClosed = true;
             if (this.writerClosed)
             {
+                // if both sides are now closed, cleanup
                 this.CleanupNoLock();
+            }
+            else if (this.spaceAvailableSignal != null
+                && this.spaceAvailableSignal.CurrentCount == 0)
+            {
+                // release anyone waiting on the write side
+                this.spaceAvailableSignal.Release();
             }
         }
         #endregion
@@ -288,6 +450,19 @@ namespace Medallion.Shell.Streams
             this.buffer = null;
             this.readTask = null;
             this.bytesAvailableSignal.Dispose();
+            if (this.spaceAvailableSignal != null) 
+            {
+                this.spaceAvailableSignal.Dispose();
+            }
+        }
+        #endregion
+
+        #region ---- Cancellation ----
+        private static Task<int> CreateCanceledTask()
+        {
+            var taskCompletionSource = new TaskCompletionSource<int>();
+            taskCompletionSource.SetCanceled();
+            return taskCompletionSource.Task;
         }
         #endregion
 
@@ -305,8 +480,40 @@ namespace Medallion.Shell.Streams
 
             public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
-                // ok since we don't have true async write
-                return base.BeginWrite(buffer, offset, count, callback, state);
+                // according to the docs, the callback is optional
+                var writeTask = this.WriteAsync(buffer, offset, count, CancellationToken.None);
+                var writeResult = new AsyncWriteResult(state, writeTask, this);
+                if (callback != null)
+                {
+                    writeTask.ContinueWith(_ => callback(writeResult));
+                }
+                return writeResult;
+            }
+
+            private sealed class AsyncWriteResult : IAsyncResult
+            {
+                private readonly object state;
+                private readonly Task writeTask;
+                private readonly PipeInputStream stream;
+
+                public AsyncWriteResult(object state, Task writeTask, PipeInputStream stream)
+                {
+                    this.state = state;
+                    this.writeTask = writeTask;
+                    this.stream = stream;
+                }
+
+                public Task WriteTask { get { return this.writeTask; } }
+
+                public Stream Stream { get { return this.stream; } }
+
+                object IAsyncResult.AsyncState { get { return this.state; } }
+
+                WaitHandle IAsyncResult.AsyncWaitHandle { get { return this.writeTask.As<IAsyncResult>().AsyncWaitHandle; } }
+
+                bool IAsyncResult.CompletedSynchronously { get { return this.writeTask.As<IAsyncResult>().CompletedSynchronously; } }
+
+                bool IAsyncResult.IsCompleted { get { return this.writeTask.IsCompleted; } }
             }
 
             public override bool CanRead { get { return false; } }
@@ -342,18 +549,21 @@ namespace Medallion.Shell.Streams
 
             public override void EndWrite(IAsyncResult asyncResult)
             {
-                base.EndWrite(asyncResult); // no true async
+                Throw.IfNull(asyncResult, "asyncResult");
+                var writeResult = asyncResult as AsyncWriteResult;
+                Throw.If(writeResult == null || writeResult.Stream != this, "asyncResult: must be created by this stream's BeginWrite method");
+                writeResult.WriteTask.Wait();
             }
 
             public override void Flush()
             {
-                // no-op, since we have no buffer
+                // no-op, since we are just a buffer
             }
 
             public override Task FlushAsync(CancellationToken cancellationToken)
             {
-                // we have no true async support
-                return base.FlushAsync(cancellationToken);
+                // no-op since we are just a buffer
+                return CompletedZeroTask;
             }
 
             public override long Length { get { throw Throw.NotSupported(); } }
@@ -397,13 +607,25 @@ namespace Medallion.Shell.Streams
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                this.pipe.Write(buffer, offset, count);
+                try
+                {
+                    this.pipe.WriteAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.WriteTimeout), CancellationToken.None).Wait();
+                }
+                catch (AggregateException ex)
+                {
+                    // unwrap aggregate if we can
+                    if (ex.InnerExceptions.Count == 1)
+                    {
+                        ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                    }
+
+                    throw;
+                }
             }
 
             public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
-                // no true async writes
-                return base.WriteAsync(buffer, offset, count, cancellationToken);
+                return this.pipe.WriteAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.WriteTimeout), cancellationToken);
             }
 
             public override void WriteByte(byte value)
@@ -412,10 +634,19 @@ namespace Medallion.Shell.Streams
                 base.WriteByte(value);
             }
 
+            private int writeTimeout = Timeout.Infinite;
+
             public override int WriteTimeout
             {
-                get { throw Throw.NotSupported(); }
-                set { throw Throw.NotSupported(); }
+                get { return this.writeTimeout; }
+                set 
+                {
+                    if (value != Timeout.Infinite)
+                    {
+                        Throw.IfOutOfRange(value, "WriteTimeout", min: 0);
+                    }
+                    this.writeTimeout = value;
+                }
             }
 
             private static NotSupportedException WriteOnly([CallerMemberName] string memberName = null)
@@ -615,5 +846,25 @@ namespace Medallion.Shell.Streams
             }
         }
         #endregion
+
+        private static readonly StringBuilder log = new StringBuilder();
+        private static int nextId;
+        private int id = Interlocked.Increment(ref nextId);
+        private void Log(string format, params object[] args)
+        {
+            var formatted = this.id + ": " + string.Format(format, args);
+            lock (log)
+            {
+                log.AppendLine(formatted);
+            }
+        }
+        public static void PrintLog()
+        {
+            Console.WriteLine("**** LOG ****");
+            lock (log)
+            {
+                Console.WriteLine(log.ToString());
+            }
+        }
     }
 }
