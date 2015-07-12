@@ -20,8 +20,20 @@ namespace SampleCommand
             switch (args[0])
             {
                 case "echo":
-                    var input = Console.In.ReadToEnd();
-                    Console.Out.Write(input);
+                    if (args.Length > 1 && args[1] == "--per-char")
+                    {
+                        int ch;
+                        while ((ch = Console.In.Read()) != -1)
+                        {
+                            Console.Out.Write((char)ch);
+                            Console.Out.Flush();
+                        }
+                    }
+                    else
+                    {
+                        var input = Console.In.ReadToEnd();
+                        Console.Out.Write(input);
+                    }
                     break;
                 case "grep":
                     var regex = new Regex(args[1]);

@@ -250,6 +250,29 @@ namespace Medallion.Shell.Tests
             command.Task.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
+        [TestMethod]
+        public void TestAutoFlush()
+        {
+            var command = Command.Run("SampleCommand", "echo", "--per-char");
+            command.StandardInput.AutoFlush.ShouldEqual(true);
+            command.StandardInput.Write('a');
+
+            var buffer = new char[1];
+            var asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
+            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            buffer[0].ShouldEqual('a');
+
+            command.StandardInput.AutoFlush = false;
+            command.StandardInput.Write('b');
+            asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            command.StandardInput.Flush();
+            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            buffer[0].ShouldEqual('b');
+
+            command.StandardInput.Close();
+        }
+
         private IEnumerable<string> ErrorLines()
         {
             yield return "1";

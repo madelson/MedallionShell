@@ -19,13 +19,24 @@ namespace Medallion.Shell.Streams
         {
             Throw.IfNull(writer, "writer");
             this.writer = writer;
+            this.AutoFlush = true; // set the default
         }
 
         #region ---- Custom methods ----
         /// <summary>
-        /// Provides access to the underlying stream
+        /// Provides access to the underlying <see cref="Stream"/>. Equivalent to <see cref="StreamWriter.BaseStream"/>
         /// </summary>
         public Stream BaseStream { get { return this.writer.BaseStream; } }
+
+        /// <summary>
+        /// Determines whether writes are automatically flushed to the underlying <see cref="Stream"/> after each write.
+        /// Equivalent to <see cref="StreamWriter.AutoFlush"/>. Defaults to TRUE
+        /// </summary>
+        public bool AutoFlush 
+        { 
+            get { return this.writer.AutoFlush; }
+            set { this.writer.AutoFlush = value; }
+        }
 
         /// <summary>
         /// Asynchronously copies <paramref name="stream"/> to this stream
