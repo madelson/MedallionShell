@@ -36,6 +36,28 @@ namespace Medallion.Shell.Tests.Streams
         }
 
         [TestMethod]
+        public void TestLargeStreamWithFixedLength()
+        {
+            var pipe = new Pipe();
+            pipe.SetFixedLength();
+
+            var bytes = Enumerable.Range(0, 5 * Constants.ByteBufferSize)
+                .Select(b => (byte)(b % 256))
+                .ToArray();
+            var asyncWrite = pipe.InputStream.WriteAsync(bytes, 0, bytes.Length)
+                .ContinueWith(_ => pipe.InputStream.Close());
+            var memoryStream = new MemoryStream();
+            var buffer = new byte[777];
+            int bytesRead;
+            while ((bytesRead = pipe.OutputStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                memoryStream.Write(buffer, 0, bytesRead);
+            }
+            asyncWrite.Wait(TimeSpan.FromSeconds(1)).ShouldEqual(true);
+            memoryStream.ToArray().SequenceEqual(bytes).ShouldEqual(true);
+        }
+
+        [TestMethod]
         public void TimeoutTest()
         {
             var pipe = new Pipe { OutputStream = { ReadTimeout = 0 } };
@@ -226,13 +248,17 @@ namespace Medallion.Shell.Tests.Streams
         public void TestPipeChainWithFixedLengthPipes()
         {
             var pipes = CreatePipeChain(2);
+            // note that this needs to be >> larger than the capacity to block all the pipes,
+            // since we can store bytes in each pipe in the chain + each buffer between pipes
             var longText = new string('z', 8 * Constants.ByteBufferSize + 1);
             pipes.ForEach(p => p.SetFixedLength());
             var asyncWrite = pipes[0].WriteTextAsync(longText);
             asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
             var asyncRead = pipes.Last().ReadTextAsync(longText.Length);
-            asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
-            asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+            asyncWrite.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
+            asyncRead.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
+            Assert.IsNotNull(asyncRead.Result);
+            asyncRead.Result.Length.ShouldEqual(longText.Length);
             asyncRead.Result.ShouldEqual(longText);
         }
 
@@ -252,6 +278,82 @@ namespace Medallion.Shell.Tests.Streams
             }
 
             return pipes;
+        }
+
+        [TestMethod]
+        public void FuzzTest()
+        {
+            const int ByteCount = 100000;
+
+            var pipe = new Pipe();
+            var writeTask = Task.Run(async () =>
+            {
+                var memoryStream = new MemoryStream();
+                var random = new Random(1234);
+                var bytesWritten = 0;
+                while (bytesWritten < ByteCount)
+                {
+                    //Console.WriteLine("Writing " + memoryStream.Length);
+                    switch (random.Next(10))
+                    {
+                        case 1:
+                            //Console.WriteLine("SETTING FIXED LENGTH");
+                            pipe.SetFixedLength();
+                            break;
+                        case 2:
+                        case 3:
+                            await Task.Delay(1);
+                            break;
+                        default:
+                            var bufferLength = random.Next(0, 5000);
+                            var offset = random.Next(0, bufferLength + 1);
+                            var count = random.Next(0, bufferLength - offset + 1);
+                            var buffer = new byte[bufferLength];
+                            random.NextBytes(buffer);
+                            memoryStream.Write(buffer, offset, count);
+                            //Console.WriteLine("WRITE START");
+                            await pipe.InputStream.WriteAsync(buffer, offset, count);
+                            //Console.WriteLine("WRITE END");
+                            bytesWritten += count;
+                            break;
+                    }
+                }
+                //Console.WriteLine("WRITER ALL DONE");
+                pipe.InputStream.Close();
+                return memoryStream;
+            });
+
+            var readTask = Task.Run(async () =>
+            {
+                var memoryStream = new MemoryStream();
+                var random = new Random(5678);
+                while (true)
+                {
+                    //Console.WriteLine("Reading " + memoryStream.Length);
+                    if (random.Next(10) == 1)
+                    {
+                        await Task.Delay(1);
+                    }
+                    var bufferLength = random.Next(0, 5000);
+                    var offset = random.Next(0, bufferLength + 1);
+                    var count = random.Next(0, bufferLength - offset + 1);
+                    var buffer = new byte[bufferLength];
+                    //Console.WriteLine("READ START");
+                    var bytesRead = await pipe.OutputStream.ReadAsync(buffer, offset, count);
+                    //Console.WriteLine("READ END");
+                    if (bytesRead == 0 && count > 0)
+                    {
+                        // if we tried to read more than 1 byte and we got 0, the pipe is done
+                        //Console.WriteLine("READER ALL DONE");
+                        return memoryStream;
+                    }
+                    memoryStream.Write(buffer, offset, bytesRead);
+                }
+            });
+
+            Task.WhenAll(writeTask, readTask).Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+
+            CollectionAssert.AreEqual(writeTask.Result.ToArray(), readTask.Result.ToArray());
         }
     }
 

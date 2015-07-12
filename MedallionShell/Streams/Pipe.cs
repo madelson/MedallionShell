@@ -224,16 +224,10 @@ namespace Medallion.Shell.Streams
 
             this.EnsureCapacityNoLock(unchecked(this.count + count));
 
-            var startToEnd = this.buffer.Length - start;
-            var spaceAtEnd = startToEnd - this.count;
-            if (spaceAtEnd > 0)
-            {
-                Buffer.BlockCopy(src: buffer, srcOffset: offset, dst: this.buffer, dstOffset: this.start + this.count, count: Math.Min(spaceAtEnd, count));
-            }
-            if (count > spaceAtEnd)
-            {
-                Buffer.BlockCopy(src: buffer, srcOffset: count - spaceAtEnd, dst: this.buffer, dstOffset: this.count - startToEnd, count: count - spaceAtEnd);
-            }
+            var writeStart = (this.start + this.count) % this.buffer.Length;
+            var writeStartToEndCount = Math.Min(this.buffer.Length - writeStart, count);
+            Buffer.BlockCopy(src: buffer, srcOffset: offset, dst: this.buffer, dstOffset: writeStart, count: writeStartToEndCount);
+            Buffer.BlockCopy(src: buffer, srcOffset: offset + writeStartToEndCount, dst: this.buffer, dstOffset: 0, count: count - writeStartToEndCount);
             this.count += count;
 
             this.UpdateSignalsNoLock();
@@ -268,7 +262,7 @@ namespace Medallion.Shell.Streams
                 var doubleCapacity = 2L * currentCapacity;
                 newCapacity = capacity >= doubleCapacity 
                     ? capacity
-                    :(int)Math.Min(doubleCapacity, int.MaxValue);
+                    : (int)Math.Min(doubleCapacity, int.MaxValue);
             }
 
             var newBuffer = new byte[newCapacity];
@@ -381,37 +375,21 @@ namespace Medallion.Shell.Streams
         {
             var countToRead = Math.Min(this.count, count);
 
-            var startToEnd = this.buffer.Length - this.start;
-            var newStart = this.start;
-            if (startToEnd > 0)
+            var bytesRead = 0;
+            while (bytesRead < countToRead)
             {
-                int countToReadFromEnd;
-                if (startToEnd > countToRead)
-                {
-                    countToReadFromEnd = countToRead;
-                    newStart += countToRead;
-                }
-                else
-                {
-                    countToReadFromEnd = startToEnd;
-                    newStart = 0;
-                }
-                Buffer.BlockCopy(src: this.buffer, srcOffset: this.start, dst: buffer, dstOffset: offset, count: countToReadFromEnd);
+                var bytesToRead = Math.Min(count - bytesRead, this.buffer.Length - this.start);
+                Buffer.BlockCopy(src: this.buffer, srcOffset: this.start, dst: buffer, dstOffset: offset + bytesRead, count: bytesToRead);
+                bytesRead += bytesToRead;
+                this.start = (this.start + bytesToRead) % this.buffer.Length;
             }
-            if (startToEnd < countToRead)
-            {
-                var countToReadFromBeginning = countToRead - startToEnd;
-                newStart += countToReadFromBeginning;
-                Buffer.BlockCopy(src: this.buffer, srcOffset: 0, dst: buffer, dstOffset: startToEnd, count: countToReadFromBeginning);
-            }
-
-            this.start = newStart;
             this.count -= countToRead;
 
             // ensure that an empty pipe never stays above the max stable size
             if (this.count == 0
                 && this.buffer.Length > MaxStableSize)
             {
+                this.start = 0;
                 this.buffer = new byte[MaxStableSize];
             }
 
@@ -447,8 +425,8 @@ namespace Medallion.Shell.Streams
                             @this.InternalCloseReadSideNoLock();
                         }
                         return -1;
-                    }
-                    , state: this
+                    }, 
+                    state: this
                 );
             }
         }
