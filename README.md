@@ -56,3 +56,8 @@ var shell = new Shell(o => o.ThrowOnError()...);
 shell.Run("path_to_grep", "some REGEX");
 ```
 
+## Release Notes
+- 1.0.3 Fixed bug with standard error (thanks <a href="https://github.com/nsdfxela">nsdfxela</a>!)
+- 1.0.2 Fixed bug where timeout would suppress errors from ThrowOnError option
+- 1.0.1 Allowed for argument ommission in Command.Run(), other minor fixes 
+- 1.0.0 Initial release

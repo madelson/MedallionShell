@@ -35,6 +35,10 @@ namespace SampleCommand
                         Console.Out.Write(input);
                     }
                     break;
+                case "errecho":
+                    var errEchoInput = Console.In.ReadToEnd();
+                    (args[0].StartsWith("err") ? Console.Error : Console.Out).Write(errEchoInput);
+                    break;
                 case "grep":
                     var regex = new Regex(args[1]);
                     while ((line = Console.ReadLine()) != null)
