@@ -15,7 +15,7 @@
       A lightweight library that simplifies working with processes in .NET
     </description>
     <releaseNotes>
-      Fixed bug with standard error
+      Added AutoFlush support and fixed bug where small flushed data packets got stuck in the buffer
     </releaseNotes>
     <copyright>Copyright 2014</copyright>
     <tags>process async</tags>
