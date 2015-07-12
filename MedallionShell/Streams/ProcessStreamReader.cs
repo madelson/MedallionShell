@@ -17,7 +17,7 @@ namespace Medallion.Shell.Streams
         internal ProcessStreamReader() { }
 
         /// <summary>
-        /// Provides access to the underlying stream
+        /// Provides access to the underlying <see cref="Stream"/>. Equivalent to <see cref="StreamReader.BaseStream"/>
         /// </summary>
         public abstract Stream BaseStream { get; }
 
