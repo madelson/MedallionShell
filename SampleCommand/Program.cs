@@ -20,9 +20,24 @@ namespace SampleCommand
             switch (args[0])
             {
                 case "echo":
+                    if (args.Length > 1 && args[1] == "--per-char")
+                    {
+                        int ch;
+                        while ((ch = Console.In.Read()) != -1)
+                        {
+                            Console.Out.Write((char)ch);
+                            Console.Out.Flush();
+                        }
+                    }
+                    else
+                    {
+                        var input = Console.In.ReadToEnd();
+                        Console.Out.Write(input);
+                    }
+                    break;
                 case "errecho":
-                    var input = Console.In.ReadToEnd();
-                    (args[0].StartsWith("err") ? Console.Error : Console.Out).Write(input);
+                    var errEchoInput = Console.In.ReadToEnd();
+                    (args[0].StartsWith("err") ? Console.Error : Console.Out).Write(errEchoInput);
                     break;
                 case "grep":
                     var regex = new Regex(args[1]);
@@ -72,6 +87,15 @@ namespace SampleCommand
                     {
                         Console.Out.WriteLine(pipeLine);
                         Console.Out.Flush();
+                    }
+                    break;
+                case "shortflush":
+                    Console.Out.Write(args[1]);
+                    Console.Out.Flush();
+                    // don't exit until stdin closes
+                    while (Console.ReadLine() != null)
+                    {
+                        Thread.Sleep(5);
                     }
                     break;
                 default:

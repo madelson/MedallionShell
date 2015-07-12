@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,6 +48,31 @@ namespace Medallion.Shell
             {
                 throw new ArgumentOutOfRangeException(paramName, string.Format("Expected: <= {0}, but was {1}", max, value));
             }
+        }
+
+        public static void IfInvalidBuffer<T>(T[] buffer, int offset, int count)
+        {
+            if (buffer == null)
+            {
+                throw new ArgumentNullException("buffer");
+            }
+            if (offset < 0)
+            {
+                throw new ArgumentOutOfRangeException("offset");
+            }
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException("count");
+            }
+            if (offset + count > buffer.Length)
+            {
+                throw new ArgumentOutOfRangeException("the segment described by offset and count must be within buffer");
+            }
+        }
+
+        public static NotSupportedException NotSupported([CallerMemberName] string memberName = null)
+        {
+            throw new NotSupportedException(memberName);
         }
     }
 

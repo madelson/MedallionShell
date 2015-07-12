@@ -239,6 +239,41 @@ namespace Medallion.Shell.Tests
         }
 
         [TestMethod]
+        public void TestShortFlush()
+        {
+            var command = Command.Run("SampleCommand", "shortflush", "a");
+            var readCommand = command.StandardOutput.ReadBlockAsync(new char[1], 0, 1);
+            //var readCommand = command.StandardOutput.BaseStream.ReadAsync(new byte[1], 0, 1);
+            readCommand.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+
+            command.StandardInput.Close();
+            command.Task.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
+        }
+
+        [TestMethod]
+        public void TestAutoFlush()
+        {
+            var command = Command.Run("SampleCommand", "echo", "--per-char");
+            command.StandardInput.AutoFlush.ShouldEqual(true);
+            command.StandardInput.Write('a');
+
+            var buffer = new char[1];
+            var asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
+            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            buffer[0].ShouldEqual('a');
+
+            command.StandardInput.AutoFlush = false;
+            command.StandardInput.Write('b');
+            asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
+            asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
+            command.StandardInput.Flush();
+            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            buffer[0].ShouldEqual('b');
+
+            command.StandardInput.Close();
+        }
+
+        [TestMethod]
         public void TestErrorEcho()
         {
             var command = Command.Run("SampleCommand", "errecho") < "abc";
