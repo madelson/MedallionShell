@@ -40,7 +40,7 @@ namespace Medallion.Shell.Streams
                     && (bytesRead = await this.processStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0
                 )
                 {
-                    this.pipe.InputStream.Write(buffer, 0, buffer.Length);
+                    await this.pipe.InputStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
                 }
             }
             finally
@@ -58,12 +58,16 @@ namespace Medallion.Shell.Streams
 
         public override void Discard()
         {
-            this.discardContents = true;   
+            this.discardContents = true;
+            this.reader.Dispose();
         }
 
         public override void StopBuffering()
         {
-            throw new NotImplementedException();
+            // this causes writes to the pipe to block, thus
+            // preventing unbounded buffering (although some more content
+            // may still be buffered)
+            this.pipe.SetFixedLength();
         }
         #endregion
 
@@ -127,7 +131,7 @@ namespace Medallion.Shell.Streams
         {
             if (disposing)
             {
-                this.reader.Dispose();
+                this.Discard();
             }
         }
         #endregion

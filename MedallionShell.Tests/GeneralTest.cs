@@ -238,17 +238,16 @@ namespace Medallion.Shell.Tests
             version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
         }
 
-        // problem: Mode.Buffer holds the lock while waiting for content. We try to take the lock
-        // to read the content. Since there's no more content, we block forever (effectively no flush)
         [TestMethod]
         public void TestShortFlush()
         {
             var command = Command.Run("SampleCommand", "shortflush", "a");
             var readCommand = command.StandardOutput.ReadBlockAsync(new char[1], 0, 1);
-            Task.WhenAny(readCommand, Task.Delay(TimeSpan.FromSeconds(3))).ShouldEqual<Task>(readCommand);
+            //var readCommand = command.StandardOutput.BaseStream.ReadAsync(new byte[1], 0, 1);
+            readCommand.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
 
             command.StandardInput.Close();
-            command.Task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            command.Task.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
         private IEnumerable<string> ErrorLines()

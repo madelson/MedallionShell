@@ -28,13 +28,13 @@ namespace Medallion.Shell
             var ioTasks = new List<Task>(capacity: 2);
             if (startInfo.RedirectStandardOutput)
             {
-                this.standardOutputHandler = new ProcessStreamHandler(this.process.StandardOutput);
-                ioTasks.Add(this.standardOutputHandler.Task);
+                this.standardOutputReader = new InternalProcessStreamReader(this.process.StandardOutput);
+                ioTasks.Add(this.standardOutputReader.Task);
             }
             if (startInfo.RedirectStandardError)
             {
-                this.standardErrorHandler = new ProcessStreamHandler(this.process.StandardError);
-                ioTasks.Add(this.standardErrorHandler.Task);
+                this.standardErrorReader = new InternalProcessStreamReader(this.process.StandardError);
+                ioTasks.Add(this.standardErrorReader.Task);
             }
             if (startInfo.RedirectStandardInput)
             {
@@ -95,23 +95,23 @@ namespace Medallion.Shell
             }
         }
 
-        private readonly ProcessStreamHandler standardOutputHandler;
+        private readonly InternalProcessStreamReader standardOutputReader;
         public override ProcessStreamReader StandardOutput
         {
             get 
             {
-                Throw<InvalidOperationException>.If(this.standardOutputHandler == null, "Standard output is not redirected");
-                return this.standardOutputHandler.Reader;
+                Throw<InvalidOperationException>.If(this.standardOutputReader == null, "Standard output is not redirected");
+                return this.standardOutputReader;
             }
         }
 
-        private readonly ProcessStreamHandler standardErrorHandler;
+        private readonly InternalProcessStreamReader standardErrorReader;
         public override Streams.ProcessStreamReader StandardError
         {
             get 
             {
-                Throw<InvalidOperationException>.If(this.standardErrorHandler == null, "Standard error is not redirected");
-                return this.standardOutputHandler.Reader;
+                Throw<InvalidOperationException>.If(this.standardErrorReader == null, "Standard error is not redirected");
+                return this.standardErrorReader;
             }
         }
 

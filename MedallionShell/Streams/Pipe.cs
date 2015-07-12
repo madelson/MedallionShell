@@ -378,7 +378,7 @@ namespace Medallion.Shell.Streams
             var bytesRead = 0;
             while (bytesRead < countToRead)
             {
-                var bytesToRead = Math.Min(count - bytesRead, this.buffer.Length - this.start);
+                var bytesToRead = Math.Min(countToRead - bytesRead, this.buffer.Length - this.start);
                 Buffer.BlockCopy(src: this.buffer, srcOffset: this.start, dst: buffer, dstOffset: offset + bytesRead, count: bytesToRead);
                 bytesRead += bytesToRead;
                 this.start = (this.start + bytesToRead) % this.buffer.Length;
