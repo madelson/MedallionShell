@@ -29,6 +29,7 @@ obj/
 [Bb]in
 [Dd]ebug*/
 [Rr]elease*/
+.vs/
 
 #upgrade from 2010
 Backup/*
@@ -45,6 +46,7 @@ StyleCop.Cache
 
 #Project files 
 [Bb]uild/
+project.lock.json
 
 #Nuget Files
 *.nupkg
