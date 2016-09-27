@@ -472,6 +472,7 @@ namespace Medallion.Shell.Streams
 
             public PipeInputStream(Pipe pipe) { this.pipe = pipe; }
 
+#if !NETCORE
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 throw WriteOnly();
@@ -488,6 +489,7 @@ namespace Medallion.Shell.Streams
                 }
                 return writeResult;
             }
+#endif
 
             private sealed class AsyncWriteResult : IAsyncResult
             {
@@ -523,10 +525,12 @@ namespace Medallion.Shell.Streams
 
             public override bool CanWrite { get { return true; } }
 
+#if !NETCORE
             public override void Close()
             {
                 base.Close(); // calls Dispose(true)
             }
+#endif
 
             public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
             {
@@ -541,6 +545,7 @@ namespace Medallion.Shell.Streams
                 }
             }
 
+#if !NETCORE
             public override int EndRead(IAsyncResult asyncResult)
             {
                 throw WriteOnly();
@@ -553,6 +558,7 @@ namespace Medallion.Shell.Streams
                 Throw.If(writeResult == null || writeResult.Stream != this, "asyncResult: must be created by this stream's BeginWrite method");
                 writeResult.WriteTask.Wait();
             }
+#endif
 
             public override void Flush()
             {
@@ -662,6 +668,7 @@ namespace Medallion.Shell.Streams
 
             public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
 
+#if !NETCORE
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 // according to the docs, the callback is optional
@@ -673,6 +680,7 @@ namespace Medallion.Shell.Streams
                 }
                 return readResult;
             }
+#endif
 
             private sealed class AsyncReadResult : IAsyncResult
             {
@@ -700,10 +708,12 @@ namespace Medallion.Shell.Streams
                 bool IAsyncResult.IsCompleted { get { return this.readTask.IsCompleted; } }
             }
 
+#if !NETCORE
             public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 throw ReadOnly();
             }
+#endif
 
             public override bool CanRead { get { return true; } }
 
@@ -713,10 +723,12 @@ namespace Medallion.Shell.Streams
 
             public override bool CanWrite { get { return false; } }
 
+#if !NETCORE
             public override void Close()
             {
                 base.Close(); // calls Dispose(true)
             }
+#endif
 
             public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
             {
@@ -732,6 +744,7 @@ namespace Medallion.Shell.Streams
                 }
             }
 
+#if !NETCORE
             public override int EndRead(IAsyncResult asyncResult)
             {
                 Throw.IfNull(asyncResult, "asyncResult");
@@ -745,6 +758,7 @@ namespace Medallion.Shell.Streams
             {
                 throw ReadOnly();
             }
+#endif
 
             public override void Flush()
             {
