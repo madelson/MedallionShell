@@ -1,17 +1,16 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace Medallion.Shell.Tests
 {
-    [TestClass]
-    public class PipeTest
+    public class PipeTest : IDisposable
     {
-        [TestMethod]
+        [Fact]
         public void TestPiping()
         {
             var shell = new Shell(o => o.ThrowOnError());
@@ -68,7 +67,7 @@ namespace Medallion.Shell.Tests
             switch (kind)
             {
                 case Kind.Stream:
-                    return isOut ? new MemoryStream() : new MemoryStream(Encoding.Default.GetBytes(Content));
+                    return isOut ? new MemoryStream() : new MemoryStream(Encoding.UTF8.GetBytes(Content));
                 case Kind.File:
                     var path = GetPath(isOut);
                     if (!isOut)
@@ -94,7 +93,7 @@ namespace Medallion.Shell.Tests
             switch (kind)
             {
                 case Kind.Stream:
-                    return Encoding.Default.GetString(((MemoryStream)output).ToArray());
+                    return Encoding.UTF8.GetString(((MemoryStream)output).ToArray());
                 case Kind.File:
                     return File.ReadAllText(GetPath(isOut: true));
                 case Kind.ReaderWriter:
@@ -108,7 +107,11 @@ namespace Medallion.Shell.Tests
             }
         }
 
-        [ClassCleanup]
+        public void Dispose()
+        {
+            TearDown();
+        }
+        
         public static void TearDown()
         {
             foreach (var isOut in new[] { false, true })
