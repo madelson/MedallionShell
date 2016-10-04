@@ -224,8 +224,11 @@ namespace Medallion.Shell.Tests
             
             pipeline.Kill();
             pipeline.Result.Success.ShouldEqual(false);
-            // This doesn't work right now due to our lack of flushing. There's not enought data so the single line gets caught
-            // between pipes
+            // This doesn't work right now due to our lack of flushing. Piping uses Stream.CopyToAsync() under the hood, which
+            // doesn't flush on each write. There's not enough data so the single line gets caught between pipes.
+            // One way we could address this is to have the PipeAsync generic logic incorporate
+            // periodic flushing. That way, if a Read is taking too long, we flush the output to keep data moving.
+            // Not clear how valuable this is, though. For now, this test serves to document this behavior
             UnitTestHelpers.AssertThrows<ArgumentOutOfRangeException>(() => lines[0].ShouldEqual("a line"));
         }
 
