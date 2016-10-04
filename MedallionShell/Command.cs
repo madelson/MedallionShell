@@ -10,15 +10,6 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
-    // TODO better flushing handling (see TestNestedKill):
-        // one way we could address this is to have the PipeAsync generic logic incorporate
-        // periodic flushing. That way, if a Read is taking too long, we flush the output to keep data moving.
-        // Not clear how valuable this is, though
-    // TODO cancellation token support
-    // TODO ToString() implementations
-    // TODO README link to codeducky
-    // TODO codeducky post
-
     /// <summary>
     /// Represents an executing <see cref="Process"/> as well as related asynchronous activity (e. g. the piping of
     /// input and output streams)
@@ -76,6 +67,200 @@ namespace Medallion.Shell
         /// </summary>
         public abstract Task<CommandResult> Task { get; }
 
+        #region ---- Fluent redirection ----
+        /// <summary>
+        /// Implements <see cref="Command"/> piping as in bash. The first <see cref="Command"/>'s standard output is piped
+        /// to the second's standard input. Returns a new <see cref="Command"/> instance whose <see cref="Command.Task"/> tracks
+        /// the progress of the entire chain
+        /// </summary>
+        public Command PipeTo(Command second)
+        {
+            Throw.IfNull(second, nameof(second));
+
+            return new PipedCommand(this, second);
+        }
+
+        /// <summary>
+        /// Standard output redirection as in bash. The <see cref="Command"/>'s standard output is written to the given
+        /// <paramref name="stream"/>. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectTo(Stream stream)
+        {
+            Throw.IfNull(stream, nameof(stream));
+
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true));
+        }
+
+        /// <summary>
+        /// Standard error redirection as in bash. The <see cref="Command"/>'s standard error is written to the given
+        /// <paramref name="stream"/>. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectStandardErrorTo(Stream stream)
+        {
+            Throw.IfNull(stream, nameof(stream));
+
+            return new IoCommand(this, this.StandardError.PipeToAsync(stream, leaveStreamOpen: true));
+        }
+
+        /// <summary>
+        /// Standard input redirection as in bash. The given <paramref name="stream"/> is written to the <see cref="Command"/>'s 
+        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectFrom(Stream stream)
+        {
+            Throw.IfNull(stream, nameof(stream));
+
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true));
+        }
+
+        /// <summary>
+        /// Standard output redirection as in bash. The <see cref="Command"/>'s standard output is written to the given
+        /// <paramref name="file"/>. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectTo(FileInfo file)
+        {
+            Throw.IfNull(file, nameof(file));
+
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(file));
+        }
+
+        /// <summary>
+        /// Standard error redirection as in bash. The <see cref="Command"/>'s standard error is written to the given
+        /// <paramref name="file"/>. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectStandardErrorTo(FileInfo file)
+        {
+            Throw.IfNull(file, nameof(file));
+
+            return new IoCommand(this, this.StandardError.PipeToAsync(file));
+        }
+
+        /// <summary>
+        /// Standard input redirection as in bash. The given <paramref name="file"/> is written to the <see cref="Command"/>'s 
+        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectFrom(FileInfo file)
+        {
+            Throw.IfNull(file, nameof(file));
+
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(file));
+        }
+
+        /// <summary>
+        /// Standard output redirection as in bash. The lines of <see cref="Command"/>'s standard output are added to the given
+        /// collection (<paramref name="lines"/> Returns a new <see cref="Command"/>  whose <see cref="Command.Task"/> tracks 
+        /// the progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectTo(ICollection<string> lines)
+        {
+            Throw.IfNull(lines, nameof(lines));
+            
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(lines));
+        }
+
+        /// <summary>
+        /// Standard error redirection as in bash. The lines of <see cref="Command"/>'s standard error are added to the given
+        /// collection (<paramref name="lines"/> Returns a new <see cref="Command"/>  whose <see cref="Command.Task"/> tracks 
+        /// the progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectStandardErrorTo(ICollection<string> lines)
+        {
+            Throw.IfNull(lines, nameof(lines));
+            
+            return new IoCommand(this, this.StandardError.PipeToAsync(lines));
+        }
+
+        /// <summary>
+        /// Standard input redirection as in bash. The items in <paramref name="lines"/> are written to the <see cref="Command"/>'s 
+        /// standard output as lines of text. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the 
+        /// progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectFrom(IEnumerable<string> lines)
+        {
+            Throw.IfNull(lines, nameof(lines));
+
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(lines));
+        }
+
+        /// <summary>
+        /// Standard output redirection as in bash. The chars of <see cref="Command"/>'s standard output are added to the given
+        /// collection (<paramref name="chars"/> Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks 
+        /// the progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectTo(ICollection<char> chars)
+        {
+            Throw.IfNull(chars, nameof(chars));
+
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(chars));
+        }
+
+        /// <summary>
+        /// Standard error redirection as in bash. The chars of <see cref="Command"/>'s standard error are added to the given
+        /// collection (<paramref name="chars"/> Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks 
+        /// the progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectStandardErrorTo(ICollection<char> chars)
+        {
+            Throw.IfNull(chars, nameof(chars));
+            
+            return new IoCommand(this, this.StandardError.PipeToAsync(chars));
+        }
+
+        /// <summary>
+        /// Standard input redirection as in bash. The items in <paramref name="chars"/> are written to the <see cref="Command"/>'s 
+        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the 
+        /// progress of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectFrom(IEnumerable<char> chars)
+        {
+            Throw.IfNull(chars, nameof(chars));
+
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(chars));
+        }
+
+        /// <summary>
+        /// Standard output redirection as in bash. The <see cref="Command"/>'s standard output is written to the given
+        /// <paramref name="writer"/>. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectTo(TextWriter writer)
+        {
+            Throw.IfNull(writer, nameof(writer));
+
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(writer, leaveWriterOpen: true));
+        }
+
+        /// <summary>
+        /// Standard error redirection as in bash. The <see cref="Command"/>'s standard error is written to the given
+        /// <paramref name="writer"/>. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectStandardErrorTo(TextWriter writer)
+        {
+            Throw.IfNull(writer, nameof(writer));
+
+            return new IoCommand(this, this.StandardError.PipeToAsync(writer, leaveWriterOpen: true));
+        }
+
+        /// <summary>
+        /// Standard input redirection as in bash. The given <paramref name="reader"/> is written to the <see cref="Command"/>'s 
+        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
+        /// of both this <see cref="Command"/> and the IO being performed
+        /// </summary>
+        public Command RedirectFrom(TextReader reader)
+        {
+            Throw.IfNull(reader, nameof(reader));
+
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true));
+        }
+        #endregion
+
         #region ---- Operator overloads ----
         /// <summary>
         /// Implements <see cref="Command"/> piping as in bash. The first <see cref="Command"/>'s standard output is piped
@@ -84,7 +269,8 @@ namespace Medallion.Shell
         /// </summary>
         public static Command operator |(Command first, Command second)
         {
-            return new PipedCommand(first, second);
+            Throw.IfNull(first, "first");
+            return first.PipeTo(second);
         }
 
         #region ---- Standard input and output redirection ----
@@ -96,9 +282,7 @@ namespace Medallion.Shell
         public static Command operator >(Command command, Stream stream)
         {
             Throw.IfNull(command, "command");
-            Throw.IfNull(stream, "stream");
-
-            return new IoCommand(command, command.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true));
+            return command.RedirectTo(stream);
         }
 
         /// <summary>
@@ -109,8 +293,7 @@ namespace Medallion.Shell
         public static Command operator <(Command command, Stream stream)
         {
             Throw.IfNull(command, "command");
-
-            return new IoCommand(command, command.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true));
+            return command.RedirectFrom(stream);
         }
 
         /// <summary>
@@ -121,8 +304,7 @@ namespace Medallion.Shell
         public static Command operator >(Command command, FileInfo file)
         {
             Throw.IfNull(command, "command");
-
-            return new IoCommand(command, command.StandardOutput.PipeToAsync(file));
+            return command.RedirectTo(file);
         }
 
         /// <summary>
@@ -133,8 +315,7 @@ namespace Medallion.Shell
         public static Command operator <(Command command, FileInfo file)
         {
             Throw.IfNull(command, "command");
-
-            return new IoCommand(command, command.StandardInput.PipeFromAsync(file));
+            return command.RedirectFrom(file);
         }
 
         /// <summary>
@@ -151,7 +332,7 @@ namespace Medallion.Shell
             var linesCollection = lines as ICollection<string>;
             Throw.If(linesCollection == null, "lines: must implement ICollection<string> in order to recieve output");
 
-            return new IoCommand(command, command.StandardOutput.PipeToAsync(linesCollection));
+            return command.RedirectTo(linesCollection);
         }
 
         /// <summary>
@@ -162,8 +343,7 @@ namespace Medallion.Shell
         public static Command operator <(Command command, IEnumerable<string> lines)
         {
             Throw.IfNull(command, "command");
-
-            return new IoCommand(command, command.StandardInput.PipeFromAsync(lines));
+            return command.RedirectFrom(lines);
         }
 
         /// <summary>
@@ -180,7 +360,7 @@ namespace Medallion.Shell
             var charCollection = chars as ICollection<char>;
             Throw<ArgumentException>.If(charCollection == null, "chars: must implement ICollection<char> in order to receive output");
 
-            return new IoCommand(command, command.StandardOutput.PipeToAsync(charCollection));
+            return command.RedirectTo(charCollection);
         }
 
         /// <summary>
@@ -191,8 +371,7 @@ namespace Medallion.Shell
         public static Command operator <(Command command, IEnumerable<char> chars)
         {
             Throw.IfNull(command, "command");
-
-            return new IoCommand(command, command.StandardInput.PipeFromAsync(chars));
+            return command.RedirectFrom(chars);
         }
         #endregion
         #endregion

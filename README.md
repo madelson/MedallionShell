@@ -30,6 +30,9 @@ cmd.Wait();
 // and we can even chain commands together with the pipe operator
 var pipeline = Command.Run("path_to_grep", "some REGEX") | Command.Run("path_to_grep", "another REGEX");
 
+// if you don't like using operators, you can use the equivalent fluent methods instead
+var cmd = Command.Run("path_to_grep", some REGEX").RedirectFrom(new FileInfo("some path")).RedirectTo(lines);
+
 // we can check a command's exit status using it's result
 if (cmd.Result.Success) { ... }
 
