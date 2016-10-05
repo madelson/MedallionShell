@@ -217,19 +217,21 @@ namespace Medallion.Shell.Tests
             var pipeline = Command.Run("SampleCommand", "pipe")
                 | Command.Run("SampleCommand", "pipe")
                 | Command.Run("SampleCommand", "pipe") > lines;
+
+            // demonstrate that a single line can make it all the way through the pipeline
+            // without getting caught in a buffer along the way
             pipeline.StandardInput.WriteLine("a line");
-            pipeline.StandardInput.Flush();
-            Thread.Sleep(100);
+            var start = DateTime.UtcNow;
+            while ((DateTime.UtcNow - start) < TimeSpan.FromSeconds(5))
+            {
+                if (lines.Count > 0) { break; }
+                Thread.Sleep(10);
+            }
+            lines[0].ShouldEqual("a line");
+
             pipeline.Task.IsCompleted.ShouldEqual(false);
-            
             pipeline.Kill();
             pipeline.Result.Success.ShouldEqual(false);
-            // This doesn't work right now due to our lack of flushing. Piping uses Stream.CopyToAsync() under the hood, which
-            // doesn't flush on each write. There's not enough data so the single line gets caught between pipes.
-            // One way we could address this is to have the PipeAsync generic logic incorporate
-            // periodic flushing. That way, if a Read is taking too long, we flush the output to keep data moving.
-            // Not clear how valuable this is, though. For now, this test serves to document this behavior
-            UnitTestHelpers.AssertThrows<ArgumentOutOfRangeException>(() => lines[0].ShouldEqual("a line"));
         }
 
         [TestMethod]

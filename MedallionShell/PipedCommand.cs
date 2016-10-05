@@ -19,7 +19,7 @@ namespace Medallion.Shell
             this.first = first;
             this.second = second;
 
-            var pipeStreamsTask = this.first.StandardOutput.PipeToAsync(this.second.StandardInput.BaseStream);
+            var pipeStreamsTask = PipeAsync(this.first.StandardOutput, this.second.StandardInput);
             this.task = this.CreateTask(pipeStreamsTask);
         }
 
@@ -70,6 +70,17 @@ namespace Medallion.Shell
         {
             this.first.As<IDisposable>().Dispose();
             this.second.As<IDisposable>().Dispose();
+        }
+        
+        private static async Task PipeAsync(ProcessStreamReader source, ProcessStreamWriter destination)
+        {
+            // NOTE: we use PipeFrom() since this will automatically flush any characters written to the
+            // TextWriter APIs of destination first. However, we wrap with a using to ensure that source is
+            // disposed rather than just source.BaseStream (which is all we pass to PipeFrom)
+            using (source)
+            {
+                await destination.PipeFromAsync(source.BaseStream).ConfigureAwait(false);
+            }
         }
     }
 }

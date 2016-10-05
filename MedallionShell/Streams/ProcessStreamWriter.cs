@@ -50,7 +50,17 @@ namespace Medallion.Shell.Streams
                 {
                     // flush any content buffered in the writer, since we'll be using the raw stream
                     await this.writer.FlushAsync().ConfigureAwait(false);
-                    await stream.CopyToAsync(this.BaseStream).ConfigureAwait(false);
+                    if (this.AutoFlush)
+                    {
+                        // if the writer is configured to autoflush, we preserve that behavior when
+                        // piping to the writer from a stream even though for performance we are bypassing
+                        // this.writer in this case
+                        await stream.CopyToAsyncWithAutoFlush(this.BaseStream).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await stream.CopyToAsync(this.BaseStream).ConfigureAwait(false);
+                    }
                 },
                 leaveOpen: leaveWriterOpen,
                 extraDisposeAction: leaveStreamOpen ? default(Action) : () => stream.Dispose()
