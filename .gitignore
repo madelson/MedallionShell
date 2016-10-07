@@ -52,3 +52,6 @@ project.lock.json
 *.nupkg
 #MA: using nuget package restore!
 packages/
+
+# Cake tools
+tools/
