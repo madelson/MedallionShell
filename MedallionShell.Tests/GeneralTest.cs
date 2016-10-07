@@ -207,16 +207,21 @@ namespace Medallion.Shell.Tests
             var pipeline = Command.Run("SampleCommand", "pipe")
                 | Command.Run("SampleCommand", "pipe")
                 | Command.Run("SampleCommand", "pipe") > lines;
+
+            // demonstrate that a single line can make it all the way through the pipeline
+            // without getting caught in a buffer along the way
             pipeline.StandardInput.WriteLine("a line");
-            pipeline.StandardInput.Flush();
-            Thread.Sleep(100);
+            var start = DateTime.UtcNow;
+            while ((DateTime.UtcNow - start) < TimeSpan.FromSeconds(5))
+            {
+                if (lines.Count > 0) { break; }
+                Thread.Sleep(10);
+            }
+            lines[0].ShouldEqual("a line");
+
             pipeline.Task.IsCompleted.ShouldEqual(false);
-            
             pipeline.Kill();
             pipeline.Result.Success.ShouldEqual(false);
-            // This doesn't work right now due to our lack of flushing. There's not enought data so the single line gets caught
-            // between pipes
-            Assert.Throws<ArgumentOutOfRangeException>(() => lines[0].ShouldEqual("a line"));
         }
 
         [Fact]

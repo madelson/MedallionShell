@@ -15,7 +15,7 @@ namespace Medallion.Shell
     internal sealed class ProcessCommand : Command
     {
         private readonly bool disposeOnExit;
-
+        
         internal ProcessCommand(ProcessStartInfo startInfo, bool throwOnError, bool disposeOnExit, TimeSpan timeout)
         {
             this.disposeOnExit = disposeOnExit;
@@ -124,7 +124,7 @@ namespace Medallion.Shell
 
             TryKillProcess(this.process);
         }
-
+        
         private static Task CreateProcessTask(Process process, bool throwOnError, TimeSpan timeout)
         {
             var taskCompletionSource = new TaskCompletionSource<bool>();
@@ -147,20 +147,28 @@ namespace Medallion.Shell
         }
 
         private static async Task AddTimeout(Task task, Process process, TimeSpan timeout)
-        { 
-            // wait for either the given task or the timeout to complete
-            // http://stackoverflow.com/questions/4238345/asynchronously-wait-for-taskt-to-complete-with-timeout
-            var completed = await SystemTask.WhenAny(task, SystemTask.Delay(timeout)).ConfigureAwait(false);
-
-            // Task.WhenAny() swallows errors: wait for the completed task to propagate any errors that occurred
-            await completed.ConfigureAwait(false);
-
-            // if we timed out, kill the process
-            if (completed != task) 
+        {
+            using (var timeoutCleanupSource = new CancellationTokenSource())
             {
-                Log.WriteLine("Process timed out");
-                TryKillProcess(process);
-                throw new TimeoutException("Process killed after exceeding timeout of " + timeout);
+                // wait for either the given task or the timeout to complete
+                // http://stackoverflow.com/questions/4238345/asynchronously-wait-for-taskt-to-complete-with-timeout
+                var completed = await SystemTask.WhenAny(task, SystemTask.Delay(timeout, timeoutCleanupSource.Token)).ConfigureAwait(false);
+
+                // Task.WhenAny() swallows errors: wait for the completed task to propagate any errors that occurred
+                await completed.ConfigureAwait(false);
+
+                // if we timed out, kill the process
+                if (completed != task)
+                {
+                    Log.WriteLine("Process timed out");
+                    TryKillProcess(process);
+                    throw new TimeoutException("Process killed after exceeding timeout of " + timeout);
+                }
+                else
+                {
+                    // clean up the timeout
+                    timeoutCleanupSource.Cancel();
+                }
             }
         }
 
