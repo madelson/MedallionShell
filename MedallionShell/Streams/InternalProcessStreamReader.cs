@@ -45,12 +45,17 @@ namespace Medallion.Shell.Streams
             }
             finally
             {
+#if NETCORE
+                this.processStream.Dispose();
+                this.pipe.InputStream.Dispose();
+#else
                 this.processStream.Close();
                 this.pipe.InputStream.Close();
+#endif
             }
         }
 
-        #region ---- ProcessStreamReader implementation ----
+#region ---- ProcessStreamReader implementation ----
         public override Stream BaseStream
         {
             get { return this.reader.BaseStream; }
@@ -69,9 +74,9 @@ namespace Medallion.Shell.Streams
             // may still be buffered)
             this.pipe.SetFixedLength();
         }
-        #endregion
+#endregion
 
-        #region ---- TextReader implementation ----
+#region ---- TextReader implementation ----
         // all reader methods are overriden to call the same method on the underlying StreamReader.
         // This approach is preferable to extending StreamReader directly, since many of the async methods
         // on StreamReader are conservative and fall back to threaded asynchrony when inheritance is in play
@@ -134,6 +139,6 @@ namespace Medallion.Shell.Streams
                 this.Discard();
             }
         }
-        #endregion
+#endregion
     }
 }

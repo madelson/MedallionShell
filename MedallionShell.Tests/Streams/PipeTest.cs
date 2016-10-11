@@ -1,5 +1,4 @@
 ﻿using Medallion.Shell.Streams;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,13 +6,13 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace Medallion.Shell.Tests.Streams
 {
-    [TestClass]
     public class PipeTest
     {
-        [TestMethod]
+        [Fact]
         public void SimpleTest()
         {
             var pipe = new Pipe();
@@ -35,7 +34,7 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.Result.ShouldEqual("x" + new string('y', 99));
         }
 
-        [TestMethod]
+        [Fact]
         public void TestLargeStreamWithFixedLength()
         {
             var pipe = new Pipe();
@@ -45,7 +44,7 @@ namespace Medallion.Shell.Tests.Streams
                 .Select(b => (byte)(b % 256))
                 .ToArray();
             var asyncWrite = pipe.InputStream.WriteAsync(bytes, 0, bytes.Length)
-                .ContinueWith(_ => pipe.InputStream.Close());
+                .ContinueWith(_ => pipe.InputStream.Dispose());
             var memoryStream = new MemoryStream();
             var buffer = new byte[777];
             int bytesRead;
@@ -57,17 +56,17 @@ namespace Medallion.Shell.Tests.Streams
             memoryStream.ToArray().SequenceEqual(bytes).ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Fact]
         public void TimeoutTest()
         {
             var pipe = new Pipe { OutputStream = { ReadTimeout = 0 } };
-            UnitTestHelpers.AssertThrows<TimeoutException>(() => pipe.OutputStream.ReadByte());
+            Assert.Throws<TimeoutException>(() => pipe.OutputStream.ReadByte());
 
             pipe.WriteText(new string('a', 2048));
             pipe.ReadTextAsync(2048).Result.ShouldEqual(new string('a', 2048));
         }
 
-        [TestMethod]
+        [Fact]
         public void TestWriteTimeout()
         {
             var pipe = new Pipe { InputStream = { WriteTimeout = 0 } };
@@ -76,10 +75,10 @@ namespace Medallion.Shell.Tests.Streams
             var asyncWrite = pipe.InputStream.WriteAsync(new byte[1], 0, 1);
             asyncWrite.ContinueWith(_ => { }).Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(true);
             asyncWrite.IsFaulted.ShouldEqual(true);
-            Assert.IsInstanceOfType(asyncWrite.Exception.InnerException, typeof(TimeoutException));
+            Assert.IsType<TimeoutException>(asyncWrite.Exception.InnerException);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestPartialWriteDoesNotTimeout()
         {
             var pipe = new Pipe { InputStream = { WriteTimeout = 0 }, OutputStream = { ReadTimeout = 1000 } };
@@ -91,7 +90,7 @@ namespace Medallion.Shell.Tests.Streams
             pipe.ReadTextAsync(text.Length).Result.ShouldEqual(new string(text.Select(b => (char)b).ToArray()));
         }
 
-        [TestMethod]
+        [Fact]
         public void TestCancel()
         {
             var pipe = new Pipe();
@@ -111,7 +110,7 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.IsCanceled.ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestCancelWrite()
         {
             var pipe = new Pipe();
@@ -129,7 +128,7 @@ namespace Medallion.Shell.Tests.Streams
             asyncWrite.IsCanceled.ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestPartialWriteDoesNotCancel()
         {
             var pipe = new Pipe();
@@ -154,13 +153,13 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.Result.ShouldEqual(new string('a', (2 * Constants.ByteBufferSize) - 1) + new string('b', Constants.ByteBufferSize));
         }
 
-        [TestMethod]
+        [Fact]
         public void TestCloseWriteSide()
         {
             var pipe = new Pipe();
             pipe.WriteText("123456");
-            pipe.InputStream.Close();
-            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => pipe.InputStream.WriteByte(1));
+            pipe.InputStream.Dispose();
+            Assert.Throws<ObjectDisposedException>(() => pipe.InputStream.WriteByte(1));
 
             pipe.ReadTextAsync(5).Result.ShouldEqual("12345");
             pipe.ReadTextAsync(2).Result.ShouldEqual(null);
@@ -168,18 +167,18 @@ namespace Medallion.Shell.Tests.Streams
             pipe = new Pipe();
             var asyncRead = pipe.ReadTextAsync(1);
             asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
-            pipe.InputStream.Close();
+            pipe.InputStream.Dispose();
             asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestCloseReadSide()
         {
             var pipe = new Pipe();
             pipe.WriteText("abc");
             pipe.ReadTextAsync(2).Result.ShouldEqual("ab");
-            pipe.OutputStream.Close();
-            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => pipe.OutputStream.ReadByte());
+            pipe.OutputStream.Dispose();
+            Assert.Throws<ObjectDisposedException>(() => pipe.OutputStream.ReadByte());
 
             var largeBytes = new byte[10 * 1024];
             var initialMemory = GC.GetTotalMemory(forceFullCollection: true);
@@ -189,25 +188,25 @@ namespace Medallion.Shell.Tests.Streams
             }
             var finalMemory = GC.GetTotalMemory(forceFullCollection: true);
 
-            Assert.IsTrue(finalMemory - initialMemory < 10 * largeBytes.Length, "final = " + finalMemory + " initial = " + initialMemory);
+            Assert.True(finalMemory - initialMemory < 10 * largeBytes.Length, "final = " + finalMemory + " initial = " + initialMemory);
 
-            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => pipe.OutputStream.ReadByte());
+            Assert.Throws<ObjectDisposedException>(() => pipe.OutputStream.ReadByte());
 
-            pipe.InputStream.Close();
+            pipe.InputStream.Dispose();
         }
 
-        [TestMethod]
+        [Fact]
         public void TestConcurrentReads()
         {
             var pipe = new Pipe();
 
             var asyncRead = pipe.ReadTextAsync(1);
-            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => pipe.OutputStream.ReadByte());
-            pipe.InputStream.Close();
+            Assert.Throws<InvalidOperationException>(() => pipe.OutputStream.ReadByte());
+            pipe.InputStream.Dispose();
             asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestConcurrentWrites()
         {
             var pipe = new Pipe();
@@ -216,12 +215,12 @@ namespace Medallion.Shell.Tests.Streams
             var longText = new string('x', (2 * Constants.ByteBufferSize) + 1);
             var asyncWrite = pipe.WriteTextAsync(longText);
             asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
-            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => pipe.InputStream.WriteByte(101));
-            pipe.OutputStream.Close();
+            Assert.Throws<InvalidOperationException>(() => pipe.InputStream.WriteByte(101));
+            pipe.OutputStream.Dispose();
             asyncWrite.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestChainedPipes()
         {
             var pipes = CreatePipeChain(100);
@@ -244,7 +243,7 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.Result.ShouldEqual(longText);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestPipeChainWithFixedLengthPipes()
         {
             var pipes = CreatePipeChain(2);
@@ -257,7 +256,7 @@ namespace Medallion.Shell.Tests.Streams
             var asyncRead = pipes.Last().ReadTextAsync(longText.Length);
             asyncWrite.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
             asyncRead.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
-            Assert.IsNotNull(asyncRead.Result);
+            Assert.NotNull(asyncRead.Result);
             asyncRead.Result.Length.ShouldEqual(longText.Length);
             asyncRead.Result.ShouldEqual(longText);
         }
@@ -272,15 +271,15 @@ namespace Medallion.Shell.Tests.Streams
                 var toPipe = pipes[i + 1];
                 fromPipe.OutputStream.CopyToAsync(toPipe.InputStream)
                     .ContinueWith(_ => {
-                        fromPipe.OutputStream.Close();
-                        toPipe.InputStream.Close();
+                        fromPipe.OutputStream.Dispose();
+                        toPipe.InputStream.Dispose();
                     });
             }
 
             return pipes;
         }
 
-        [TestMethod]
+        [Fact]
         public void FuzzTest()
         {
             const int ByteCount = 100000;
@@ -319,7 +318,7 @@ namespace Medallion.Shell.Tests.Streams
                     }
                 }
                 //Console.WriteLine("WRITER ALL DONE");
-                pipe.InputStream.Close();
+                pipe.InputStream.Dispose();
                 return memoryStream;
             });
 
@@ -353,7 +352,7 @@ namespace Medallion.Shell.Tests.Streams
 
             Task.WhenAll(writeTask, readTask).Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
 
-            CollectionAssert.AreEqual(writeTask.Result.ToArray(), readTask.Result.ToArray());
+            Assert.Equal(writeTask.Result.ToArray(), readTask.Result.ToArray());
         }
     }
 
@@ -380,7 +379,7 @@ namespace Medallion.Shell.Tests.Streams
                 bytesRead += result;
             }
 
-            return new string(Encoding.Default.GetChars(bytes));
+            return new string(Encoding.UTF8.GetChars(bytes));
         }
     }
 }

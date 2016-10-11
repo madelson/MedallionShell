@@ -165,6 +165,7 @@ namespace Medallion.Shell
                 return this.StartInfo(psi => psi.WorkingDirectory = path);
             }
 
+#if !NETCORE
             /// <summary>
             /// Adds or overwrites an environment variable to be passed to the <see cref="Command"/>
             /// </summary>
@@ -185,6 +186,7 @@ namespace Medallion.Shell
                 var environmentVariablesList = environmentVariables.ToList();
                 return this.StartInfo(psi => environmentVariablesList.ForEach(kvp => psi.EnvironmentVariables[kvp.Key] = kvp.Value));
             }
+#endif
 
             /// <summary>
             /// If specified, a non-zero exit code will cause the <see cref="Command"/>'s <see cref="Task"/> to fail

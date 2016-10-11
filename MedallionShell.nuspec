@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>MedallionShell</id>
+    <version>1.1.0</version>
+    <title>Medallion Shell</title>
+    <authors>Michael Adelson</authors>
+    <owners>Michael Adelson</owners>
+    <licenseUrl>https://raw.githubusercontent.com/madelson/MedallionShell/master/License.txt</licenseUrl>
+    <projectUrl>https://github.com/madelson/MedallionShell</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A lightweight library that simplifies working with processes in .NET</description>
+    <summary>A lightweight library that simplifies working with processes in .NET</summary>
+    <releaseNotes>Added AutoFlush support and fixed bug where small flushed data packets got stuck in the buffer</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>process async</tags>
+    <dependencies>
+      <group targetFramework="net45"></group>
+      <group targetFramework="netstandard1.3">
+        <dependency id="NETStandard.Library" version="1.6.0"/>
+        <dependency id="System.Diagnostics.Process" version="4.1.0"/>
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="MedallionShell\bin\Release\MedallionShell.dll" target="lib\net45"/>
+    <file src="MedallionShell.NetCore\bin\Release\netstandard1.3\MedallionShell.dll" target="lib\netstandard1.3"/>
+  </files>
+</package>

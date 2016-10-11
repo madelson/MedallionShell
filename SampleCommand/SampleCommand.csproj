@@ -66,4 +66,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Target Name="AfterBuild">
+    <Copy SourceFiles="bin/$(Configuration)/SampleCommand.exe" DestinationFiles="../MedallionShell.NetCore.Tests/SampleCommand.exe"/>
+  </Target>
 </Project>
