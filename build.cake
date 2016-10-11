@@ -1,35 +1,43 @@
 #tool "nuget:?package=xunit.runner.console"
 var target = Argument("target", "Default");
 
-Task("CompileSampleCommand")
-  .Does(() => {
-  MSBuild("SampleCommand/SampleCommand.csproj");
+Task("RestoreNuGetPackages")
+    .Does(() =>
+{
+    NuGetRestore("MedallionShell.sln");
 });
 
+Task("CompileSampleCommand")
+	.IsDependentOn("RestoreNuGetPackages")
+	.Does(() => {
+		MSBuild("SampleCommand/SampleCommand.csproj");
+	});
 
 Task("CompileNetCore")
-  .Does(() =>
-{
-  DotNetCoreBuild("MedallionShell.NetCore");
-});
+	.IsDependentOn("RestoreNuGetPackages")
+	.Does(() =>
+	{
+		DotNetCoreBuild("MedallionShell.NetCore");
+	});
 
 Task("TestNetCore")
   .IsDependentOn("CompileNetCore")
   .IsDependentOn("CompileSampleCommand")
   .Does(() =>
-{
-  CopyFile("SampleCommand/bin/Debug/SampleCommand.exe", "SampleCommand.exe");
-  try {
-    DotNetCoreTest("MedallionShell.NetCore.Tests");
-  } finally {
-    DeleteFile("SampleCommand.exe");
-  }
-});
+	{
+		CopyFile("SampleCommand/bin/Debug/SampleCommand.exe", "SampleCommand.exe");
+		try {
+			DotNetCoreTest("MedallionShell.NetCore.Tests");
+		} finally {
+			DeleteFile("SampleCommand.exe");
+		}
+	});
 
 Task("CompileNet45")
-  .Does(()=>{
-  MSBuild("MedallionShell/MedallionShell.csproj");
-});
+	.IsDependentOn("RestoreNuGetPackages")
+	.Does(()=>{
+		MSBuild("MedallionShell/MedallionShell.csproj");
+	});
 
 Task("CompileNet45Tests")
   .IsDependentOn("CompileNet45")
