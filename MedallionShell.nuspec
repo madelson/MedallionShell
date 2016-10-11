@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>MedallionShell</id>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <title>Medallion Shell</title>
     <authors>Michael Adelson</authors>
     <owners>Michael Adelson</owners>
@@ -11,9 +11,9 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A lightweight library that simplifies working with processes in .NET</description>
     <summary>A lightweight library that simplifies working with processes in .NET</summary>
-    <releaseNotes>Added AutoFlush support and fixed bug where small flushed data packets got stuck in the buffer</releaseNotes>
+    <releaseNotes>Added .NET Core support, added fluent APIs for Command operators, and fixed Command piping so that StandardInput.AutoFlush is always respected</releaseNotes>
     <copyright>Copyright 2016</copyright>
-    <tags>process async</tags>
+    <tags>process async shell</tags>
     <dependencies>
       <group targetFramework="net45"></group>
       <group targetFramework="netstandard1.3">

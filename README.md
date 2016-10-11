@@ -60,6 +60,7 @@ shell.Run("path_to_grep", "some REGEX");
 ```
 
 ## Release Notes
+- 1.2.0 Adds .NET Core support (thanks [kal](https://github.com/kal)!), adds new fluent APIs for each of the piping/redirection operators, and now respects StandardInput.AutoFlush when piping between commands
 - 1.1.0 Adds AutoFlush support to StandardInput, and fixed bug where small amounts of flushed data became "stuck" in the StandardOutput buffer
 - 1.0.3 Fixed bug with standard error (thanks <a href="https://github.com/nsdfxela">nsdfxela</a>!)
 - 1.0.2 Fixed bug where timeout would suppress errors from ThrowOnError option
