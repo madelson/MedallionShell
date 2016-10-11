@@ -17,6 +17,8 @@
       "include": "../MedallionShell/**/*.cs"
     },
     "outputName": "MedallionShell",
-    "define": ["NETCORE"]
+    "define": [ "NETCORE" ],
+    "optimize": true,
+    "xmlDoc": true
   }
 }

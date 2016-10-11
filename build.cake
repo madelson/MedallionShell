@@ -44,9 +44,17 @@ Task("TestNet45")
   XUnit2("MedallionShell.Tests/bin/Debug/MedallionShell.Tests.dll");
 });
 
+// based on http://stackoverflow.com/questions/37814627/cake-nugetpack-configuration
+Task("NuGetPack")
+	.IsDependentOn("TestNet45")
+	.IsDependentOn("TestNetCore")
+	.Does(() => NuGetPack(
+		GetFiles("MedallionShell.nuspec"), 
+		new NuGetPackSettings { Symbols = true }
+	));
+
 Task("Default")
-  .IsDependentOn("TestNet45")
-  .IsDependentOn("TestNetCore")
+  .IsDependentOn("NuGetPack")
   .Does(() =>
 {
   Information("Hello World!");
