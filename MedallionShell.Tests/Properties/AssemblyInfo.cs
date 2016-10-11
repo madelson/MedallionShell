@@ -34,3 +34,7 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
+
+// we can't use parallel tests, since tests such as TestCloseReadSide() try to measure
+// memory and therefore don't work when things are running in parallel
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
