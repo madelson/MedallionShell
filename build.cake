@@ -4,7 +4,16 @@ var target = Argument("target", "Default");
 Task("RestoreNuGetPackages")
     .Does(() =>
 {
-    NuGetRestore("MedallionShell.sln");
+	// unfortunately we need to do these separately between core and framework 
+	// See http://stackoverflow.com/questions/39975879/upgrade-to-nuget-3-4-4-rtm-final-breaks-package-restore#39975879
+	DotNetCoreRestore();
+	
+	NuGetRestore(
+		GetFiles("MedallionShell/MedallionShell.csproj")
+			.Concat(GetFiles("MedallionShell.Tests/MedallionShell.Tests.csproj")) 
+			.Concat(GetFiles("SampleCommand/SampleCommand.csproj")),
+		new NuGetRestoreSettings { PackagesDirectory = "packages" }
+	);
 });
 
 Task("CompileSampleCommand")

@@ -3,7 +3,7 @@ MedallionShell
 
 MedallionShell is a lightweight library that vastly simplifies working with processes in .NET apps. 
 
-[Download the NuGet package](https://www.nuget.org/packages/medallionshell)
+[Download the NuGet package](https://www.nuget.org/packages/medallionshell) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.svg?style=flat)](https://www.nuget.org/packages/MedallionShell/)
 
 Built on top of the powerful, yet [clunky](http://www.codeducky.org/process-handling-net/) [System.Diagnostics.Process API](http://msdn.microsoft.com/en-us/library/system.diagnostics.process(v=vs.110).aspx), the MedallionShell API streamlines common use-cases, removes [pitfalls](http://www.codeducky.org/process-handling-net/), and integrates Process handling with .NET [async/await](http://msdn.microsoft.com/en-us/library/hh191443.aspx) and [Tasks](http://msdn.microsoft.com/en-us/library/dd460717(v=vs.110).aspx).
 
@@ -60,7 +60,7 @@ shell.Run("path_to_grep", "some REGEX");
 ```
 
 ## Release Notes
-- 1.2.0 Adds .NET Core support (thanks [kal](https://github.com/kal)!), adds new fluent APIs for each of the piping/redirection operators, and now respects StandardInput.AutoFlush when piping between commands
+- 1.2.1 Adds .NET Core support (thanks [kal](https://github.com/kal)!), adds new fluent APIs for each of the piping/redirection operators, and now respects StandardInput.AutoFlush when piping between commands
 - 1.1.0 Adds AutoFlush support to StandardInput, and fixed bug where small amounts of flushed data became "stuck" in the StandardOutput buffer
 - 1.0.3 Fixed bug with standard error (thanks <a href="https://github.com/nsdfxela">nsdfxela</a>!)
 - 1.0.2 Fixed bug where timeout would suppress errors from ThrowOnError option
