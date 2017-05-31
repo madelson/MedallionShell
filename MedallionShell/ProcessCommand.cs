@@ -16,7 +16,12 @@ namespace Medallion.Shell
     {
         private readonly bool disposeOnExit;
         
-        internal ProcessCommand(ProcessStartInfo startInfo, bool throwOnError, bool disposeOnExit, TimeSpan timeout)
+        internal ProcessCommand(
+            ProcessStartInfo startInfo, 
+            bool throwOnError, 
+            bool disposeOnExit, 
+            TimeSpan timeout,
+            Encoding standardInputEncoding)
         {
             this.disposeOnExit = disposeOnExit;
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
@@ -38,7 +43,12 @@ namespace Medallion.Shell
             }
             if (startInfo.RedirectStandardInput)
             {
-                this.standardInput = new ProcessStreamWriter(this.process.StandardInput);
+                // unfortunately, this can't be done via ProcessStartInfo so we have to do it manually here.
+                // See https://github.com/dotnet/corefx/issues/20497
+                var streamWriter = standardInputEncoding == null || Equals(this.process.StandardInput.Encoding, standardInputEncoding)
+                    ? this.process.StandardInput
+                    : new StreamWriter(this.process.StandardInput.BaseStream, standardInputEncoding);
+                this.standardInput = new ProcessStreamWriter(streamWriter);
             }
 
             this.task = this.CreateCombinedTask(processTask, ioTasks);

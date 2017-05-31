@@ -20,7 +20,14 @@ namespace SampleCommand
             switch (args[0])
             {
                 case "echo":
-                    if (args.Length > 1 && args[1] == "--per-char")
+                    var isPerChar = args.Contains("--per-char");
+                    var isUtf8 = args.Contains("--utf8");
+                    if (isUtf8)
+                    {
+                        Console.InputEncoding = Console.OutputEncoding = Encoding.UTF8;
+                    }
+
+                    if (isPerChar)
                     {
                         int ch;
                         while ((ch = Console.In.Read()) != -1)

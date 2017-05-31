@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -274,6 +275,25 @@ namespace Medallion.Shell.Tests
         {
             var command = Command.Run("SampleCommand", "errecho") < "abc";
             command.Result.StandardError.ShouldEqual("abc");
+        }
+
+        [TestMethod]
+        public void TestEncoding()
+        {
+            // pick a string that will be different in UTF8 vs the default to make sure we use the default
+            var bytes = new byte[] { 255 };
+            var inputEncoded = Console.InputEncoding.GetString(bytes);
+            inputEncoded.ShouldEqual(Console.OutputEncoding.GetString(bytes));
+            inputEncoded.ShouldNotEqual(Encoding.UTF8.GetString(bytes));
+            var command = Command.Run("SampleCommand", "echo") < inputEncoded;
+            command.Result.StandardOutput.ShouldEqual(inputEncoded);
+
+            const string InternationalText = "漢字";
+            command = Command.Run("SampleCommand", "echo") < InternationalText;
+            command.Result.StandardOutput.ShouldEqual("??", "Default encoding does not support international chars");
+
+            command = Command.Run("SampleCommand", new[] { "echo", "--utf8" }, options: o => o.Encoding(Encoding.UTF8)) < InternationalText;
+            command.Result.StandardOutput.ShouldEqual(InternationalText);
         }
 
         private IEnumerable<string> ErrorLines()

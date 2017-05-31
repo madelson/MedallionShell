@@ -52,13 +52,18 @@ namespace Medallion.Shell
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
             };
+            if (finalOptions.ProcessStreamEncoding != null)
+            {
+                processStartInfo.StandardOutputEncoding = processStartInfo.StandardErrorEncoding = finalOptions.ProcessStreamEncoding;
+            }
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 
             var command = new ProcessCommand(
                 processStartInfo, 
                 throwOnError: finalOptions.ThrowExceptionOnError,
                 disposeOnExit: finalOptions.DisposeProcessOnExit,
-                timeout: finalOptions.ProcessTimeout
+                timeout: finalOptions.ProcessTimeout,
+                standardInputEncoding: finalOptions.ProcessStreamEncoding
             );
             finalOptions.CommandInitializers.ForEach(a => a(command));
 
@@ -117,6 +122,7 @@ namespace Medallion.Shell
             internal bool ThrowExceptionOnError { get; set; }
             internal bool DisposeProcessOnExit { get; set; }
             internal TimeSpan ProcessTimeout { get; set; }
+            internal Encoding ProcessStreamEncoding { get; set; }
 
             #region ---- Builder methods ----
             /// <summary>
@@ -130,6 +136,7 @@ namespace Medallion.Shell
                 this.ThrowExceptionOnError = false;
                 this.DisposeProcessOnExit = true;
                 this.ProcessTimeout = System.Threading.Timeout.InfiniteTimeSpan;
+                this.ProcessStreamEncoding = null;
                 return this;
             }
 
@@ -233,6 +240,24 @@ namespace Medallion.Shell
                 Throw<ArgumentOutOfRangeException>.If(timeout < TimeSpan.Zero && timeout != System.Threading.Timeout.InfiniteTimeSpan, "timeout");
 
                 this.ProcessTimeout = timeout;
+                return this;
+            }
+
+            /// <summary>
+            /// Specifies an <see cref="Encoding"/> to be used for StandardOutput, StandardError, and StandardInput. 
+            /// 
+            /// By default, <see cref="Process"/> will use <see cref="Console.OutputEncoding"/> for output streams and <see cref="Console.InputEncoding"/>
+            /// for input streams.
+            /// 
+            /// Note that the output encodings can be set individually via <see cref="ProcessStartInfo"/>. If you need to specify different encodings
+            /// for different streams, use this method to set the StandardInput encoding and then use <see cref="StartInfo(Action{ProcessStartInfo})"/>
+            /// to further override the two output encodings
+            /// </summary>
+            public Options Encoding(Encoding encoding)
+            {
+                Throw.IfNull(encoding, nameof(encoding));
+
+                this.ProcessStreamEncoding = encoding;
                 return this;
             }
             #endregion
