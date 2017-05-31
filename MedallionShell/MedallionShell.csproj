@@ -1,85 +1,43 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{15AF2EC0-F7B2-4206-B92A-DD1F3DC25F30}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFrameworks>netstandard1.3;net45</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
-    <AssemblyName>MedallionShell</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <Version>1.2.1</Version>
+    <Authors>Michael Adelson</Authors>
+    <Description>A lightweight library that simplifies working with processes in .NET</Description>
+    <Copyright>Copyright © 2017 Michael Adelson</Copyright>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageLicenseUrl>https://raw.githubusercontent.com/madelson/MedallionShell/master/License.tx</PackageLicenseUrl>
+    <PackageTags>process async shell stdin stdout stderr pipe redirect</PackageTags>
+    <PackageProjectUrl>https://github.com/madelson/MedallionShell</PackageProjectUrl>
+    <RepositoryUrl />
+    <FileVersion>1.0.0.0</FileVersion>
+    <PackageReleaseNotes>Added .NET Core support, added fluent APIs for Command operators, and fixed Command piping so that StandardInput.AutoFlush is always respected</PackageReleaseNotes>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DocumentationFile>bin\Debug\MedallionShell.XML</DocumentationFile>
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <WarningLevel>1</WarningLevel>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <Optimize>True</Optimize>
+    <AssemblyVersion>1.2.1.0</AssemblyVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+
+  <PropertyGroup>
+    <DocumentationFile>bin\Debug\MedallionShell.xml</DocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Testing|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\Testing\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;TESTING</DefineConstants>
-    <DocumentationFile>bin\Debug\MedallionShell.XML</DocumentationFile>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
-    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net45'">
+    
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Command.cs" />
-    <Compile Include="CommandResult.cs" />
-    <Compile Include="Constants.cs" />
-    <Compile Include="ErrorExitCodeException.cs" />
-    <Compile Include="ExceptionHelpers.cs" />
-    <Compile Include="Helpers.cs" />
-    <Compile Include="IoCommand.cs" />
-    <Compile Include="Log.cs" />
-    <Compile Include="PipedCommand.cs" />
-    <Compile Include="ProcessCommand.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Shell.cs" />
-    <Compile Include="Streams\InternalProcessStreamReader.cs" />
-    <Compile Include="Streams\Pipe.cs" />
-    <Compile Include="Streams\ProcessStreamReader.cs" />
-    <Compile Include="Streams\ProcessStreamWriter.cs" />
-    <Compile Include="Streams\PipeHelpers.cs" />
-    <Compile Include="CommandLineSyntax.cs" />
-    <Compile Include="WindowsCommandLineSyntax.cs" />
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
+	<PackageReference Include="NETStandard.Library" version="1.6.0" />
+	<PackageReference Include="System.Diagnostics.Process" version="4.1.0" />
   </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

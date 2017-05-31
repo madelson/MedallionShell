@@ -68,15 +68,4 @@ shell.Run("path_to_grep", "some REGEX");
 - 1.0.0 Initial release
 
 ## Building The Code
-You will need:
-- VisualStudio 2015 or higher (community edition is fine) [download](https://www.visualstudio.com/vs/community/)
-- .NET Core Tooling for VisualStudio [download](https://www.microsoft.com/net/core#windows)
-- .NET Core SDK for Windows [download](https://www.microsoft.com/net/core#windows)
-
-MedallionShell can be built from VisualStudio or from the command line using [Cake](http://cakebuild.net/):
-
-```
-powershell ./build.ps1
-```
-
-Running the cake build script will build the solution and execute the tests against both .NET Core and the .NET Framework (this is key, since the XUnit runner in VS does not allow you to pick which build to use when running unit tests). Cake will also create the NuGet package.
+You will need VisualStudio 2017 or higher (community edition is fine) [download](https://www.visualstudio.com/vs/community/).

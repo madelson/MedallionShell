@@ -165,7 +165,7 @@ namespace Medallion.Shell
                 return this.StartInfo(psi => psi.WorkingDirectory = path);
             }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             /// <summary>
             /// Adds or overwrites an environment variable to be passed to the <see cref="Command"/>
             /// </summary>

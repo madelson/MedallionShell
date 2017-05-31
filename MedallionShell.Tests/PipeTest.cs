@@ -1,16 +1,17 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Medallion.Shell.Tests
 {
+    [TestClass]
     public class PipeTest : IDisposable
     {
-        [Fact]
+        [TestMethod]
         public void TestPiping()
         {
             var shell = new Shell(o => o.ThrowOnError());

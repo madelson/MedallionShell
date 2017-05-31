@@ -472,7 +472,7 @@ namespace Medallion.Shell.Streams
 
             public PipeInputStream(Pipe pipe) { this.pipe = pipe; }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 throw WriteOnly();
@@ -525,7 +525,7 @@ namespace Medallion.Shell.Streams
 
             public override bool CanWrite { get { return true; } }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             public override void Close()
             {
                 base.Close(); // calls Dispose(true)
@@ -545,7 +545,7 @@ namespace Medallion.Shell.Streams
                 }
             }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             public override int EndRead(IAsyncResult asyncResult)
             {
                 throw WriteOnly();
@@ -668,7 +668,7 @@ namespace Medallion.Shell.Streams
 
             public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 // according to the docs, the callback is optional
@@ -708,7 +708,7 @@ namespace Medallion.Shell.Streams
                 bool IAsyncResult.IsCompleted { get { return this.readTask.IsCompleted; } }
             }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
                 throw ReadOnly();
@@ -723,7 +723,7 @@ namespace Medallion.Shell.Streams
 
             public override bool CanWrite { get { return false; } }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             public override void Close()
             {
                 base.Close(); // calls Dispose(true)
@@ -744,7 +744,7 @@ namespace Medallion.Shell.Streams
                 }
             }
 
-#if !NETCORE
+#if !NETSTANDARD1_3
             public override int EndRead(IAsyncResult asyncResult)
             {
                 Throw.IfNull(asyncResult, "asyncResult");

@@ -45,7 +45,7 @@ namespace Medallion.Shell.Streams
             }
             finally
             {
-#if NETCORE
+#if NETSTANDARD1_3
                 this.processStream.Dispose();
                 this.pipe.InputStream.Dispose();
 #else

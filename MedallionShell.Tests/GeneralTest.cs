@@ -1,16 +1,17 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Medallion.Shell.Tests
 {
+    [TestClass]
     public class GeneralTest
     {
-        [Fact]
+        [TestMethod]
         public void TestGrep()
         {
             var command = Shell.Default.Run("SampleCommand", "grep", "a+");
@@ -20,7 +21,7 @@ namespace Medallion.Shell.Tests
             command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
         }
 
-        [Fact]
+        [TestMethod]
         public void TestPipedGrep()
         {
             Log.WriteLine("******** TestPipedGrep starting *********");
@@ -36,7 +37,7 @@ namespace Medallion.Shell.Tests
             results.SequenceEqual(new[] { "abcd", "abc" }).ShouldEqual(true);
         }
 
-        [Fact]
+        [TestMethod]
         public void TestLongWriteWithInfrequentReads()
         {
             var lines = Enumerable.Range(0, 100).Select(i => i.ToString())
@@ -73,7 +74,7 @@ namespace Medallion.Shell.Tests
             string.Join("/", outputLines).ShouldEqual(string.Join("/", lines));
         }
 
-        [Fact]
+        [TestMethod]
         public void TestHead()
         {
             var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
@@ -81,7 +82,7 @@ namespace Medallion.Shell.Tests
             command.Task.Result.StandardOutput.Trim().ShouldEqual(string.Join(Environment.NewLine, Enumerable.Range(0, 10)));
         }
 
-        [Fact]
+        [TestMethod]
         public void TestCloseStandardOutput()
         {
             var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
@@ -89,57 +90,57 @@ namespace Medallion.Shell.Tests
             command.StandardOutput.BaseStream.ReadByte();
             command.StandardOutput.BaseStream.Dispose();
             
-            Assert.Throws<ObjectDisposedException>(() => command.StandardOutput.BaseStream.ReadByte());
-            Assert.Throws<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.BaseStream.ReadByte());
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
 
             var command2 = shell.Run("SampleCommand", "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
             command2.Wait();
             command2.StandardOutput.Dispose();
-            Assert.Throws<ObjectDisposedException>(() => command2.StandardOutput.Read());
+            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command2.StandardOutput.Read());
         }
 
-        [Fact]
+        [TestMethod]
         public void TestExitCode()
         {
-            Assert.True(Command.Run("SampleCommand", "exit", 0).Result.Success);
-            Assert.False(Command.Run("SampleCommand", "exit", 1).Result.Success);
+            Assert.IsTrue(Command.Run("SampleCommand", "exit", 0).Result.Success);
+            Assert.IsFalse(Command.Run("SampleCommand", "exit", 1).Result.Success);
 
             var shell = new Shell(o => o.ThrowOnError());
-            var ex = Assert.Throws<AggregateException>(() => shell.Run("SampleCommand", "exit", -1).Task.Wait());
+            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => shell.Run("SampleCommand", "exit", -1).Task.Wait());
             ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
                 .ShouldEqual(true);
 
             shell.Run("SampleCommand", "exit", 0).Task.Wait();
         }
 
-        [Fact]
+        [TestMethod]
         public void TestThrowOnErrorWithTimeout()
         {
             var command = Command.Run("SampleCommand", new object[] { "exit", 1 }, o => o.ThrowOnError().Timeout(TimeSpan.FromDays(1)));
-            var ex = Assert.Throws<AggregateException>(() => command.Task.Wait());
+            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => command.Task.Wait());
             ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
                 .ShouldEqual(true);
         }
 
-        [Fact]
+        [TestMethod]
         public void TestTimeout()
         {
             var willTimeout = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.FromMilliseconds(200)));
-            var ex = Assert.Throws<AggregateException>(() => willTimeout.Task.Wait());
-            Assert.IsType<TimeoutException>(ex.InnerException);
+            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => willTimeout.Task.Wait());
+            Assert.IsInstanceOfType(ex.InnerException, typeof(TimeoutException));
         }
 
-        [Fact]
+        [TestMethod]
         public void TestErrorHandling()
         {
             var command = Command.Run("SampleCommand", "echo") < "abc" > new char[0];
-            Assert.Throws<AggregateException>(() => command.Wait());
+            UnitTestHelpers.AssertThrows<AggregateException>(() => command.Wait());
 
             var command2 = Command.Run("SampleCommand", "echo") < this.ErrorLines();
-            Assert.Throws<AggregateException>(() => command.Wait());
+            UnitTestHelpers.AssertThrows<AggregateException>(() => command.Wait());
         }
 
-        [Fact]
+        [TestMethod]
         public void TestStopBufferingAndDiscard()
         {
             var command = Command.Run("SampleCommand", "pipe");
@@ -175,7 +176,7 @@ namespace Medallion.Shell.Tests
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void TestKill()
         {
             var command = Command.Run("SampleCommand", "pipe");
@@ -191,7 +192,7 @@ namespace Medallion.Shell.Tests
             command.StandardOutput.ReadLine().ShouldEqual("abc");
         }
 
-        [Fact]
+        [TestMethod]
         public void TestKillAfterFinished()
         {
             var command = Command.Run("SampleCommand", "bool", true, "something");
@@ -200,7 +201,7 @@ namespace Medallion.Shell.Tests
             command.Result.Success.ShouldEqual(true);
         }
 
-        [Fact]
+        [TestMethod]
         public void TestNestedKill()
         {
             var lines = new List<string>();
@@ -224,16 +225,16 @@ namespace Medallion.Shell.Tests
             pipeline.Result.Success.ShouldEqual(false);
         }
 
-        [Fact]
+        [TestMethod]
         public void TestVersioning()
         {
             var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version.ToString();
             var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute));
-            Assert.NotNull(informationalVersion);
+            Assert.IsNotNull(informationalVersion);
             version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
         }
 
-        [Fact]
+        [TestMethod]
         public void TestShortFlush()
         {
             var command = Command.Run("SampleCommand", "shortflush", "a");
@@ -245,7 +246,7 @@ namespace Medallion.Shell.Tests
             command.Task.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
-        [Fact]
+        [TestMethod]
         public void TestAutoFlush()
         {
             var command = Command.Run("SampleCommand", "echo", "--per-char");
@@ -268,7 +269,7 @@ namespace Medallion.Shell.Tests
             command.StandardInput.Dispose();
         }
 
-        [Fact]
+        [TestMethod]
         public void TestErrorEcho()
         {
             var command = Command.Run("SampleCommand", "errecho") < "abc";
