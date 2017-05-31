@@ -23,7 +23,7 @@ namespace Medallion.Shell.Streams
         {
             this.processStream = processStreamReader.BaseStream;
             this.pipe = new Pipe();
-            this.reader = new StreamReader(this.pipe.OutputStream);
+            this.reader = new StreamReader(this.pipe.OutputStream, processStreamReader.CurrentEncoding);
             this.task = Task.Run(() => this.BufferLoop());
         }
 
