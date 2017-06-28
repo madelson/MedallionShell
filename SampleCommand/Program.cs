@@ -105,6 +105,23 @@ namespace SampleCommand
                         Thread.Sleep(5);
                     }
                     break;
+                case "echoLinesToBothStreams":
+                    async Task echoLines(TextWriter output)
+                    {
+                        while (true)
+                        {
+                            string lineToEcho;
+                            lock (Console.In)
+                            {
+                                lineToEcho = Console.In.ReadLine(); // no async due to lock
+                            }
+                            if (lineToEcho == null) { return; }
+
+                            await output.WriteLineAsync(lineToEcho);
+                        }
+                    }
+                    Task.WaitAll(Task.Run(() => echoLines(Console.Error)), Task.Run(() => echoLines(Console.Out)));
+                    break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);
                     Environment.Exit(-1);

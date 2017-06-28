@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,36 @@ namespace Medallion.Shell
         public static T As<T>(this T @this)
         {
             return @this;
+        }
+
+        public static TResult GetResultWithUnwrappedException<TResult>(this Task<TResult> @this)
+        {
+            if (@this.IsCompleted)
+            {
+                return @this.Status == TaskStatus.RanToCompletion
+                    ? @this.Result
+                    : throw ThrowUnwrapped(@this);
+            }
+            
+            try { return @this.Result; }
+            catch (AggregateException)
+            {
+                throw ThrowUnwrapped(@this);
+            }
+        }
+
+        private static Exception ThrowUnwrapped(Task task)
+        {
+            if (task.IsFaulted)
+            {
+                ExceptionDispatchInfo.Capture(task.Exception.GetBaseException()).Throw();
+            }
+            else if (task.IsCanceled)
+            {
+                throw new TaskCanceledException();
+            }
+
+            return null;
         }
     }
 

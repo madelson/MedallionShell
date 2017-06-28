@@ -296,6 +296,24 @@ namespace Medallion.Shell.Tests
             command.Result.StandardOutput.ShouldEqual(InternationalText);
         }
 
+        [TestMethod]
+        public void TestGetOutputAndErrorLines()
+        {
+            // simple echo case
+            var command = Command.Run("SampleCommand", "echo") < new[] { "a", "b", "c" };
+            string.Join(", ", command.GetOutputAndErrorLines().ToList()).ShouldEqual("a, b, c");
+
+            // failure case: stderr not redirected
+            command = Command.Run("SampleCommand", new[] { "echo" }, options: o => o.StartInfo(s => s.RedirectStandardError = false)) < new[] { "a" };
+            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command.GetOutputAndErrorLines());
+
+            // fuzz case
+            var lines = Enumerable.Range(0, 5000).Select(_ => Guid.NewGuid().ToString()).ToArray();
+            command = Command.Run("SampleCommand", "echoLinesToBothStreams") < lines;
+            var outputLines = command.GetOutputAndErrorLines().ToList();
+            CollectionAssert.AreEquivalent(lines, outputLines);
+        }
+
         private IEnumerable<string> ErrorLines()
         {
             yield return "1";

@@ -259,6 +259,16 @@ namespace Medallion.Shell
 
             return new IoCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true));
         }
+
+        /// <summary>
+        /// Returns a single streaming <see cref="IEnumerable{T}"/> which merges the outputs of
+        /// <see cref="ProcessStreamReader.GetLines"/> on <see cref="StandardOutput"/> and
+        /// <see cref="StandardError"/>. This is similar to doing 2>&amp;1 on the command line.
+        /// 
+        /// Merging at the line level means that interleaving of the outputs cannot break up any single
+        /// lines
+        /// </summary>
+        public IEnumerable<string> GetOutputAndErrorLines() => new MergedLinesEnumerable(standardOutput: this.StandardOutput, standardError: this.StandardError);
         #endregion
 
         #region ---- Operator overloads ----
