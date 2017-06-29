@@ -128,11 +128,11 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeToAsync(FileInfo file, bool leaveReaderOpen = false)
         {
-            Throw.IfNull(file, "file");
+            Throw.IfNull(file, nameof(file));
             
             // used over FileInfo.OpenWrite to get read file share, which seems potentially useful and
-            // not that harmful
-            var stream = new FileStream(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
+            // not that harmful. This also allows us to enable async. Note that 4096 is the default FileStream buffer size
+            var stream = new FileStream(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read, bufferSize: 4096, useAsync: true);
             return this.PipeToAsync(stream, leaveReaderOpen: leaveReaderOpen, leaveStreamOpen: false);
         }
 
