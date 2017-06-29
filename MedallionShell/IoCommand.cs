@@ -33,6 +33,9 @@ namespace Medallion.Shell
             get { return this.command.Processes; }
         }
 
+        public override int ProcessId => this.command.ProcessId;
+        public override IReadOnlyList<int> ProcessIds => this.command.ProcessIds;
+
         public override Streams.ProcessStreamWriter StandardInput
         {
             get { return this.command.StandardInput; }

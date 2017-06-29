@@ -1,7 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Management;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -312,6 +314,64 @@ namespace Medallion.Shell.Tests
             command = Command.Run("SampleCommand", "echoLinesToBothStreams") < lines;
             var outputLines = command.GetOutputAndErrorLines().ToList();
             CollectionAssert.AreEquivalent(lines, outputLines);
+        }
+
+        [TestMethod]
+        public void TestProcessAndProcessId()
+        {
+            void testHelper(bool disposeOnExit)
+            {
+                var shell = new Shell(o => o.DisposeOnExit(disposeOnExit));
+                var command1 = shell.Run("SampleCommand", "pipe", "--id1");
+                var command2 = shell.Run("SampleCommand", "pipe", "--id2");
+                var pipeCommand = command1.PipeTo(command2);
+                try
+                {
+                    if (disposeOnExit)
+                    {
+                        // invalid due to DisposeOnExit()
+                        UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command1.Process.ToString())
+                            .Message.ShouldContain("dispose on exit");
+                        UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command2.Processes.Count())
+                            .Message.ShouldContain("dispose on exit");
+                        UnitTestHelpers.AssertThrows<InvalidOperationException>(() => pipeCommand.Processes.Count())
+                            .Message.ShouldContain("dispose on exit");
+                    }
+                    else
+                    {
+                        command1.Process.StartInfo.Arguments.ShouldContain("--id1");
+                        command1.Processes.SequenceEqual(new[] { command1.Process });
+                        command2.Process.StartInfo.Arguments.ShouldContain("--id2");
+                        command2.Processes.SequenceEqual(new[] { command2.Process }).ShouldEqual(true);
+                        pipeCommand.Process.ShouldEqual(command2.Process);
+                        pipeCommand.Processes.SequenceEqual(new[] { command1.Process, command2.Process }).ShouldEqual(true);
+                    }
+
+                    // https://stackoverflow.com/questions/2633628/can-i-get-command-line-arguments-of-other-processes-from-net-c
+                    string getCommandLine(int processId)
+                    {
+                        using (var searcher = new ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId))
+                        {
+                            return searcher.Get().Cast<ManagementBaseObject>().Single()["CommandLine"].ToString();
+                        }
+                    }
+
+                    getCommandLine(command1.ProcessId).ShouldContain("--id1");
+                    command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
+                    getCommandLine(command2.ProcessId).ShouldContain("--id2");
+                    command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
+                    pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
+                    pipeCommand.ProcessIds.SequenceEqual(new[] { command1.ProcessId, command2.ProcessId }).ShouldEqual(true);
+                }
+                finally
+                {
+                    command1.RedirectFrom(new[] { "data" });
+                    pipeCommand.Wait();
+                }
+            }
+
+            testHelper(disposeOnExit: true);
+            testHelper(disposeOnExit: false);
         }
 
         private IEnumerable<string> ErrorLines()

@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,6 +52,15 @@ namespace Medallion.Shell
                 this.standardInput = new ProcessStreamWriter(streamWriter);
             }
 
+            // according to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.process.id?view=netcore-1.1#System_Diagnostics_Process_Id,
+            // this can throw PlatformNotSupportedException on some older windows systems in some StartInfo configurations. To be as
+            // robust as possible, we thus make this a best-effort attempt
+            try { this.processIdOrExceptionDispatchInfo = process.Id; }
+            catch (PlatformNotSupportedException processIdException)
+            {
+                this.processIdOrExceptionDispatchInfo = ExceptionDispatchInfo.Capture(processIdException);
+            }
+
             this.task = this.CreateCombinedTask(processTask, ioTasks);
         }
 
@@ -93,6 +103,28 @@ namespace Medallion.Shell
         public override IReadOnlyList<Process> Processes
         {
             get { return this.processes ?? (this.processes = new ReadOnlyCollection<Process>(new[] { this.Process })); }
+        }
+
+        private readonly object processIdOrExceptionDispatchInfo;
+        public override int ProcessId
+        {
+            get
+            {
+                this.ThrowIfDisposed();
+
+                if (this.processIdOrExceptionDispatchInfo is ExceptionDispatchInfo exceptionDispatchInfo)
+                {
+                    exceptionDispatchInfo.Throw();
+                }
+
+                return (int)this.processIdOrExceptionDispatchInfo;
+            }
+        }
+
+        private IReadOnlyList<int> processIds;
+        public override IReadOnlyList<int> ProcessIds
+        {
+            get { return this.processIds ?? (this.processIds = new ReadOnlyCollection<int>(new[] { this.ProcessId })); }
         }
 
         private readonly ProcessStreamWriter standardInput;

@@ -20,16 +20,30 @@ namespace Medallion.Shell
         internal Command() { }
 
         /// <summary>
-        /// The <see cref="Process"/> associated with this <see cref="Command"/>. In a multi-process command,
-        /// this will be the final <see cref="Process"/> in the chain. NOTE: this property cannot be accessed when using
-        /// the DisposeOnExit option
+        /// The <see cref="System.Diagnostics.Process"/> associated with this <see cref="Command"/>. In a multi-process command,
+        /// this will be the final <see cref="System.Diagnostics.Process"/> in the chain. NOTE: this property cannot be accessed when using
+        /// the <see cref="Shell.Options.DisposeOnExit(bool)"/> option
         /// </summary>
         public abstract Process Process { get; }
         /// <summary>
-        /// All <see cref="Process"/>es associated with this <see cref="Command"/>. NOTE: this property cannot be accessed when using
-        /// the DisposeOnExit option
+        /// All <see cref="System.Diagnostics.Process"/>es associated with this <see cref="Command"/>. NOTE: this property cannot be accessed when using
+        /// the <see cref="Shell.Options.DisposeOnExit(bool)"/> option
         /// </summary>
         public abstract IReadOnlyList<Process> Processes { get; }
+
+        /// <summary>
+        /// The PID of the process associated with this <see cref="Command"/>. In a multi-process command,
+        /// this will be the PID of the final <see cref="System.Diagnostics.Process"/> in the chain. NOTE: unlike
+        /// the <see cref="Process"/> property, this property is compatible with the <see cref="Shell.Options.DisposeOnExit(bool)"/>
+        /// option
+        /// </summary>
+        public abstract int ProcessId { get; }
+        /// <summary>
+        /// All PIDs of the <see cref="System.Diagnostics.Process"/>es associated with this <see cref="Command"/>. NOTE: unlike
+        /// the <see cref="Processes"/> property, this property is compatible with the 
+        /// <see cref="Shell.Options.DisposeOnExit(bool)"/> option
+        /// </summary>
+        public abstract IReadOnlyList<int> ProcessIds { get; }
 
         /// <summary>
         /// Writes to the process's standard input
