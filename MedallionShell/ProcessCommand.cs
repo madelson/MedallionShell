@@ -45,11 +45,15 @@ namespace Medallion.Shell
             }
             if (startInfo.RedirectStandardInput)
             {
-                // unfortunately, this can't be done via ProcessStartInfo so we have to do it manually here.
+                // unfortunately, changing the encoding can't be done via ProcessStartInfo so we have to do it manually here.
                 // See https://github.com/dotnet/corefx/issues/20497
-                var streamWriter = standardInputEncoding == null || Equals(this.process.StandardInput.Encoding, standardInputEncoding)
-                    ? this.process.StandardInput
-                    : new StreamWriter(this.process.StandardInput.BaseStream, standardInputEncoding);
+
+                var originalStandardInput = this.process.StandardInput;
+                var wrappedStream = PlatformCompatibilityHelper.WrapStandardInputStreamIfNeeded(originalStandardInput.BaseStream);
+                var standardInputEncodingToUse = standardInputEncoding ?? originalStandardInput.Encoding;
+                var streamWriter = wrappedStream == originalStandardInput.BaseStream && Equals(standardInputEncodingToUse, originalStandardInput.Encoding)
+                    ? originalStandardInput
+                    : new StreamWriter(wrappedStream, standardInputEncodingToUse);
                 this.standardInput = new ProcessStreamWriter(streamWriter);
             }
 
@@ -251,13 +255,14 @@ namespace Medallion.Shell
                         // disposes out from under us
                         try
                         {
-                            if (throwOnError && process.ExitCode != 0)
+                            var exitCode = process.SafeGetExitCode();
+                            if (throwOnError && exitCode != 0)
                             {
                                 taskBuilder.SetException(new ErrorExitCodeException(process));
                             }
                             else
                             {
-                                taskBuilder.SetResult(process.ExitCode);
+                                taskBuilder.SetResult(exitCode);
                             }
                         }
                         catch (Exception ex) 

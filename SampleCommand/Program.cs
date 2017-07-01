@@ -122,6 +122,14 @@ namespace SampleCommand
                     }
                     Task.WaitAll(Task.Run(() => echoLines(Console.Error)), Task.Run(() => echoLines(Console.Out)));
                     break;
+                case nameof(PlatformCompatibilityTests):
+                    var method = typeof(PlatformCompatibilityTests).GetMethod(args[1]);
+                    if (method == null)
+                    {
+                        throw new ArgumentException($"Unknown test method '{args[1]}'");
+                    }
+                    method.Invoke(null, new object[0]);
+                    break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);
                     Environment.Exit(-1);
