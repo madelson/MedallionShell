@@ -39,6 +39,15 @@ namespace Medallion.Shell.Tests
             throw new InvalidOperationException("Should never get here");
         }
 
+        public static void AssertDoesNotThrow(Action action, string message = null)
+        {
+            try { action(); }
+            catch (Exception ex)
+            {
+                Assert.Fail($"Expected: no failure; was: '{ex}'{(message != null ? message + ": " : string.Empty)}");
+            }
+        }
+
         public static void AssertIsInstanceOf<T>(object value, string message = null)
         {
             Assert.IsInstanceOfType(value, typeof(T), message);

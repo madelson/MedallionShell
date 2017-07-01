@@ -22,12 +22,13 @@ namespace Medallion.Shell
             bool throwOnError, 
             bool disposeOnExit, 
             TimeSpan timeout,
+            CancellationToken cancellationToken,
             Encoding standardInputEncoding)
         {
             this.disposeOnExit = disposeOnExit;
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
-            var processTask = CreateProcessTask(this.process, throwOnError: throwOnError, timeout: timeout);
+            var processTask = CreateProcessTask(this.process, throwOnError: throwOnError);
 
             this.process.Start();
 
@@ -60,17 +61,25 @@ namespace Medallion.Shell
             {
                 this.processIdOrExceptionDispatchInfo = ExceptionDispatchInfo.Capture(processIdException);
             }
-
-            this.task = this.CreateCombinedTask(processTask, ioTasks);
+            
+            this.task = this.CreateCombinedTask(processTask.Task, timeout, cancellationToken, ioTasks);
         }
 
-        private async Task<CommandResult> CreateCombinedTask(Task processTask, List<Task> ioTasks)
+        private async Task<CommandResult> CreateCombinedTask(
+            Task<int> processTask, 
+            TimeSpan timeout,
+            CancellationToken cancellationToken, 
+            List<Task> ioTasks)
         {
             int exitCode;
             try
             {
-                await processTask.ConfigureAwait(false);
-                exitCode = this.process.ExitCode;
+                // we only set up timeout and cancellation AFTER starting the process. This prevents a race
+                // condition where we immediately try to kill the process before having started it and then proceed to start it.
+                // While we could avoid starting at all in such cases, that would leave the command in a weird state (no PID, no streams, etc)
+                await this.HandleCancellationAndTimeout(processTask, cancellationToken, timeout).ConfigureAwait(false);
+
+                exitCode = await processTask.ConfigureAwait(false);
             }
             finally
             {
@@ -83,6 +92,25 @@ namespace Medallion.Shell
 
             await SystemTask.WhenAll(ioTasks).ConfigureAwait(false);
             return new CommandResult(exitCode, this);
+        }
+
+        private async Task HandleCancellationAndTimeout(Task<int> processTask, CancellationToken cancellationToken, TimeSpan timeout)
+        {
+            using (var cancellationOrTimeout = CancellationOrTimeout.TryCreate(cancellationToken, timeout))
+            {
+                if (cancellationOrTimeout != null)
+                {
+                    // wait for either cancellation/timeout or the process to finish
+                    var completed = await SystemTask.WhenAny(cancellationOrTimeout.Task, processTask).ConfigureAwait(false);
+                    if (completed == cancellationOrTimeout.Task)
+                    {
+                        // if cancellation/timeout finishes first, kill the process
+                        TryKillProcess(this.process);
+                        // propagate cancellation or timeout exception
+                        await completed.ConfigureAwait(false);
+                    }
+                }
+            }
         }
 
         private readonly Process process;
@@ -167,9 +195,9 @@ namespace Medallion.Shell
             TryKillProcess(this.process);
         }
         
-        private static Task CreateProcessTask(Process process, bool throwOnError, TimeSpan timeout)
+        private static TaskCompletionSource<int> CreateProcessTask(Process process, bool throwOnError)
         {
-            var taskCompletionSource = new TaskCompletionSource<bool>();
+            var taskCompletionSource = new TaskCompletionSource<int>();
             process.Exited += (o, e) =>
             {
                 Log.WriteLine("Received exited event from {0}", process.Id);
@@ -180,38 +208,11 @@ namespace Medallion.Shell
                 }
                 else
                 {
-                    taskCompletionSource.SetResult(true);
+                    taskCompletionSource.SetResult(process.ExitCode);
                 }
             };
-            return timeout != Timeout.InfiniteTimeSpan
-                ? AddTimeout(taskCompletionSource.Task, process, timeout)
-                : taskCompletionSource.Task;
-        }
 
-        private static async Task AddTimeout(Task task, Process process, TimeSpan timeout)
-        {
-            using (var timeoutCleanupSource = new CancellationTokenSource())
-            {
-                // wait for either the given task or the timeout to complete
-                // http://stackoverflow.com/questions/4238345/asynchronously-wait-for-taskt-to-complete-with-timeout
-                var completed = await SystemTask.WhenAny(task, SystemTask.Delay(timeout, timeoutCleanupSource.Token)).ConfigureAwait(false);
-
-                // Task.WhenAny() swallows errors: wait for the completed task to propagate any errors that occurred
-                await completed.ConfigureAwait(false);
-
-                // if we timed out, kill the process
-                if (completed != task)
-                {
-                    Log.WriteLine("Process timed out");
-                    TryKillProcess(process);
-                    throw new TimeoutException("Process killed after exceeding timeout of " + timeout);
-                }
-                else
-                {
-                    // clean up the timeout
-                    timeoutCleanupSource.Cancel();
-                }
-            }
+            return taskCompletionSource;
         }
 
         private static void TryKillProcess(Process process)

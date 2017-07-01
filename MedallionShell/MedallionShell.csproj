@@ -22,7 +22,7 @@
   <PropertyGroup>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     <TreatSpecificWarningsAsErrors />
-    <WarningLevel>1</WarningLevel>
+    <WarningLevel>4</WarningLevel>
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <Optimize>True</Optimize>
     <AssemblyVersion>1.3.0.0</AssemblyVersion>

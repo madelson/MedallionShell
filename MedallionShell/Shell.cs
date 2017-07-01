@@ -63,6 +63,7 @@ namespace Medallion.Shell
                 throwOnError: finalOptions.ThrowExceptionOnError,
                 disposeOnExit: finalOptions.DisposeProcessOnExit,
                 timeout: finalOptions.ProcessTimeout,
+                cancellationToken: finalOptions.ProcessCancellationToken,
                 standardInputEncoding: finalOptions.ProcessStreamEncoding
             );
             finalOptions.CommandInitializers.ForEach(a => a(command));
@@ -119,10 +120,11 @@ namespace Medallion.Shell
             internal List<Action<ProcessStartInfo>> StartInfoInitializers { get; private set; }
             internal List<Action<Command>> CommandInitializers { get; private set; }
             internal CommandLineSyntax CommandLineSyntax { get; private set; }
-            internal bool ThrowExceptionOnError { get; set; }
-            internal bool DisposeProcessOnExit { get; set; }
-            internal TimeSpan ProcessTimeout { get; set; }
-            internal Encoding ProcessStreamEncoding { get; set; }
+            internal bool ThrowExceptionOnError { get; private set; }
+            internal bool DisposeProcessOnExit { get; private set; }
+            internal TimeSpan ProcessTimeout { get; private set; }
+            internal Encoding ProcessStreamEncoding { get; private set; }
+            internal CancellationToken ProcessCancellationToken { get; private set; }
 
             #region ---- Builder methods ----
             /// <summary>
@@ -137,6 +139,7 @@ namespace Medallion.Shell
                 this.DisposeProcessOnExit = true;
                 this.ProcessTimeout = System.Threading.Timeout.InfiniteTimeSpan;
                 this.ProcessStreamEncoding = null;
+                this.ProcessCancellationToken = System.Threading.CancellationToken.None;
                 return this;
             }
 
@@ -258,6 +261,16 @@ namespace Medallion.Shell
                 Throw.IfNull(encoding, nameof(encoding));
 
                 this.ProcessStreamEncoding = encoding;
+                return this;
+            }
+
+            /// <summary>
+            /// Specifies a <see cref="System.Threading.CancellationToken"/> which will abort the command when canceled.
+            /// When a command is aborted, the underlying process will be killed as if using <see cref="Medallion.Shell.Command.Kill"/>
+            /// </summary>
+            public Options CancellationToken(CancellationToken cancellationToken)
+            {
+                this.ProcessCancellationToken = cancellationToken;
                 return this;
             }
             #endregion

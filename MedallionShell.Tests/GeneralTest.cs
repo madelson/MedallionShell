@@ -134,13 +134,106 @@ namespace Medallion.Shell.Tests
         }
 
         [TestMethod]
+        public void TestZeroTimeout()
+        {
+            var willTimeout = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.Zero));
+            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => willTimeout.Task.Wait());
+            Assert.IsInstanceOfType(ex.InnerException, typeof(TimeoutException));
+        }
+
+        [TestMethod]
+        public void TestCancellationAlreadyCanceled()
+        {
+            using (var alreadyCanceled = new CancellationTokenSource(millisecondsDelay: 0))
+            {
+                var command = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.CancellationToken(alreadyCanceled.Token));
+                UnitTestHelpers.AssertThrows<TaskCanceledException>(() => command.Wait());
+                UnitTestHelpers.AssertThrows<TaskCanceledException>(() => command.Result.ToString());
+                command.Task.Status.ShouldEqual(TaskStatus.Canceled);
+                UnitTestHelpers.AssertDoesNotThrow(() => command.ProcessId.ToString(), "still executes a command and gets a process ID");
+            }
+        }
+
+        [TestMethod]
+        public void TestCancellationNotCanceled()
+        {
+            using (var notCanceled = new CancellationTokenSource())
+            {
+                var command = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.CancellationToken(notCanceled.Token));
+                command.Task.Wait(50).ShouldEqual(false);
+                command.Kill();
+                command.Task.Wait(1000).ShouldEqual(true);
+                command.Result.Success.ShouldEqual(false);
+            }
+        }
+
+        [TestMethod]
+        public void TestCancellationCanceledPartway()
+        {
+            using (var cancellationTokenSource = new CancellationTokenSource())
+            {
+                var results = new SynchronizedCollection<string>();
+                var command = Command.Run("SampleCommand", new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+                command.StandardInput.WriteLine("hello");
+                var timeout = Task.Delay(TimeSpan.FromSeconds(10));
+                while (results.Count == 0 && !timeout.IsCompleted) ;
+                results.Count.ShouldEqual(1);
+                cancellationTokenSource.Cancel();
+                var aggregateException = UnitTestHelpers.AssertThrows<AggregateException>(() => command.Task.Wait(1000));
+                UnitTestHelpers.AssertIsInstanceOf<TaskCanceledException>(aggregateException.GetBaseException());
+                CollectionAssert.AreEqual(results, new[] { "hello" });
+            }
+        }
+
+        [TestMethod]
+        public void TestCancellationCanceledAfterCompletion()
+        {
+            using (var cancellationTokenSource = new CancellationTokenSource())
+            {
+                var results = new List<string>();
+                var command = Command.Run("SampleCommand", new object[] { "echo" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+                command.StandardInput.WriteLine("hello");
+                command.StandardInput.Close();
+                command.Task.Wait(1000).ShouldEqual(true);
+                cancellationTokenSource.Cancel();
+                command.Result.Success.ShouldEqual(true);
+            }
+        }
+
+        [TestMethod]
+        public void TestCancellationWithTimeoutTimeoutWins()
+        {
+            var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var command = Command.Run(
+                "SampleCommand", 
+                new object[] { "sleep", 1000000 }, 
+                o => o.CancellationToken(cancellationTokenSource.Token)
+                    .Timeout(TimeSpan.FromMilliseconds(50))
+            );
+            UnitTestHelpers.AssertThrows<TimeoutException>(() => command.Wait());
+        }
+
+        [TestMethod]
+        public void TestCancellationWithTimeoutCancellationWins()
+        {
+            var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+            var command = Command.Run(
+                "SampleCommand",
+                new object[] { "sleep", 1000000 },
+                o => o.CancellationToken(cancellationTokenSource.Token)
+                    .Timeout(TimeSpan.FromSeconds(5))
+            );
+            UnitTestHelpers.AssertThrows<TaskCanceledException>(() => command.Wait());
+        }
+        
+        [TestMethod]
         public void TestErrorHandling()
         {
             var command = Command.Run("SampleCommand", "echo") < "abc" > new char[0];
-            UnitTestHelpers.AssertThrows<AggregateException>(() => command.Wait());
+            UnitTestHelpers.AssertThrows<NotSupportedException>(() => command.Wait());
 
             var command2 = Command.Run("SampleCommand", "echo") < this.ErrorLines();
-            UnitTestHelpers.AssertThrows<AggregateException>(() => command.Wait());
+            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command2.Wait());
         }
 
         [TestMethod]
