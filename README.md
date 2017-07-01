@@ -60,6 +60,12 @@ shell.Run("path_to_grep", "some REGEX");
 ```
 
 ## Release Notes
+- 1.4.0 
+	- Added cancellation support ([#18](https://github.com/madelson/MedallionShell/issues/18))
+	- Added API for getting the underlying process ID for a command even with the DisposeOnExit option ([#16](https://github.com/madelson/MedallionShell/issues/16))
+	- Added API for consuming standard out and standard error lines together as a single stream ([#14](https://github.com/madelson/MedallionShell/issues/14))
+	- Improve Mono compatibility ([#6](https://github.com/madelson/MedallionShell/issues/6))
+	- Changed `Command.Result` and `Command.Wait()` to throw unwrapped exceptions instead of `AggregateException`
 - 1.3.0 Fixed default standard IO stream encodings (thanks [xjfnet](https://github.com/xjfnet)!) and added support for specifying a custom encoding
 - 1.2.1 Adds .NET Core support (thanks [kal](https://github.com/kal)!), adds new fluent APIs for each of the piping/redirection operators, and now respects StandardInput.AutoFlush when piping between commands
 - 1.1.0 Adds AutoFlush support to StandardInput, and fixed bug where small amounts of flushed data became "stuck" in the StandardOutput buffer
