@@ -466,6 +466,16 @@ namespace Medallion.Shell.Tests
             testHelper(disposeOnExit: false);
         }
 
+        [TestMethod]
+        public void TestToString()
+        {
+            var command = Command.Run("SampleCommand", new[] {"grep", "a+"}, options => options.DisposeOnExit(true));
+
+            var actual = command.ToString();
+
+            actual.ShouldEqual($"SampleCommand \"grep\" \"a+\"");
+        }
+
         private IEnumerable<string> ErrorLines()
         {
             yield return "1";
