@@ -17,33 +17,68 @@ namespace Medallion.Shell
         /// </summary>
         public override string CreateArgumentString(IEnumerable<string> arguments)
         {
-            Throw.IfNull(arguments, "arguments");
+            Throw.IfNull(arguments, nameof(arguments));
 
-            var escapedArguments = arguments.Select(EscapeArgument);
-            var result = string.Join(" ", escapedArguments);
-            return result;
+            var builder = new StringBuilder();
+            var isFirstArgument = true;
+            foreach (var argument in arguments)
+            {
+                Throw.If(argument == null, nameof(arguments) + ": must not contain null");
+
+                if (isFirstArgument) { isFirstArgument = false; }
+                else { builder.Append(' '); }
+                AddArgument(argument, builder);
+            }
+
+            return builder.ToString();
         }
 
-        private static string EscapeArgument(string argument)
+        private static void AddArgument(string argument, StringBuilder builder)
         {
-            Throw.IfNull(argument, "argument");
+            // based on the logic from http://stackoverflow.com/questions/5510343/escape-command-line-arguments-in-c-sharp.
+            // The method given there doesn't minimize the use of quotation. For that, I drew from
+            // https://blogs.msdn.microsoft.com/twistylittlepassagesallalike/2011/04/23/everyone-quotes-command-line-arguments-the-wrong-way/
 
-            // this is super complex; I'm basing this on:
-            // http://stackoverflow.com/questions/5510343/escape-command-line-arguments-in-c-sharp
-            // Note: at the time of this writing, the posted answer didn't quite work as written. There was a comment
-            // mentioning the correction, and I've submitted it as an edit (the groupings in the original post are wrong)
-            
-            // TODO the thread also mentions another method that only quotes when necessary. Should we use that?
+            // the essential encoding logic is:
+            // (1) non-empty strings with no special characters require no encoding
+            // (2) find each substring of 0-or-more \ followed by " and replace it by twice-as-many \, followed by \"
+            // (3) check if argument ends on \ and if so, double the number of backslashes at the end
+            // (4) add leading and trailing "
 
-            // find each substring of 0-or-more \ followed by " and replace it by twice-as-many \, followed by \".
-            var singleQuotesEscaped = Regex.Replace(argument, @"(\\*)" + "\"", @"$1$1\" + "\"");
+            if (argument.Length > 0
+                && !argument.Any(IsSpecialCharacter))
+            {
+                builder.Append(argument);
+                return;
+            }
 
-            // check if argument ends on \ and if so, double the number of backslashes at the end
-            var trailingBackslashEscaped = Regex.Replace(singleQuotesEscaped, @"(\\+)$", @"$1$1");
+            builder.Append('"');
 
-            // add leading and trailing quotes
-            var fullyEscaped = "\"" + trailingBackslashEscaped + "\"";
-            return fullyEscaped;
+            var backSlashCount = 0;
+            foreach (var ch in argument)
+            {
+                switch (ch)
+                {
+                    case '\\':
+                        ++backSlashCount;
+                        break;
+                    case '"':
+                        builder.Append('\\', repeatCount: (2 * backSlashCount) + 1);
+                        backSlashCount = 0;
+                        builder.Append(ch);
+                        break;
+                    default:
+                        builder.Append('\\', repeatCount: backSlashCount);
+                        backSlashCount = 0;
+                        builder.Append(ch);
+                        break;
+                }
+            }
+
+            builder.Append('\\', repeatCount: 2 * backSlashCount)
+                .Append('"');
         }
+
+        private static bool IsSpecialCharacter(char ch) => char.IsWhiteSpace(ch) || ch == '"';
     }
 }
