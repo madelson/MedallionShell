@@ -68,14 +68,14 @@ namespace Medallion.Shell
         /// this will throw the faulting <see cref="Exception"/> or <see cref="TaskCanceledException"/> rather than
         /// the wrapped <see cref="AggregateException"/> thrown by <see cref="Task{TResult}.Result"/>
         /// </summary>
-        public void Wait() => this.Task.GetResultWithUnwrappedException();
+        public void Wait() => this.Task.GetAwaiter().GetResult();
 
         /// <summary>
         /// A convenience method for <code>command.Task.Result</code>. If the task faulted or was canceled,
         /// this will throw the faulting <see cref="Exception"/> or <see cref="TaskCanceledException"/> rather than
         /// the wrapped <see cref="AggregateException"/> thrown by <see cref="Task{TResult}.Result"/>
         /// </summary>
-        public CommandResult Result => this.Task.GetResultWithUnwrappedException();
+        public CommandResult Result => this.Task.GetAwaiter().GetResult();
 
         /// <summary>
         /// A <see cref="Task"/> representing the progress of this <see cref="Command"/>

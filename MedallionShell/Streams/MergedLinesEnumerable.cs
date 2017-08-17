@@ -55,11 +55,11 @@ namespace Medallion.Shell.Streams
                 }
                 else
                 {
-                    var nextCompleted = Task.WhenAny(tasks.Select(t => t.Task)).GetResultWithUnwrappedException();
+                    var nextCompleted = Task.WhenAny(tasks.Select(t => t.Task)).GetAwaiter().GetResult();
                     next = tasks[0].Task == nextCompleted ? tasks[0] : tasks[1];
                 }
 
-                var nextLine = next.Task.GetResultWithUnwrappedException();
+                var nextLine = next.Task.GetAwaiter().GetResult();
                 tasks.Remove(next);
 
                 if (nextLine != null)
@@ -69,7 +69,7 @@ namespace Medallion.Shell.Streams
                 }
                 else
                 {
-                    var otherAsyncLine = tasks[0].Task.GetResultWithUnwrappedException();
+                    var otherAsyncLine = tasks[0].Task.GetAwaiter().GetResult();
                     if (otherAsyncLine != null)
                     {
                         yield return otherAsyncLine;
