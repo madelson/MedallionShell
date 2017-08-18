@@ -15,6 +15,7 @@ namespace Medallion.Shell
 {
     internal sealed class ProcessCommand : Command
     {
+        private readonly ProcessStartInfo startInfo;
         private readonly bool disposeOnExit;
         
         internal ProcessCommand(
@@ -25,6 +26,7 @@ namespace Medallion.Shell
             CancellationToken cancellationToken,
             Encoding standardInputEncoding)
         {
+            this.startInfo = startInfo;
             this.disposeOnExit = disposeOnExit;
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
@@ -168,6 +170,11 @@ namespace Medallion.Shell
 
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
+
+        public override string ToString()
+        {
+            return this.startInfo.FileName + " " + this.startInfo.Arguments;
+        }
 
         public override void Kill()
         {
