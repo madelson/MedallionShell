@@ -17,7 +17,7 @@ namespace Medallion.Shell
     {
         private readonly bool disposeOnExit;
         /// <summary>
-        /// Used to <see cref="ToString"/>
+        /// Used for <see cref="ToString"/>
         /// </summary>
         private readonly string fileName, arguments;
         
