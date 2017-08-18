@@ -60,6 +60,9 @@ shell.Run("path_to_grep", "some REGEX");
 ```
 
 ## Release Notes
+- 1.5.0
+	- Command overrides `ToString()` to simplify debugging ([#19](https://github.com/madelson/MedallionShell/issues/19)). Thanks [Stephanvs](https://github.com/Stephanvs)!
+	- WindowsCommandLineSyntax no longer quotes arguments that don't require it
 - 1.4.0 
 	- Added cancellation support ([#18](https://github.com/madelson/MedallionShell/issues/18))
 	- Added API for getting the underlying process ID for a command even with the DisposeOnExit option ([#16](https://github.com/madelson/MedallionShell/issues/16))
