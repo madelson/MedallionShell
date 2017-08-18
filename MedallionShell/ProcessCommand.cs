@@ -15,19 +15,23 @@ namespace Medallion.Shell
 {
     internal sealed class ProcessCommand : Command
     {
-        private readonly ProcessStartInfo startInfo;
         private readonly bool disposeOnExit;
+        /// <summary>
+        /// Used to <see cref="ToString"/>
+        /// </summary>
+        private readonly string fileName, arguments;
         
         internal ProcessCommand(
             ProcessStartInfo startInfo, 
             bool throwOnError, 
-            bool disposeOnExit, 
+            bool disposeOnExit,
             TimeSpan timeout,
             CancellationToken cancellationToken,
             Encoding standardInputEncoding)
         {
-            this.startInfo = startInfo;
             this.disposeOnExit = disposeOnExit;
+            this.fileName = startInfo.FileName;
+            this.arguments = startInfo.Arguments;
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
             var processMonitoringTask = CreateProcessMonitoringTask(this.process);
@@ -171,10 +175,7 @@ namespace Medallion.Shell
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
 
-        public override string ToString()
-        {
-            return this.startInfo.FileName + " " + this.startInfo.Arguments;
-        }
+        public override string ToString() => this.fileName + " " + this.arguments;
 
         public override void Kill()
         {

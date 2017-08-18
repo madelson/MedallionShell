@@ -74,6 +74,8 @@ namespace Medallion.Shell
             this.second.Kill();
         }
 
+        public override string ToString() => this.first + " | " + this.second;
+
         protected override void DisposeInternal()
         {
             this.first.As<IDisposable>().Dispose();
