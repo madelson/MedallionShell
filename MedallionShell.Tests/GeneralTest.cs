@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Management;
 using System.Reflection;
@@ -464,6 +465,32 @@ namespace Medallion.Shell.Tests
 
             testHelper(disposeOnExit: true);
             testHelper(disposeOnExit: false);
+        }
+
+        [TestMethod]
+        public void TestToString()
+        {
+            var command0 = Command.Run("SampleCommand", new[] { "grep", "a+" }, options => options.DisposeOnExit(true));
+            command0.ToString().ShouldEqual($"SampleCommand grep a+");
+
+            var command1 = Command.Run("SampleCommand", "exit", 0);
+            command1.ToString().ShouldEqual("SampleCommand exit 0");
+
+            var command2 = Command.Run("SampleCommand", "ex it", "0 0");
+            command2.ToString().ShouldEqual("SampleCommand \"ex it\" \"0 0\"");
+
+            var command3 = command1 < new[] { "a" };
+            command3.ToString().ShouldEqual("SampleCommand exit 0 < System.String[]");
+
+            var command4 = command3 | Command.Run("SampleCommand", "echo");
+            command4.ToString().ShouldEqual("SampleCommand exit 0 < System.String[] | SampleCommand echo");
+
+            var command5 = command2.RedirectStandardErrorTo(Stream.Null);
+            command5.ToString().ShouldEqual($"SampleCommand \"ex it\" \"0 0\" 2> {Stream.Null}");
+
+            var command6 = command5.RedirectTo(new StringWriter());
+            command6.Wait();
+            command6.ToString().ShouldEqual($"{command5} > {new StringWriter()}");
         }
 
         private IEnumerable<string> ErrorLines()

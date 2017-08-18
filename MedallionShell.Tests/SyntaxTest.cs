@@ -16,16 +16,21 @@ namespace Medallion.Shell.Tests
             this.TestSyntax(" ");
             this.TestSyntax(@"c:\temp", @"a\\b");
             this.TestSyntax("\" a \"", @"\\", @"\""", @"\\""");
+            this.TestSyntax("a\"b");
+            this.TestSyntax("a\"b\"");
+            this.TestSyntax("a\"b", "c\"d");
+            this.TestSyntax("\v", "\t");
+            this.TestSyntax("\r", "\n", "\r\n");
+            this.TestSyntax(string.Empty, "\"", "\\", string.Empty);
+            this.TestSyntax("abc", "a\\b", "a\\ b\"");
         }
 
         private void TestSyntax(params string[] arguments)
         {
-            var lines = Command.Run("SampleCommand", new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError())
-                .StandardOutput
-                .GetLines()
-                .ToArray();
+            var output = Command.Run("SampleCommand", new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError()).Result.StandardOutput;
 
-            lines.SequenceEqual(arguments).ShouldEqual(true, "Got: '" + string.Join(Environment.NewLine, lines) + "'");
+            var expected = string.Join(string.Empty, arguments.Select(a => a + Environment.NewLine));
+            output.ShouldEqual(expected);
         }
     }
 }

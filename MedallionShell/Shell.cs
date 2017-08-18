@@ -59,7 +59,7 @@ namespace Medallion.Shell
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 
             var command = new ProcessCommand(
-                processStartInfo, 
+                processStartInfo,
                 throwOnError: finalOptions.ThrowExceptionOnError,
                 disposeOnExit: finalOptions.DisposeProcessOnExit,
                 timeout: finalOptions.ProcessTimeout,
@@ -81,8 +81,7 @@ namespace Medallion.Shell
             return this.Run(executable, arguments.AsEnumerable());
         }
         #endregion
-
-        // TODO do we want to support static Run-type methods here as well?
+        
         #region ---- Static API ----
         private static readonly Shell DefaultShell = new Shell();
         /// <summary>

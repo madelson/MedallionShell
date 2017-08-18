@@ -10,11 +10,16 @@ namespace Medallion.Shell
     {
         private readonly Command command;
         private readonly Task<CommandResult> task;
-
-        public IoCommand(Command command, Task ioTask)
+        // for toString
+        private readonly string @operator;
+        private readonly object sourceOrSink;
+        
+        public IoCommand(Command command, Task ioTask, string @operator, object sourceOrSink)
         {
             this.command = command;
             this.task = this.CreateTask(ioTask);
+            this.@operator = @operator;
+            this.sourceOrSink = sourceOrSink;
         }
 
         private async Task<CommandResult> CreateTask(Task ioTask)
@@ -60,6 +65,8 @@ namespace Medallion.Shell
         {
             this.command.Kill();
         }
+
+        public override string ToString() => $"{this.command} {this.@operator} {this.sourceOrSink}";
 
         protected override void DisposeInternal()
         {

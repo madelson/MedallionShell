@@ -68,14 +68,14 @@ namespace Medallion.Shell
         /// this will throw the faulting <see cref="Exception"/> or <see cref="TaskCanceledException"/> rather than
         /// the wrapped <see cref="AggregateException"/> thrown by <see cref="Task{TResult}.Result"/>
         /// </summary>
-        public void Wait() => this.Task.GetResultWithUnwrappedException();
+        public void Wait() => this.Task.GetAwaiter().GetResult();
 
         /// <summary>
         /// A convenience method for <code>command.Task.Result</code>. If the task faulted or was canceled,
         /// this will throw the faulting <see cref="Exception"/> or <see cref="TaskCanceledException"/> rather than
         /// the wrapped <see cref="AggregateException"/> thrown by <see cref="Task{TResult}.Result"/>
         /// </summary>
-        public CommandResult Result => this.Task.GetResultWithUnwrappedException();
+        public CommandResult Result => this.Task.GetAwaiter().GetResult();
 
         /// <summary>
         /// A <see cref="Task"/> representing the progress of this <see cref="Command"/>
@@ -104,7 +104,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true));
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true), ">", stream);
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(stream, leaveStreamOpen: true));
+            return new IoCommand(this, this.StandardError.PipeToAsync(stream, leaveStreamOpen: true), "2>", stream);
         }
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true));
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true), "<", stream);
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(file));
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(file), ">", file);
         }
 
         /// <summary>
@@ -152,7 +152,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(file));
+            return new IoCommand(this, this.StandardError.PipeToAsync(file), "2>", file);
         }
 
         /// <summary>
@@ -164,7 +164,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(file));
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(file), "<", file);
         }
 
         /// <summary>
@@ -176,7 +176,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
             
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(lines));
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(lines), ">", lines.GetType());
         }
 
         /// <summary>
@@ -188,7 +188,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
             
-            return new IoCommand(this, this.StandardError.PipeToAsync(lines));
+            return new IoCommand(this, this.StandardError.PipeToAsync(lines), "2>", lines.GetType());
         }
 
         /// <summary>
@@ -200,7 +200,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(lines));
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(lines), "<", lines.GetType());
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(chars));
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(chars), ">", chars.GetType());
         }
 
         /// <summary>
@@ -224,7 +224,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
             
-            return new IoCommand(this, this.StandardError.PipeToAsync(chars));
+            return new IoCommand(this, this.StandardError.PipeToAsync(chars), "2>", chars.GetType());
         }
 
         /// <summary>
@@ -236,7 +236,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(chars));
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(chars), "<", chars.GetType());
         }
 
         /// <summary>
@@ -248,7 +248,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(writer, nameof(writer));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(writer, leaveWriterOpen: true));
+            return new IoCommand(this, this.StandardOutput.PipeToAsync(writer, leaveWriterOpen: true), ">", writer);
         }
 
         /// <summary>
@@ -260,7 +260,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(writer, nameof(writer));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(writer, leaveWriterOpen: true));
+            return new IoCommand(this, this.StandardError.PipeToAsync(writer, leaveWriterOpen: true), "2>", writer);
         }
 
         /// <summary>
@@ -272,7 +272,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(reader, nameof(reader));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true));
+            return new IoCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true), "<", reader);
         }
 
         /// <summary>
