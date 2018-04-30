@@ -66,22 +66,22 @@ MedallionShell makes it easier to write process-handling code that works across 
 In particular, Mono has peculiarities in how it handles writing to an exited process that makes it very difficult to write correct cross-platform code. MedallionShell contains workarounds for these oddities that help ensure that code that works on .NET Framework/.NET Core runs seamlessly on Mono (see [#6](https://github.com/madelson/MedallionShell/issues/6) and [#22](https://github.com/madelson/MedallionShell/issues/22)).
 
 ## Release Notes
-- 1.5.1 Improved Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting and testing the fix!
+- 1.5.1 Improves Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting and testing the fix!
 - 1.5.0
 	- Command overrides `ToString()` to simplify debugging ([#19](https://github.com/madelson/MedallionShell/issues/19)). Thanks [Stephanvs](https://github.com/Stephanvs)!
 	- WindowsCommandLineSyntax no longer quotes arguments that don't require it
 - 1.4.0 
-	- Added cancellation support ([#18](https://github.com/madelson/MedallionShell/issues/18))
-	- Added API for getting the underlying process ID for a command even with the DisposeOnExit option ([#16](https://github.com/madelson/MedallionShell/issues/16))
-	- Added API for consuming standard out and standard error lines together as a single stream ([#14](https://github.com/madelson/MedallionShell/issues/14))
-	- Improved Mono compatibility ([#6](https://github.com/madelson/MedallionShell/issues/6))
-	- Changed `Command.Result` and `Command.Wait()` to throw unwrapped exceptions instead of `AggregateException`
-- 1.3.0 Fixed default standard IO stream encodings (thanks [xjfnet](https://github.com/xjfnet)!) and added support for specifying a custom encoding
+	- Adds cancellation support ([#18](https://github.com/madelson/MedallionShell/issues/18))
+	- Adds API for getting the underlying process ID for a command even with the DisposeOnExit option ([#16](https://github.com/madelson/MedallionShell/issues/16))
+	- Adds API for consuming standard out and standard error lines together as a single stream ([#14](https://github.com/madelson/MedallionShell/issues/14))
+	- Improves Mono compatibility ([#6](https://github.com/madelson/MedallionShell/issues/6))
+	- Changes `Command.Result` and `Command.Wait()` to throw unwrapped exceptions instead of `AggregateException`
+- 1.3.0 Fixes default standard IO stream encodings (thanks [xjfnet](https://github.com/xjfnet)!) and added support for specifying a custom encoding
 - 1.2.1 Adds .NET Core support (thanks [kal](https://github.com/kal)!), adds new fluent APIs for each of the piping/redirection operators, and now respects StandardInput.AutoFlush when piping between commands
 - 1.1.0 Adds AutoFlush support to StandardInput, and fixed bug where small amounts of flushed data became "stuck" in the StandardOutput buffer
-- 1.0.3 Fixed bug with standard error (thanks <a href="https://github.com/nsdfxela">nsdfxela</a>!)
-- 1.0.2 Fixed bug where timeout would suppress errors from ThrowOnError option
-- 1.0.1 Allowed for argument ommission in Command.Run(), other minor fixes 
+- 1.0.3 Fixes bug with standard error (thanks <a href="https://github.com/nsdfxela">nsdfxela</a>!)
+- 1.0.2 Fixes bug where timeout would suppress errors from ThrowOnError option
+- 1.0.1 Allows for argument ommission in Command.Run(), other minor fixes 
 - 1.0.0 Initial release
 
 ## Building The Code
