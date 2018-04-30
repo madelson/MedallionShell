@@ -7,6 +7,8 @@
   <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
     <Version>1.5.1</Version>
+    <AssemblyVersion>1.5.1.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
     <Authors>Michael Adelson</Authors>
     <Description>A lightweight library that simplifies working with processes in .NET</Description>
     <Copyright>Copyright © 2017 Michael Adelson</Copyright>
@@ -15,7 +17,6 @@
     <PackageTags>process async shell stdin stdout stderr pipe redirect</PackageTags>
     <PackageProjectUrl>https://github.com/madelson/MedallionShell</PackageProjectUrl>
     <RepositoryUrl />
-    <FileVersion>1.0.0.0</FileVersion>
     <PackageReleaseNotes>See https://github.com/madelson/MedallionShell#release-notes</PackageReleaseNotes>
   </PropertyGroup>
 
@@ -25,7 +26,6 @@
     <WarningLevel>4</WarningLevel>
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <Optimize>True</Optimize>
-    <AssemblyVersion>1.5.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup>
