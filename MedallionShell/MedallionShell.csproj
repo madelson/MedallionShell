@@ -6,7 +6,7 @@
 
   <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
-    <Version>1.5.0</Version>
+    <Version>1.5.1</Version>
     <Authors>Michael Adelson</Authors>
     <Description>A lightweight library that simplifies working with processes in .NET</Description>
     <Copyright>Copyright © 2017 Michael Adelson</Copyright>
@@ -16,7 +16,7 @@
     <PackageProjectUrl>https://github.com/madelson/MedallionShell</PackageProjectUrl>
     <RepositoryUrl />
     <FileVersion>1.0.0.0</FileVersion>
-    <PackageReleaseNotes>Added ToString() override for Commands to simplify debugging. WindowsCommandLineSyntax no longer quotes arguments unnecessarily.</PackageReleaseNotes>
+    <PackageReleaseNotes>See https://github.com/madelson/MedallionShell#release-notes</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup>

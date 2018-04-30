@@ -19,7 +19,16 @@ namespace Medallion.Shell.Tests
         public void TestWriteAfterExit() => RunTest(() => PlatformCompatibilityTests.TestWriteAfterExit());
 
         [TestMethod]
+        public void TestFlushAfterExit() => RunTest(() => PlatformCompatibilityTests.TestFlushAfterExit());
+
+        [TestMethod]
         public void TestExitWithMinusOne() => RunTest(() => PlatformCompatibilityTests.TestExitWithMinusOne());
+
+        [TestMethod]
+        public void TestExitWithOne() => RunTest(() => PlatformCompatibilityTests.TestExitWithOne());
+
+        [TestMethod]
+        public void TestBadProcessFile() => RunTest(() => PlatformCompatibilityTests.TestBadProcessFile());
 
         private static void RunTest(Expression<Action> testMethod)
         {

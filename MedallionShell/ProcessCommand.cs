@@ -36,17 +36,17 @@ namespace Medallion.Shell
 
             var processMonitoringTask = CreateProcessMonitoringTask(this.process);
 
-            this.process.Start();
-
+            this.process.SafeStart(out var processStandardInput, out var processStandardOutput, out var processStandardError);
+            
             var ioTasks = new List<Task>(capacity: 2);
             if (startInfo.RedirectStandardOutput)
             {
-                this.standardOutputReader = new InternalProcessStreamReader(this.process.StandardOutput);
+                this.standardOutputReader = new InternalProcessStreamReader(processStandardOutput);
                 ioTasks.Add(this.standardOutputReader.Task);
             }
             if (startInfo.RedirectStandardError)
             {
-                this.standardErrorReader = new InternalProcessStreamReader(this.process.StandardError);
+                this.standardErrorReader = new InternalProcessStreamReader(processStandardError);
                 ioTasks.Add(this.standardErrorReader.Task);
             }
             if (startInfo.RedirectStandardInput)
@@ -54,11 +54,10 @@ namespace Medallion.Shell
                 // unfortunately, changing the encoding can't be done via ProcessStartInfo so we have to do it manually here.
                 // See https://github.com/dotnet/corefx/issues/20497
 
-                var originalStandardInput = this.process.StandardInput;
-                var wrappedStream = PlatformCompatibilityHelper.WrapStandardInputStreamIfNeeded(originalStandardInput.BaseStream);
-                var standardInputEncodingToUse = standardInputEncoding ?? originalStandardInput.Encoding;
-                var streamWriter = wrappedStream == originalStandardInput.BaseStream && Equals(standardInputEncodingToUse, originalStandardInput.Encoding)
-                    ? originalStandardInput
+                var wrappedStream = PlatformCompatibilityHelper.WrapStandardInputStreamIfNeeded(processStandardInput.BaseStream);
+                var standardInputEncodingToUse = standardInputEncoding ?? processStandardInput.Encoding;
+                var streamWriter = wrappedStream == processStandardInput.BaseStream && Equals(standardInputEncodingToUse, processStandardInput.Encoding)
+                    ? processStandardInput
                     : new StreamWriter(wrappedStream, standardInputEncodingToUse);
                 this.standardInput = new ProcessStreamWriter(streamWriter);
             }
