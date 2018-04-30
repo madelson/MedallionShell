@@ -5,7 +5,7 @@ MedallionShell is a lightweight library that vastly simplifies working with proc
 
 [Download the NuGet package](https://www.nuget.org/packages/medallionshell) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.svg?style=flat)](https://www.nuget.org/packages/MedallionShell/)
 
-Built on top of the powerful, yet [clunky](http://www.codeducky.org/process-handling-net/) [System.Diagnostics.Process API](http://msdn.microsoft.com/en-us/library/system.diagnostics.process(v=vs.110).aspx), the MedallionShell API streamlines common use-cases, removes [pitfalls](http://www.codeducky.org/process-handling-net/), and integrates Process handling with .NET [async/await](http://msdn.microsoft.com/en-us/library/hh191443.aspx) and [Tasks](http://msdn.microsoft.com/en-us/library/dd460717(v=vs.110).aspx).
+Built on top of the powerful, yet [clunky](https://github.com/steaks/codeducky/blob/master/blogs/Processes.md) [System.Diagnostics.Process API](http://msdn.microsoft.com/en-us/library/system.diagnostics.process(v=vs.110).aspx), the MedallionShell API streamlines common use-cases, removes [pitfalls](https://github.com/steaks/codeducky/blob/master/blogs/Processes.md), and integrates Process handling with .NET [async/await](http://msdn.microsoft.com/en-us/library/hh191443.aspx) and [Tasks](http://msdn.microsoft.com/en-us/library/dd460717(v=vs.110).aspx).
 
 ```C#
 // processes are created and interacted with using the Command class
@@ -59,7 +59,14 @@ var shell = new Shell(o => o.ThrowOnError()...);
 shell.Run("path_to_grep", "some REGEX");
 ```
 
+## Cross-Platform Support
+
+MedallionShell makes it easier to write process-handling code that works across different .NET platforms.
+
+In particular, Mono has peculiarities in how it handles writing to an exited process that makes it very difficult to write correct cross-platform code. MedallionShell contains workarounds for these oddities that help ensure that code that works on .NET Framework/.NET Core runs seamlessly on Mono (see [#6](https://github.com/madelson/MedallionShell/issues/6) and [#22](https://github.com/madelson/MedallionShell/issues/22)).
+
 ## Release Notes
+- 1.5.1 Improved Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting and testing the fix!
 - 1.5.0
 	- Command overrides `ToString()` to simplify debugging ([#19](https://github.com/madelson/MedallionShell/issues/19)). Thanks [Stephanvs](https://github.com/Stephanvs)!
 	- WindowsCommandLineSyntax no longer quotes arguments that don't require it
@@ -67,7 +74,7 @@ shell.Run("path_to_grep", "some REGEX");
 	- Added cancellation support ([#18](https://github.com/madelson/MedallionShell/issues/18))
 	- Added API for getting the underlying process ID for a command even with the DisposeOnExit option ([#16](https://github.com/madelson/MedallionShell/issues/16))
 	- Added API for consuming standard out and standard error lines together as a single stream ([#14](https://github.com/madelson/MedallionShell/issues/14))
-	- Improve Mono compatibility ([#6](https://github.com/madelson/MedallionShell/issues/6))
+	- Improved Mono compatibility ([#6](https://github.com/madelson/MedallionShell/issues/6))
 	- Changed `Command.Result` and `Command.Wait()` to throw unwrapped exceptions instead of `AggregateException`
 - 1.3.0 Fixed default standard IO stream encodings (thanks [xjfnet](https://github.com/xjfnet)!) and added support for specifying a custom encoding
 - 1.2.1 Adds .NET Core support (thanks [kal](https://github.com/kal)!), adds new fluent APIs for each of the piping/redirection operators, and now respects StandardInput.AutoFlush when piping between commands
