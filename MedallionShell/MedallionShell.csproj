@@ -42,7 +42,6 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
-	  <PackageReference Include="NETStandard.Library" version="1.6.0" />
 	  <PackageReference Include="System.Diagnostics.Process" version="4.1.0" />
   </ItemGroup>
 
