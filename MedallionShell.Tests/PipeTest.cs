@@ -1,10 +1,10 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Medallion.Shell.Tests
 {
@@ -64,7 +64,7 @@ namespace Medallion.Shell.Tests
         }
 
         private object CreateSinkOrSource(Kind kind, bool isOut)
-        { 
+        {
             switch (kind)
             {
                 case Kind.Stream:
@@ -112,7 +112,7 @@ namespace Medallion.Shell.Tests
         {
             TearDown();
         }
-        
+
         public static void TearDown()
         {
             foreach (var isOut in new[] { false, true })

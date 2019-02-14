@@ -1,13 +1,12 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-
-using Medallion.Shell.Streams;
 using System.Threading;
+using System.Threading.Tasks;
+using Medallion.Shell.Streams;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
 namespace Medallion.Shell.Tests.Streams
@@ -38,7 +37,7 @@ namespace Medallion.Shell.Tests.Streams
         public void TestBothAreEmpty()
         {
             var list = new MergedLinesEnumerable(new StringReader(string.Empty), new StringReader(string.Empty)).ToList();
-            list.Count.ShouldEqual(0, string.Join(", ", list));    
+            list.Count.ShouldEqual(0, string.Join(", ", list));
         }
 
         [TestMethod]
@@ -78,7 +77,7 @@ namespace Medallion.Shell.Tests.Streams
         [TestMethod]
         public void TestOneThrows()
         {
-            void testOneThrows(bool reverse)
+            void TestOneThrows(bool reverse)
             {
                 var reader1 = new StringReader("a\nb\nc");
                 var count = 0;
@@ -95,8 +94,8 @@ namespace Medallion.Shell.Tests.Streams
                 );
             }
 
-            testOneThrows(reverse: false);
-            testOneThrows(reverse: true);
+            TestOneThrows(reverse: false);
+            TestOneThrows(reverse: true);
         }
 
         [TestMethod]
@@ -110,9 +109,9 @@ namespace Medallion.Shell.Tests.Streams
             var strings1 = Enumerable.Range(0, 2000).Select(_ => Guid.NewGuid().ToString()).ToArray();
             var strings2 = Enumerable.Range(0, 2300).Select(_ => Guid.NewGuid().ToString()).ToArray();
 
-            void writeStrings(IReadOnlyList<string> strings, Pipe pipe)
+            void WriteStrings(IReadOnlyList<string> strings, Pipe pipe)
             {
-                var spinWait = new SpinWait();
+                var spinWait = default(SpinWait);
                 var random = new Random(Guid.NewGuid().GetHashCode());
                 using (var writer = new StreamWriter(pipe.InputStream))
                 {
@@ -128,8 +127,8 @@ namespace Medallion.Shell.Tests.Streams
                 }
             }
 
-            var task1 = Task.Run(() => writeStrings(strings1, pipe1));
-            var task2 = Task.Run(() => writeStrings(strings2, pipe2));
+            var task1 = Task.Run(() => WriteStrings(strings1, pipe1));
+            var task2 = Task.Run(() => WriteStrings(strings2, pipe2));
             var consumeTask = Task.Run(() => enumerable.ToList());
             Task.WaitAll(task1, task2, consumeTask);
 

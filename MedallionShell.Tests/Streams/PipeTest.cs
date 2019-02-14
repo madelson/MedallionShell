@@ -1,12 +1,12 @@
-﻿using Medallion.Shell.Streams;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Medallion.Shell.Streams;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Medallion.Shell.Tests.Streams
 {
@@ -140,7 +140,7 @@ namespace Medallion.Shell.Tests.Streams
             var asyncRead = pipe.ReadTextAsync(1);
             asyncRead.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
             asyncRead.Result.ShouldEqual("a");
-            
+
             pipe.SetFixedLength();
 
             var bytes = Enumerable.Repeat((byte)'b', Constants.ByteBufferSize).ToArray();
@@ -251,7 +251,7 @@ namespace Medallion.Shell.Tests.Streams
             var pipes = CreatePipeChain(2);
             // note that this needs to be >> larger than the capacity to block all the pipes,
             // since we can store bytes in each pipe in the chain + each buffer between pipes
-            var longText = new string('z', 8 * Constants.ByteBufferSize + 1);
+            var longText = new string('z', (8 * Constants.ByteBufferSize) + 1);
             pipes.ForEach(p => p.SetFixedLength());
             var asyncWrite = pipes[0].WriteTextAsync(longText);
             asyncWrite.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
@@ -272,7 +272,8 @@ namespace Medallion.Shell.Tests.Streams
                 var fromPipe = pipes[i];
                 var toPipe = pipes[i + 1];
                 fromPipe.OutputStream.CopyToAsync(toPipe.InputStream)
-                    .ContinueWith(_ => {
+                    .ContinueWith(_ => 
+                    {
                         fromPipe.OutputStream.Dispose();
                         toPipe.InputStream.Dispose();
                     });
@@ -294,11 +295,9 @@ namespace Medallion.Shell.Tests.Streams
                 var bytesWritten = 0;
                 while (bytesWritten < ByteCount)
                 {
-                    //Console.WriteLine("Writing " + memoryStream.Length);
                     switch (random.Next(10))
                     {
                         case 1:
-                            //Console.WriteLine("SETTING FIXED LENGTH");
                             pipe.SetFixedLength();
                             break;
                         case 2:
@@ -312,14 +311,11 @@ namespace Medallion.Shell.Tests.Streams
                             var buffer = new byte[bufferLength];
                             random.NextBytes(buffer);
                             memoryStream.Write(buffer, offset, count);
-                            //Console.WriteLine("WRITE START");
                             await pipe.InputStream.WriteAsync(buffer, offset, count);
-                            //Console.WriteLine("WRITE END");
                             bytesWritten += count;
                             break;
                     }
                 }
-                //Console.WriteLine("WRITER ALL DONE");
                 pipe.InputStream.Dispose();
                 return memoryStream;
             });
@@ -330,7 +326,6 @@ namespace Medallion.Shell.Tests.Streams
                 var random = new Random(5678);
                 while (true)
                 {
-                    //Console.WriteLine("Reading " + memoryStream.Length);
                     if (random.Next(10) == 1)
                     {
                         await Task.Delay(1);
@@ -339,13 +334,10 @@ namespace Medallion.Shell.Tests.Streams
                     var offset = random.Next(0, bufferLength + 1);
                     var count = random.Next(0, bufferLength - offset + 1);
                     var buffer = new byte[bufferLength];
-                    //Console.WriteLine("READ START");
                     var bytesRead = await pipe.OutputStream.ReadAsync(buffer, offset, count);
-                    //Console.WriteLine("READ END");
                     if (bytesRead == 0 && count > 0)
                     {
                         // if we tried to read more than 1 byte and we got 0, the pipe is done
-                        //Console.WriteLine("READER ALL DONE");
                         return memoryStream;
                     }
                     memoryStream.Write(buffer, offset, bytesRead);

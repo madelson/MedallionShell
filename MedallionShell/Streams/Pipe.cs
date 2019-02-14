@@ -20,13 +20,13 @@ namespace Medallion.Shell.Streams
         /// </summary>
         private const int MaxStableSize = 2 * Constants.ByteBufferSize;
         private static readonly byte[] Empty = new byte[0];
-        private static Task<int> CompletedZeroTask = Task.FromResult(0);
+        private static readonly Task<int> CompletedZeroTask = Task.FromResult(0);
 
         private readonly SemaphoreSlim bytesAvailableSignal = new SemaphoreSlim(initialCount: 0, maxCount: 1);
         private readonly object @lock = new object();
         private readonly PipeInputStream input;
         private readonly PipeOutputStream output;
-        
+
         private byte[] buffer = Empty;
         private int start, count;
         private bool writerClosed, readerClosed;
@@ -68,9 +68,9 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// MA: I used to have the signals updated in various ways and in various places
         /// throughout the code. Now I have just one function that sets both signals to the correct
-        /// values. This is called from <see cref="ReadNoLock"/>, <see cref="WriteNoLock"/>, 
+        /// values. This is called from <see cref="ReadNoLock"/>, <see cref="WriteNoLock"/>,
         /// <see cref="InternalCloseReadSideNoLock"/>, and <see cref="InternalCloseWriteSideNoLock"/>.
-        /// 
+        ///
         /// While it may seem like this does extra work, nearly all cases are necessary. For example, we used
         /// to say "signal bytes available if count > 0" at the end of <see cref="WriteNoLock"/>. The problem is
         /// that we could have the following sequence of operations:
@@ -79,14 +79,14 @@ namespace Medallion.Shell.Streams
         /// 3. <see cref="ReadNoLockAsync"/> wakes up
         /// 4. Another <see cref="WriteNoLock"/> call writes and re-signals
         /// 5. <see cref="ReadNoLockAsync"/> reads ALL content and returns, leaving <see cref="bytesAvailableSignal"/> signaled (invalid)
-        /// 
+        ///
         /// This new implementation avoids this because the <see cref="ReadNoLock"/> call inside <see cref="ReadNoLockAsync"/> will
         /// properly unsignal after it consumes ALL the contents
         /// </summary>
         private void UpdateSignalsNoLock()
         {
             // update bytes available
-            switch (this.bytesAvailableSignal.CurrentCount) 
+            switch (this.bytesAvailableSignal.CurrentCount)
             {
                 case 0:
                     if (this.count > 0 || this.writerClosed)
@@ -107,7 +107,7 @@ namespace Medallion.Shell.Streams
             // update space available
             if (this.spaceAvailableSignal != null)
             {
-                switch (this.spaceAvailableSignal.CurrentCount) 
+                switch (this.spaceAvailableSignal.CurrentCount)
                 {
                     case 0:
                         if (this.readerClosed || this.GetSpaceAvailableNoLock() > 0)
@@ -212,7 +212,8 @@ namespace Medallion.Shell.Streams
                         remainingCount -= countToWrite;
                     }
                 }
-            } while (remainingCount > 0);
+            }
+            while (remainingCount > 0);
         }
 
         private void WriteNoLock(byte[] buffer, int offset, int count)
@@ -260,7 +261,7 @@ namespace Medallion.Shell.Streams
             else
             {
                 var doubleCapacity = 2L * currentCapacity;
-                newCapacity = capacity >= doubleCapacity 
+                newCapacity = capacity >= doubleCapacity
                     ? capacity
                     : (int)Math.Min(doubleCapacity, int.MaxValue);
             }
@@ -299,8 +300,8 @@ namespace Medallion.Shell.Streams
                         {
                             @this.InternalCloseWriteSideNoLock();
                         }
-                    }
-                    , state: this
+                    },
+                    state: this
                 );
             }
         }
@@ -329,9 +330,9 @@ namespace Medallion.Shell.Streams
             }
 
             // if we didn't want to read anything, return immediately
-            if (count == 0) 
-            { 
-                return CompletedZeroTask; 
+            if (count == 0)
+            {
+                return CompletedZeroTask;
             }
 
             lock (this.@lock)
@@ -425,7 +426,7 @@ namespace Medallion.Shell.Streams
                             @this.InternalCloseReadSideNoLock();
                         }
                         return -1;
-                    }, 
+                    },
                     state: this
                 );
             }
@@ -449,7 +450,7 @@ namespace Medallion.Shell.Streams
             this.buffer = null;
             this.readTask = null;
             this.bytesAvailableSignal.Dispose();
-            if (this.spaceAvailableSignal != null) 
+            if (this.spaceAvailableSignal != null)
             {
                 this.spaceAvailableSignal.Dispose();
             }
@@ -504,26 +505,26 @@ namespace Medallion.Shell.Streams
                     this.stream = stream;
                 }
 
-                public Task WriteTask { get { return this.writeTask; } }
+                public Task WriteTask => this.writeTask;
 
-                public Stream Stream { get { return this.stream; } }
+                public Stream Stream => this.stream;
 
-                object IAsyncResult.AsyncState { get { return this.state; } }
+                object IAsyncResult.AsyncState => this.state;
 
-                WaitHandle IAsyncResult.AsyncWaitHandle { get { return this.writeTask.As<IAsyncResult>().AsyncWaitHandle; } }
+                WaitHandle IAsyncResult.AsyncWaitHandle => this.writeTask.As<IAsyncResult>().AsyncWaitHandle;
 
-                bool IAsyncResult.CompletedSynchronously { get { return this.writeTask.As<IAsyncResult>().CompletedSynchronously; } }
+                bool IAsyncResult.CompletedSynchronously => this.writeTask.As<IAsyncResult>().CompletedSynchronously;
 
-                bool IAsyncResult.IsCompleted { get { return this.writeTask.IsCompleted; } }
+                bool IAsyncResult.IsCompleted => this.writeTask.IsCompleted;
             }
 
-            public override bool CanRead { get { return false; } }
+            public override bool CanRead => false;
 
-            public override bool CanSeek { get { return false; } }
+            public override bool CanSeek => false;
 
-            public override bool CanTimeout { get { return false; } }
+            public override bool CanTimeout => false;
 
-            public override bool CanWrite { get { return true; } }
+            public override bool CanWrite => false;
 
 #if !NETSTANDARD1_3
             public override void Close()
@@ -643,8 +644,8 @@ namespace Medallion.Shell.Streams
 
             public override int WriteTimeout
             {
-                get { return this.writeTimeout; }
-                set 
+                get => this.writeTimeout;
+                set
                 {
                     if (value != Timeout.Infinite)
                     {
@@ -859,25 +860,5 @@ namespace Medallion.Shell.Streams
             }
         }
         #endregion
-
-        //private static readonly StringBuilder log = new StringBuilder();
-        //private static int nextId;
-        //private int id = Interlocked.Increment(ref nextId);
-        //private void Log(string format, params object[] args)
-        //{
-        //    var formatted = this.id + ": " + string.Format(format, args);
-        //    lock (log)
-        //    {
-        //        log.AppendLine(formatted);
-        //    }
-        //}
-        //public static void PrintLog()
-        //{
-        //    Console.WriteLine("**** LOG ****");
-        //    lock (log)
-        //    {
-        //        Console.WriteLine(log.ToString());
-        //    }
-        //}
     }
 }

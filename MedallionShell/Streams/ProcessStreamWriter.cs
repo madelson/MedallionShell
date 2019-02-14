@@ -15,7 +15,7 @@ namespace Medallion.Shell.Streams
     {
         private readonly StreamWriter writer;
 
-        internal ProcessStreamWriter(StreamWriter writer) 
+        internal ProcessStreamWriter(StreamWriter writer)
         {
             Throw.IfNull(writer, "writer");
             this.writer = writer;
@@ -32,8 +32,8 @@ namespace Medallion.Shell.Streams
         /// Determines whether writes are automatically flushed to the underlying <see cref="Stream"/> after each write.
         /// Equivalent to <see cref="StreamWriter.AutoFlush"/>. Defaults to TRUE
         /// </summary>
-        public bool AutoFlush 
-        { 
+        public bool AutoFlush
+        {
             get { return this.writer.AutoFlush; }
             set { this.writer.AutoFlush = value; }
         }
@@ -46,7 +46,7 @@ namespace Medallion.Shell.Streams
             Throw.IfNull(stream, "stream");
 
             return this.PipeAsync(
-                async () => 
+                async () =>
                 {
                     // flush any content buffered in the writer, since we'll be using the raw stream
                     await this.writer.FlushAsync().ConfigureAwait(false);
@@ -100,7 +100,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Asynchronously writes all content from <paramref name="file"/> to this stream
         /// </summary>
-        public Task PipeFromAsync(FileInfo file, bool leaveWriterOpen = false) 
+        public Task PipeFromAsync(FileInfo file, bool leaveWriterOpen = false)
         {
             Throw.IfNull(file, "file");
 
@@ -115,7 +115,7 @@ namespace Medallion.Shell.Streams
         {
             Throw.IfNull(chars, "chars");
 
-            var @string = chars as string;      
+            var @string = chars as string;
             return this.PipeAsync(
                 @string != null
                     // special-case string since we can use the built-in WriteAsync

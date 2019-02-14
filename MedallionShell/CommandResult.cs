@@ -1,9 +1,9 @@
-﻿using Medallion.Shell.Streams;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Medallion.Shell.Streams;
 
 namespace Medallion.Shell
 {
@@ -11,7 +11,7 @@ namespace Medallion.Shell
     /// The result of a <see cref="Command"/>
     /// </summary>
     public sealed class CommandResult
-    { 
+    {
         private readonly Lazy<string> standardOutput, standardError;
 
         internal CommandResult(int exitCode, Command command)

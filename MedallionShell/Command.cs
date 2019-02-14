@@ -1,5 +1,4 @@
-﻿using Medallion.Shell.Streams;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Medallion.Shell.Streams;
 
 namespace Medallion.Shell
 {
@@ -40,7 +40,7 @@ namespace Medallion.Shell
         public abstract int ProcessId { get; }
         /// <summary>
         /// All PIDs of the <see cref="System.Diagnostics.Process"/>es associated with this <see cref="Command"/>. NOTE: unlike
-        /// the <see cref="Processes"/> property, this property is compatible with the 
+        /// the <see cref="Processes"/> property, this property is compatible with the
         /// <see cref="Shell.Options.DisposeOnExit(bool)"/> option
         /// </summary>
         public abstract IReadOnlyList<int> ProcessIds { get; }
@@ -120,7 +120,7 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The given <paramref name="stream"/> is written to the <see cref="Command"/>'s 
+        /// Standard input redirection as in bash. The given <paramref name="stream"/> is written to the <see cref="Command"/>'s
         /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
         /// of both this <see cref="Command"/> and the IO being performed
         /// </summary>
@@ -156,7 +156,7 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The given <paramref name="file"/> is written to the <see cref="Command"/>'s 
+        /// Standard input redirection as in bash. The given <paramref name="file"/> is written to the <see cref="Command"/>'s
         /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
         /// of both this <see cref="Command"/> and the IO being performed
         /// </summary>
@@ -169,31 +169,31 @@ namespace Medallion.Shell
 
         /// <summary>
         /// Standard output redirection as in bash. The lines of <see cref="Command"/>'s standard output are added to the given
-        /// collection (<paramref name="lines"/> Returns a new <see cref="Command"/>  whose <see cref="Command.Task"/> tracks 
+        /// collection (<paramref name="lines"/> Returns a new <see cref="Command"/>  whose <see cref="Command.Task"/> tracks
         /// the progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public Command RedirectTo(ICollection<string> lines)
         {
             Throw.IfNull(lines, nameof(lines));
-            
+
             return new IoCommand(this, this.StandardOutput.PipeToAsync(lines), ">", lines.GetType());
         }
 
         /// <summary>
         /// Standard error redirection as in bash. The lines of <see cref="Command"/>'s standard error are added to the given
-        /// collection (<paramref name="lines"/> Returns a new <see cref="Command"/>  whose <see cref="Command.Task"/> tracks 
+        /// collection (<paramref name="lines"/> Returns a new <see cref="Command"/>  whose <see cref="Command.Task"/> tracks
         /// the progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public Command RedirectStandardErrorTo(ICollection<string> lines)
         {
             Throw.IfNull(lines, nameof(lines));
-            
+
             return new IoCommand(this, this.StandardError.PipeToAsync(lines), "2>", lines.GetType());
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The items in <paramref name="lines"/> are written to the <see cref="Command"/>'s 
-        /// standard output as lines of text. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the 
+        /// Standard input redirection as in bash. The items in <paramref name="lines"/> are written to the <see cref="Command"/>'s
+        /// standard output as lines of text. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the
         /// progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public Command RedirectFrom(IEnumerable<string> lines)
@@ -205,7 +205,7 @@ namespace Medallion.Shell
 
         /// <summary>
         /// Standard output redirection as in bash. The chars of <see cref="Command"/>'s standard output are added to the given
-        /// collection (<paramref name="chars"/> Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks 
+        /// collection (<paramref name="chars"/> Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks
         /// the progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public Command RedirectTo(ICollection<char> chars)
@@ -217,19 +217,19 @@ namespace Medallion.Shell
 
         /// <summary>
         /// Standard error redirection as in bash. The chars of <see cref="Command"/>'s standard error are added to the given
-        /// collection (<paramref name="chars"/> Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks 
+        /// collection (<paramref name="chars"/> Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks
         /// the progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public Command RedirectStandardErrorTo(ICollection<char> chars)
         {
             Throw.IfNull(chars, nameof(chars));
-            
+
             return new IoCommand(this, this.StandardError.PipeToAsync(chars), "2>", chars.GetType());
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The items in <paramref name="chars"/> are written to the <see cref="Command"/>'s 
-        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the 
+        /// Standard input redirection as in bash. The items in <paramref name="chars"/> are written to the <see cref="Command"/>'s
+        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the
         /// progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public Command RedirectFrom(IEnumerable<char> chars)
@@ -264,7 +264,7 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The given <paramref name="reader"/> is written to the <see cref="Command"/>'s 
+        /// Standard input redirection as in bash. The given <paramref name="reader"/> is written to the <see cref="Command"/>'s
         /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
         /// of both this <see cref="Command"/> and the IO being performed
         /// </summary>
@@ -279,7 +279,7 @@ namespace Medallion.Shell
         /// Returns a single streaming <see cref="IEnumerable{T}"/> which merges the outputs of
         /// <see cref="ProcessStreamReader.GetLines"/> on <see cref="StandardOutput"/> and
         /// <see cref="StandardError"/>. This is similar to doing 2>&amp;1 on the command line.
-        /// 
+        ///
         /// Merging at the line level means that interleaving of the outputs cannot break up any single
         /// lines
         /// </summary>
@@ -311,7 +311,7 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The given <paramref name="stream"/> is written to the <see cref="Command"/>'s 
+        /// Standard input redirection as in bash. The given <paramref name="stream"/> is written to the <see cref="Command"/>'s
         /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
         /// of both this <see cref="Command"/> and the IO being performed
         /// </summary>
@@ -333,7 +333,7 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The given <paramref name="file"/> is written to the <see cref="Command"/>'s 
+        /// Standard input redirection as in bash. The given <paramref name="file"/> is written to the <see cref="Command"/>'s
         /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the progress
         /// of both this <see cref="Command"/> and the IO being performed
         /// </summary>
@@ -345,8 +345,8 @@ namespace Medallion.Shell
 
         /// <summary>
         /// Standard output redirection as in bash. The lines of <see cref="Command"/>'s standard output are added to the given
-        /// collection (<paramref name="lines"/> MUST be an instance of <see cref="ICollection{String}"/>; the use of the <see cref="IEnumerable{String}"/>. 
-        /// type is to provide the required parity with the input redirection operator. Returns a new <see cref="Command"/> 
+        /// collection (<paramref name="lines"/> MUST be an instance of <see cref="ICollection{String}"/>; the use of the <see cref="IEnumerable{String}"/>.
+        /// type is to provide the required parity with the input redirection operator. Returns a new <see cref="Command"/>
         /// whose <see cref="Command.Task"/> tracks the progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public static Command operator >(Command command, IEnumerable<string> lines)
@@ -361,8 +361,8 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The items in <paramref name="lines"/> are written to the <see cref="Command"/>'s 
-        /// standard output as lines of text. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the 
+        /// Standard input redirection as in bash. The items in <paramref name="lines"/> are written to the <see cref="Command"/>'s
+        /// standard output as lines of text. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the
         /// progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public static Command operator <(Command command, IEnumerable<string> lines)
@@ -373,8 +373,8 @@ namespace Medallion.Shell
 
         /// <summary>
         /// Standard output redirection as in bash. The chars of <see cref="Command"/>'s standard output are added to the given
-        /// collection (<paramref name="chars"/> MUST be an instance of <see cref="ICollection{Char}"/>; the use of the <see cref="IEnumerable{Character}"/>. 
-        /// type is to provide the required parity with the input redirection operator. Returns a new <see cref="Command"/> 
+        /// collection (<paramref name="chars"/> MUST be an instance of <see cref="ICollection{Char}"/>; the use of the <see cref="IEnumerable{Character}"/>.
+        /// type is to provide the required parity with the input redirection operator. Returns a new <see cref="Command"/>
         /// whose <see cref="Command.Task"/> tracks the progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public static Command operator >(Command command, IEnumerable<char> chars)
@@ -389,8 +389,8 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Standard input redirection as in bash. The items in <paramref name="chars"/> are written to the <see cref="Command"/>'s 
-        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the 
+        /// Standard input redirection as in bash. The items in <paramref name="chars"/> are written to the <see cref="Command"/>'s
+        /// standard output. Returns a new <see cref="Command"/> whose <see cref="Command.Task"/> tracks the
         /// progress of both this <see cref="Command"/> and the IO being performed
         /// </summary>
         public static Command operator <(Command command, IEnumerable<char> chars)
@@ -403,7 +403,7 @@ namespace Medallion.Shell
 
         #region ---- Static API ----
         /// <summary>
-        /// A convenience method for calling <see cref="Shell.Run(String, IEnumerable{Object}, Action{Shell.Options})"/> on <see cref="Shell.Default"/>
+        /// A convenience method for calling <see cref="Shell.Run(string, IEnumerable{object}, Action{Shell.Options})"/> on <see cref="Shell.Default"/>
         /// </summary>
         public static Command Run(string executable, IEnumerable<object> arguments = null, Action<Shell.Options> options = null)
         {
@@ -411,7 +411,7 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// A convenience method for calling <see cref="Shell.Run(String, Object[])"/> on <see cref="Shell.Default"/>
+        /// A convenience method for calling <see cref="Shell.Run(string, object[])"/> on <see cref="Shell.Default"/>
         /// </summary>
         public static Command Run(string executable, params object[] arguments)
         {

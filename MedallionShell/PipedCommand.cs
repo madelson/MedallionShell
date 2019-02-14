@@ -1,11 +1,11 @@
-﻿using Medallion.Shell.Streams;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Medallion.Shell.Streams;
 
 namespace Medallion.Shell
 {
@@ -81,7 +81,7 @@ namespace Medallion.Shell
             this.first.As<IDisposable>().Dispose();
             this.second.As<IDisposable>().Dispose();
         }
-        
+
         private static async Task PipeAsync(ProcessStreamReader source, ProcessStreamWriter destination)
         {
             // NOTE: we use PipeFrom() since this will automatically flush any characters written to the

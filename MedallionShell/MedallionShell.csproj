@@ -26,6 +26,7 @@
     <WarningLevel>4</WarningLevel>
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <Optimize>True</Optimize>
+    <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -41,7 +42,13 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
-	<PackageReference Include="NETStandard.Library" version="1.6.0" />
-	<PackageReference Include="System.Diagnostics.Process" version="4.1.0" />
+	  <PackageReference Include="NETStandard.Library" version="1.6.0" />
+	  <PackageReference Include="System.Diagnostics.Process" version="4.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.1-rc.94">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>

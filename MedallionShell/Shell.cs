@@ -42,7 +42,7 @@ namespace Medallion.Shell
 
             var processStartInfo = new ProcessStartInfo
             {
-                Arguments = arguments != null 
+                Arguments = arguments != null
                     ? finalOptions.CommandLineSyntax.CreateArgumentString(arguments.Select(arg => Convert.ToString(arg, CultureInfo.InvariantCulture)))
                     : string.Empty,
                 CreateNoWindow = true,
@@ -72,7 +72,7 @@ namespace Medallion.Shell
         }
 
         /// <summary>
-        /// Executes the given <paramref name="executable"/> with the given <paramref name="arguments"/> 
+        /// Executes the given <paramref name="executable"/> with the given <paramref name="arguments"/>
         /// </summary>
         public Command Run(string executable, params object[] arguments)
         {
@@ -81,7 +81,7 @@ namespace Medallion.Shell
             return this.Run(executable, arguments.AsEnumerable());
         }
         #endregion
-        
+
         #region ---- Static API ----
         private static readonly Shell DefaultShell = new Shell();
         /// <summary>
@@ -209,11 +209,11 @@ namespace Medallion.Shell
 
             /// <summary>
             /// If specified, the underlying <see cref="Process"/> object for the command will be disposed when the process exits.
-            /// This means that there is no need to dispose of a <see cref="Command"/>. 
-            /// 
-            /// This also means that <see cref="Medallion.Shell.Command.Process"/> cannot be reliably accessed, 
-            /// since it may exit at any time. 
-            /// 
+            /// This means that there is no need to dispose of a <see cref="Command"/>.
+            ///
+            /// This also means that <see cref="Medallion.Shell.Command.Process"/> cannot be reliably accessed,
+            /// since it may exit at any time.
+            ///
             /// Defaults to true
             /// </summary>
             public Options DisposeOnExit(bool value = true)
@@ -246,11 +246,11 @@ namespace Medallion.Shell
             }
 
             /// <summary>
-            /// Specifies an <see cref="Encoding"/> to be used for StandardOutput, StandardError, and StandardInput. 
-            /// 
+            /// Specifies an <see cref="Encoding"/> to be used for StandardOutput, StandardError, and StandardInput.
+            ///
             /// By default, <see cref="Process"/> will use <see cref="Console.OutputEncoding"/> for output streams and <see cref="Console.InputEncoding"/>
             /// for input streams.
-            /// 
+            ///
             /// Note that the output encodings can be set individually via <see cref="ProcessStartInfo"/>. If you need to specify different encodings
             /// for different streams, use this method to set the StandardInput encoding and then use <see cref="StartInfo(Action{ProcessStartInfo})"/>
             /// to further override the two output encodings

@@ -10,13 +10,13 @@ namespace Medallion.Shell.Streams
     /// <summary>
     /// Unlike .NET, Mono throws an exception if you try to write to standard input after the process exits.
     /// To compensate for this, we wrap standard input with a stream that suppresses these errors.
-    /// 
+    ///
     /// See https://github.com/madelson/MedallionShell/issues/6
     /// </summary>
     internal sealed class MonoStandardIOWrapperStream : Stream
     {
         private readonly Stream stream;
-        
+
         public MonoStandardIOWrapperStream(Stream stream)
         {
             this.stream = stream;
@@ -61,7 +61,7 @@ namespace Medallion.Shell.Streams
         {
             // this approach is a bit risky since we might end up suppressing other unrelated IO exceptions.
             // However, aside from trying to check the process (which brings its own risks if the process is in
-            // a weird state), there is no really robust way to do this given that different OS's yield different 
+            // a weird state), there is no really robust way to do this given that different OS's yield different
             // error messages
 
             try { this.stream.Write(buffer, offset, count); }

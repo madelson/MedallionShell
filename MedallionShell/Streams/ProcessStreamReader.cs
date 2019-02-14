@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Medallion.Shell.Streams
 {
     /// <summary>
-    /// An implementation of <see cref="TextReader"/> with additional methods to control behavior. The 
+    /// An implementation of <see cref="TextReader"/> with additional methods to control behavior. The
     /// </summary>
     public abstract class ProcessStreamReader : TextReader
     {
@@ -42,7 +42,7 @@ namespace Medallion.Shell.Streams
             IEnumerator<string> IEnumerable<string>.GetEnumerator()
             {
                 Throw<InvalidOperationException>.If(
-                    Interlocked.Exchange(ref this.consumed, 1) != 0, 
+                    Interlocked.Exchange(ref this.consumed, 1) != 0,
                     "The enumerable returned by GetLines() can only be enumerated once"
                 );
 
@@ -129,7 +129,7 @@ namespace Medallion.Shell.Streams
         public Task PipeToAsync(FileInfo file, bool leaveReaderOpen = false)
         {
             Throw.IfNull(file, nameof(file));
-            
+
             // used over FileInfo.OpenWrite to get read file share, which seems potentially useful and
             // not that harmful. This also allows us to enable async. Note that 4096 is the default FileStream buffer size
             var stream = new FileStream(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read, bufferSize: 4096, useAsync: true);
@@ -150,7 +150,7 @@ namespace Medallion.Shell.Streams
                     int bytesRead;
                     while ((bytesRead = await this.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) != 0)
                     {
-                        for (var i = 0; i < bytesRead; ++i) 
+                        for (var i = 0; i < bytesRead; ++i)
                         {
                             chars.Add(buffer[i]);
                         }

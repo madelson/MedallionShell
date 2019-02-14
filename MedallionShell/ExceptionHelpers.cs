@@ -25,8 +25,8 @@ namespace Medallion.Shell
                 return unchecked((uint)ioException.HResult) == 0x8007006D;
             }
 
-            return @this.InnerException != null 
-                ? IsExpectedPipeException(@this.InnerException) 
+            return @this.InnerException != null
+                ? IsExpectedPipeException(@this.InnerException)
                 : false;
         }
     }

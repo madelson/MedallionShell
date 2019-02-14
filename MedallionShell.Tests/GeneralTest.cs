@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Medallion.Shell.Tests
 {
@@ -29,11 +29,9 @@ namespace Medallion.Shell.Tests
         {
             Log.WriteLine("******** TestPipedGrep starting *********");
 
-            var command = (
-                Command.Run("SampleCommand", "grep", "a") < new[] { "abcd", "a", "ab", "abc" }
+            var command = Command.Run("SampleCommand", "grep", "a") < new[] { "abcd", "a", "ab", "abc" }
                 | Command.Run("SampleCommand", "grep", "b")
-                | Command.Run("SampleCommand", "grep", "c") 
-            );
+                | Command.Run("SampleCommand", "grep", "c");
 
             var results = command.StandardOutput.GetLines().ToArray();
 
@@ -92,7 +90,7 @@ namespace Medallion.Shell.Tests
             var command = shell.Run("SampleCommand", "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
             command.StandardOutput.BaseStream.ReadByte();
             command.StandardOutput.BaseStream.Dispose();
-            
+
             UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.BaseStream.ReadByte());
             UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
 
@@ -176,7 +174,7 @@ namespace Medallion.Shell.Tests
                 var command = Command.Run("SampleCommand", new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
                 command.StandardInput.WriteLine("hello");
                 var timeout = Task.Delay(TimeSpan.FromSeconds(10));
-                while (results.Count == 0 && !timeout.IsCompleted) ;
+                while (results.Count == 0 && !timeout.IsCompleted) { }
                 results.Count.ShouldEqual(1);
                 cancellationTokenSource.Cancel();
                 var aggregateException = UnitTestHelpers.AssertThrows<AggregateException>(() => command.Task.Wait(1000));
@@ -205,8 +203,8 @@ namespace Medallion.Shell.Tests
         {
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var command = Command.Run(
-                "SampleCommand", 
-                new object[] { "sleep", 1000000 }, 
+                "SampleCommand",
+                new object[] { "sleep", 1000000 },
                 o => o.CancellationToken(cancellationTokenSource.Token)
                     .Timeout(TimeSpan.FromMilliseconds(50))
             );
@@ -225,7 +223,7 @@ namespace Medallion.Shell.Tests
             );
             UnitTestHelpers.AssertThrows<TaskCanceledException>(() => command.Wait());
         }
-        
+
         [TestMethod]
         public void TestErrorHandling()
         {
@@ -261,7 +259,7 @@ namespace Medallion.Shell.Tests
                         Log.WriteLine("Buffer full: discard content");
                         command.StandardOutput.Discard();
                     }
-                    
+
                     task.Wait(TimeSpan.FromSeconds(.5)).ShouldEqual(true, "can finish after read");
                     if (state == 1)
                     {
@@ -335,7 +333,6 @@ namespace Medallion.Shell.Tests
         {
             var command = Command.Run("SampleCommand", "shortflush", "a");
             var readCommand = command.StandardOutput.ReadBlockAsync(new char[1], 0, 1);
-            //var readCommand = command.StandardOutput.BaseStream.ReadAsync(new byte[1], 0, 1);
             readCommand.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
 
             command.StandardInput.Dispose();
@@ -412,7 +409,7 @@ namespace Medallion.Shell.Tests
         [TestMethod]
         public void TestProcessAndProcessId()
         {
-            void testHelper(bool disposeOnExit)
+            void TestHelper(bool disposeOnExit)
             {
                 var shell = new Shell(o => o.DisposeOnExit(disposeOnExit));
                 var command1 = shell.Run("SampleCommand", "pipe", "--id1");
@@ -441,7 +438,7 @@ namespace Medallion.Shell.Tests
                     }
 
                     // https://stackoverflow.com/questions/2633628/can-i-get-command-line-arguments-of-other-processes-from-net-c
-                    string getCommandLine(int processId)
+                    string GetCommandLine(int processId)
                     {
                         using (var searcher = new ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId))
                         {
@@ -449,9 +446,9 @@ namespace Medallion.Shell.Tests
                         }
                     }
 
-                    getCommandLine(command1.ProcessId).ShouldContain("--id1");
+                    GetCommandLine(command1.ProcessId).ShouldContain("--id1");
                     command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
-                    getCommandLine(command2.ProcessId).ShouldContain("--id2");
+                    GetCommandLine(command2.ProcessId).ShouldContain("--id2");
                     command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
                     pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
                     pipeCommand.ProcessIds.SequenceEqual(new[] { command1.ProcessId, command2.ProcessId }).ShouldEqual(true);
@@ -463,8 +460,8 @@ namespace Medallion.Shell.Tests
                 }
             }
 
-            testHelper(disposeOnExit: true);
-            testHelper(disposeOnExit: false);
+            TestHelper(disposeOnExit: true);
+            TestHelper(disposeOnExit: false);
         }
 
         [TestMethod]

@@ -56,7 +56,7 @@ namespace Medallion.Shell.Streams
                         await flushTaskToAwait.ConfigureAwait(false);
                     }
 
-                    // check if the source is exhausted. We've already finished the 
+                    // check if the source is exhausted. We've already finished the
                     // flush at this point so we can just return
                     if (bytesRead == 0) { return; }
 
@@ -82,7 +82,7 @@ namespace Medallion.Shell.Streams
                 throw;
             }
         }
- 
+
         public static async Task PipeAsync(this IDisposable @this, Func<Task> pipeTaskFactory, bool leaveOpen, Action extraDisposeAction = null)
         {
             try

@@ -13,7 +13,7 @@ namespace Medallion.Shell
         // for toString
         private readonly string @operator;
         private readonly object sourceOrSink;
-        
+
         public IoCommand(Command command, Task ioTask, string @operator, object sourceOrSink)
         {
             this.command = command;

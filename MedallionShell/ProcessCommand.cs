@@ -1,5 +1,4 @@
-﻿using Medallion.Shell.Streams;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -9,6 +8,7 @@ using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Medallion.Shell.Streams;
 using SystemTask = System.Threading.Tasks.Task;
 
 namespace Medallion.Shell
@@ -20,10 +20,10 @@ namespace Medallion.Shell
         /// Used for <see cref="ToString"/>
         /// </summary>
         private readonly string fileName, arguments;
-        
+
         internal ProcessCommand(
-            ProcessStartInfo startInfo, 
-            bool throwOnError, 
+            ProcessStartInfo startInfo,
+            bool throwOnError,
             bool disposeOnExit,
             TimeSpan timeout,
             CancellationToken cancellationToken,
@@ -37,7 +37,7 @@ namespace Medallion.Shell
             var processMonitoringTask = CreateProcessMonitoringTask(this.process);
 
             this.process.SafeStart(out var processStandardInput, out var processStandardOutput, out var processStandardError);
-            
+
             var ioTasks = new List<Task>(capacity: 2);
             if (startInfo.RedirectStandardOutput)
             {
@@ -65,7 +65,7 @@ namespace Medallion.Shell
             // according to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.process.id?view=netcore-1.1#System_Diagnostics_Process_Id,
             // this can throw PlatformNotSupportedException on some older windows systems in some StartInfo configurations. To be as
             // robust as possible, we thus make this a best-effort attempt
-            try { this.processIdOrExceptionDispatchInfo = process.Id; }
+            try { this.processIdOrExceptionDispatchInfo = this.process.Id; }
             catch (PlatformNotSupportedException processIdException)
             {
                 this.processIdOrExceptionDispatchInfo = ExceptionDispatchInfo.Capture(processIdException);
@@ -93,23 +93,23 @@ namespace Medallion.Shell
                     // clean up the process AFTER we capture the exit code
                     this.process.Dispose();
                 }
-            }            
+            }
 
             await SystemTask.WhenAll(ioTasks).ConfigureAwait(false);
             return new CommandResult(exitCode, this);
         }
-        
+
         private readonly Process process;
         public override System.Diagnostics.Process Process
         {
-            get 
+            get
             {
                 this.ThrowIfDisposed();
                 Throw<InvalidOperationException>.If(
                     this.disposeOnExit,
                     "Process can only be accessed when the command is not set to dispose on exit. This is to prevent non-deterministic code which may access the process before or after it exits"
                 );
-                return this.process; 
+                return this.process;
             }
         }
 
@@ -144,7 +144,7 @@ namespace Medallion.Shell
         private readonly ProcessStreamWriter standardInput;
         public override ProcessStreamWriter StandardInput
         {
-            get 
+            get
             {
                 Throw<InvalidOperationException>.If(this.standardInput == null, "Standard input is not redirected");
                 return this.standardInput;
@@ -154,7 +154,7 @@ namespace Medallion.Shell
         private readonly InternalProcessStreamReader standardOutputReader;
         public override ProcessStreamReader StandardOutput
         {
-            get 
+            get
             {
                 Throw<InvalidOperationException>.If(this.standardOutputReader == null, "Standard output is not redirected");
                 return this.standardOutputReader;
@@ -164,7 +164,7 @@ namespace Medallion.Shell
         private readonly InternalProcessStreamReader standardErrorReader;
         public override Streams.ProcessStreamReader StandardError
         {
-            get 
+            get
             {
                 Throw<InvalidOperationException>.If(this.standardErrorReader == null, "Standard error is not redirected");
                 return this.standardErrorReader;
@@ -182,7 +182,7 @@ namespace Medallion.Shell
 
             TryKillProcess(this.process);
         }
-        
+
         /// <summary>
         /// Creates a <see cref="SystemTask"/> which watches for the given <paramref name="process"/> to exit.
         /// This must be configured BEFORE starting the process since otherwise there is a race between subscribing
@@ -272,7 +272,7 @@ namespace Medallion.Shell
                                 taskBuilder.SetResult(exitCode);
                             }
                         }
-                        catch (Exception ex) 
+                        catch (Exception ex)
                         {
                             taskBuilder.SetException(ex);
                         }
