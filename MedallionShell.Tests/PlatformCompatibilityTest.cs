@@ -30,6 +30,9 @@ namespace Medallion.Shell.Tests
         [TestMethod]
         public void TestBadProcessFile() => RunTest(() => PlatformCompatibilityTests.TestBadProcessFile());
 
+        [TestMethod]
+        public void TestAttaching() => RunTest(() => PlatformCompatibilityTests.TestAttaching());
+
         private static void RunTest(Expression<Action> testMethod)
         {
             var compiled = testMethod.Compile();

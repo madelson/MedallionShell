@@ -79,6 +79,7 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
+    <Compile Include="AttachingTests.cs" />
     <Compile Include="GeneralTest.cs" />
     <Compile Include="PipeTest.cs" />
     <Compile Include="PlatformCompatibilityTest.cs" />
