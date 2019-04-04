@@ -68,7 +68,7 @@ await Command.Run("ProcssingStep1.exe") < new FileInfo("input.txt")
 	| Command.Run("processingStep2.exe") > new FileInfo("output.text");
 ```
 
-## Command Options
+### Command Options
 
 When constructing a `Command`, you can specify various options to provide additional configuration:
 ```C#
@@ -76,20 +76,21 @@ Command.Run("foo.exe", new[] { "arg1" }, options => options.ThrowOnError()...);
 ```
 
 The supported options are:
+
 |Option|Description|Default|
-|---|---|---|
+| --- | --- | --- |
 |**ThrowOnError**|If true, the command will throw an exception if the underlying process returns a non-zero exit code rather than returning a failed result|`false`|
 |**WorkingDirectory**|Sets the initial working directory for the process|`Environment.CurrentDirectory`|
 |**CancellationToken**|Specifies a `CancellationToken` which will kill the process if canceled|`CancellationToken.None`|
 |**Timeout**|Specifies a time period after which the process will be killed|`Timeout.Infinite`|
-|**StartInfo**|Specifies arbitrary additional configuration of the `ProcessStartInfo` object||
+|**StartInfo**|Specifies arbitrary additional configuration of the `ProcessStartInfo` object| |
 |**DisposeOnExit**|If true, the underlying `Process` object will be disposed when the process exits, removing the need to call `Command.Dispose()`|`true`|
 |**EnvironmentVariable(s)**|Specifies environment variable overrides for the process|`Environment.GetEnvironmentVariables()`|
 |**Encoding**|Specifies an `Encoding` to be used on all standard IO streams|`Console.OutputEncoding`/`Console.InputEncoding`: note that what this is varies by platform!|
 |**Syntax**|Specifies how command arguments should be encoded|`new WindowsCommandLineSyntax()`|
-|**Command**|Specifies arbitrary additional configuration of the `Command` object after it is created (generally only useful with `Shell`s (described below)) ||
+|**Command**|Specifies arbitrary additional configuration of the `Command` object after it is created (generally only useful with `Shell`s (described below)) | |
 
-## Shells
+### Shells
 It is frequently the case that within the context of a single application all the `Command`s you invoke will want the same or very similar options. To simplify this, you can package up a set of options in a `Shell` object for convenient re-use:
 ```C#
 private static readonly Shell MyShell = new Shell(options => options.ThrowOnError().Timeout(...)...);
