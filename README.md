@@ -85,4 +85,6 @@ In particular, Mono has peculiarities in how it handles writing to an exited pro
 - 1.0.0 Initial release
 
 ## Building The Code
+[![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch=master)](https://travis-ci.com/madelson/MedallionShell)
+
 You will need VisualStudio 2017 or higher (community edition is fine) [download](https://www.visualstudio.com/vs/community/).
