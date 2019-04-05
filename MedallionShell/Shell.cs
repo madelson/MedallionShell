@@ -226,6 +226,7 @@ namespace Medallion.Shell
             /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to an instance of
             /// <see cref="WindowsCommandLineSyntax"/>
             /// </summary>
+            [Obsolete(".NET Core uses Windows escaping to parse the argument string, so there is no need to customize this by platform")]
             public Options Syntax(CommandLineSyntax syntax)
             {
                 Throw.IfNull(syntax, "syntax");
