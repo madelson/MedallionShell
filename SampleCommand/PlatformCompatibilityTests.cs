@@ -70,6 +70,16 @@ namespace SampleCommand
             AssertThrows<Win32Exception>(() => Command.Run(Path.Combine(baseDirectory, "DOES_NOT_EXIST.exe")));
         }
 
+        public static void TestAttaching()
+        {
+            var processCommand = Command.Run("SampleCommand", new[] { "sleep", "10000" });
+            var processId = processCommand.ProcessId;
+            if (!Command.TryAttachToProcess(processId, out _))
+            {
+                throw new InvalidOperationException("Wasn't able to attach to the running process.");
+            }
+        }
+
         private static void AssertThrows<TException>(Action action) where TException : Exception
         {
             try { action(); }

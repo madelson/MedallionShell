@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -69,6 +70,66 @@ namespace Medallion.Shell
             finalOptions.CommandInitializers.ForEach(a => a(command));
 
             return command;
+        }
+
+        /// <summary>
+        /// Tries to attach to an already running process, given its <paramref name="processId"/>,
+        /// giving <paramref name="attachedCommand" /> representing the process and returning
+        /// true if this succeeded, otherwise false.
+        /// </summary>
+        public bool TryAttachToProcess(int processId, out Command attachedCommand)
+        {
+            return this.TryAttachToProcess(processId, options: null, attachedCommand: out attachedCommand);
+        }
+
+        /// <summary>
+        /// Tries to attach to an already running process, given its <paramref name="processId"/>
+        /// and <paramref name="options"/>,  giving <paramref name="attachedCommand" /> representing
+        /// the process and returning true if this succeeded, otherwise false.
+        /// </summary>
+        public bool TryAttachToProcess(int processId, Action<Shell.Options> options, out Command attachedCommand)
+        {
+            var finalOptions = this.GetOptions(options);
+            if (finalOptions.ProcessStreamEncoding != null || finalOptions.StartInfoInitializers.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    "Setting encoding or using StartInfo initializers is not available when attaching to an already running process.");
+            }
+
+            attachedCommand = null;
+            Process process = null;
+            try
+            {
+                process = Process.GetProcessById(processId);
+
+                // Since simply getting (Safe)Handle from the process enables us to read
+                // the exit code later, and handle itself is disposed when the whole class
+                // is disposed, we do not need its value. Hence the bogus call to GetType().
+#if NET45
+                process.Handle.GetType();
+#else
+                process.SafeHandle.GetType();
+#endif
+            }
+            catch (Exception e) when (IsIgnorableAttachingException(e))
+            {
+                process?.Dispose();
+                return false;
+            }
+            catch (Exception e) when (e is Win32Exception || e is NotSupportedException)
+            {
+                throw new InvalidOperationException(
+                    "Could not attach to the process from reasons other than it had already exited. See inner exception for details.",
+                    e);
+            }
+
+            attachedCommand = new AttachedCommand(
+                process,
+                finalOptions.ThrowExceptionOnError,
+                finalOptions.ProcessTimeout,
+                finalOptions.ProcessCancellationToken,
+                finalOptions.DisposeProcessOnExit);
+            return true;
         }
 
         /// <summary>
@@ -276,5 +337,12 @@ namespace Medallion.Shell
             #endregion
         }
         #endregion
+
+        private static bool IsIgnorableAttachingException(Exception exception)
+        {
+            return
+                exception is ArgumentException || // process has already exited or ID is invalid
+                exception is InvalidOperationException; // process exited after its creation but before taking its handle
+        }
     }
 }

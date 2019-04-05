@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -408,6 +409,22 @@ namespace Medallion.Shell
         public static Command Run(string executable, IEnumerable<object> arguments = null, Action<Shell.Options> options = null)
         {
             return Shell.Default.Run(executable, arguments, options);
+        }
+
+        /// <summary>
+        /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, Action{Shell.Options}, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
+        /// </summary>
+        public static bool TryAttachToProcess(int processId, Action<Shell.Options> options, out Command attachedCommand)
+        {
+            return Shell.Default.TryAttachToProcess(processId, options, out attachedCommand);
+        }
+
+        /// <summary>
+        /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
+        /// </summary>
+        public static bool TryAttachToProcess(int processId, out Command attachedCommand)
+        {
+            return Shell.Default.TryAttachToProcess(processId, out attachedCommand);
         }
 
         /// <summary>
