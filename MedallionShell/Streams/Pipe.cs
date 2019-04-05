@@ -495,36 +495,31 @@ namespace Medallion.Shell.Streams
             private sealed class AsyncWriteResult : IAsyncResult
             {
                 private readonly object state;
-                private readonly Task writeTask;
-                private readonly PipeInputStream stream;
-
+                
                 public AsyncWriteResult(object state, Task writeTask, PipeInputStream stream)
                 {
                     this.state = state;
-                    this.writeTask = writeTask;
-                    this.stream = stream;
+                    this.WriteTask = writeTask;
+                    this.Stream = stream;
                 }
 
-                public Task WriteTask => this.writeTask;
+                public Task WriteTask { get; }
 
-                public Stream Stream => this.stream;
+                public Stream Stream { get; }
 
                 object IAsyncResult.AsyncState => this.state;
 
-                WaitHandle IAsyncResult.AsyncWaitHandle => this.writeTask.As<IAsyncResult>().AsyncWaitHandle;
+                WaitHandle IAsyncResult.AsyncWaitHandle => this.WriteTask.As<IAsyncResult>().AsyncWaitHandle;
 
-                bool IAsyncResult.CompletedSynchronously => this.writeTask.As<IAsyncResult>().CompletedSynchronously;
+                bool IAsyncResult.CompletedSynchronously => this.WriteTask.As<IAsyncResult>().CompletedSynchronously;
 
-                bool IAsyncResult.IsCompleted => this.writeTask.IsCompleted;
+                bool IAsyncResult.IsCompleted => this.WriteTask.IsCompleted;
             }
 
             public override bool CanRead => false;
-
             public override bool CanSeek => false;
-
-            public override bool CanTimeout => false;
-
-            public override bool CanWrite => false;
+            public override bool CanTimeout => true;
+            public override bool CanWrite => true;
 
 #if !NETSTANDARD1_3
             public override void Close()
@@ -620,10 +615,7 @@ namespace Medallion.Shell.Streams
                 catch (AggregateException ex)
                 {
                     // unwrap aggregate if we can
-                    if (ex.InnerExceptions.Count == 1)
-                    {
-                        ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-                    }
+                    ExceptionDispatchInfo.Capture(ex.GetBaseException()).Throw();
 
                     throw;
                 }
@@ -686,27 +678,25 @@ namespace Medallion.Shell.Streams
             private sealed class AsyncReadResult : IAsyncResult
             {
                 private readonly object state;
-                private readonly Task<int> readTask;
-                private readonly PipeOutputStream stream;
-
+                
                 public AsyncReadResult(object state, Task<int> readTask, PipeOutputStream stream)
                 {
                     this.state = state;
-                    this.readTask = readTask;
-                    this.stream = stream;
+                    this.ReadTask = readTask;
+                    this.Stream = stream;
                 }
 
-                public Task<int> ReadTask { get { return this.readTask; } }
+                public Task<int> ReadTask { get; }
 
-                public Stream Stream { get { return this.stream; } }
+                public Stream Stream { get; }
 
-                object IAsyncResult.AsyncState { get { return this.state; } }
+                object IAsyncResult.AsyncState => this.state;
 
-                WaitHandle IAsyncResult.AsyncWaitHandle { get { return this.readTask.As<IAsyncResult>().AsyncWaitHandle; } }
+                WaitHandle IAsyncResult.AsyncWaitHandle => this.ReadTask.As<IAsyncResult>().AsyncWaitHandle;
 
-                bool IAsyncResult.CompletedSynchronously { get { return this.readTask.As<IAsyncResult>().CompletedSynchronously; } }
+                bool IAsyncResult.CompletedSynchronously => this.ReadTask.As<IAsyncResult>().CompletedSynchronously;
 
-                bool IAsyncResult.IsCompleted { get { return this.readTask.IsCompleted; } }
+                bool IAsyncResult.IsCompleted => this.ReadTask.IsCompleted;
             }
 
 #if !NETSTANDARD1_3
@@ -716,13 +706,10 @@ namespace Medallion.Shell.Streams
             }
 #endif
 
-            public override bool CanRead { get { return true; } }
-
-            public override bool CanSeek { get { return false; } }
-
-            public override bool CanTimeout { get { return true; } }
-
-            public override bool CanWrite { get { return false; } }
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanTimeout => true;
+            public override bool CanWrite => false;
 
 #if !NETSTANDARD1_3
             public override void Close()
