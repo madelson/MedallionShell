@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,7 +9,11 @@ using System.Threading.Tasks;
 namespace Medallion.Shell
 {
     /// <summary>
-    /// Provides <see cref="CommandLineSyntax"/> functionality for windows
+    /// Provides <see cref="CommandLineSyntax"/> functionality for windows.
+    /// 
+    /// Note that while this class uses windows parsing rules, .NET Core actually follows the same rules when parsing
+    /// <see cref="ProcessStartInfo.Arguments"/> into argv for unix-like systems. Therefore, this class is actually
+    /// cross-platform compatible
     /// </summary>
     public sealed class WindowsCommandLineSyntax : CommandLineSyntax
     {

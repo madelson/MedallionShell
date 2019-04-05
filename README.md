@@ -87,7 +87,6 @@ The supported options are:
 |**DisposeOnExit**|If true, the underlying `Process` object will be disposed when the process exits, removing the need to call `Command.Dispose()`|`true`|
 |**EnvironmentVariable(s)**|Specifies environment variable overrides for the process|`Environment.GetEnvironmentVariables()`|
 |**Encoding**|Specifies an `Encoding` to be used on all standard IO streams|`Console.OutputEncoding`/`Console.InputEncoding`: note that what this is varies by platform!|
-|**Syntax**|Specifies how command arguments should be encoded|`new WindowsCommandLineSyntax()`|
 |**Command**|Specifies arbitrary additional configuration of the `Command` object after it is created (generally only useful with `Shell`s (described below)) | |
 
 ### Shells
