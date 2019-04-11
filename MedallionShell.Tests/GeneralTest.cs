@@ -490,6 +490,21 @@ namespace Medallion.Shell.Tests
             command6.ToString().ShouldEqual($"{command5} > {new StringWriter()}");
         }
 
+        [TestMethod]
+        public void TestCommandOption()
+        {
+            var command = Command.Run("SampleCommand", new[] { "echo" }, options: o => o.Command(c => c.StandardInput.Write("!!!")))
+                .RedirectFrom("abc");
+            command.Wait();
+            command.Result.StandardOutput.ShouldEqual("!!!abc");
+
+            var writer = new StringWriter();
+            command = Command.Run("SampleCommand", new[] { "echo" }, options: o => o.Command(c => c.RedirectTo(writer)))
+                .RedirectFrom("abc123");
+            command.Wait();
+            writer.ToString().ShouldEqual("abc123");
+        }
+
         private IEnumerable<string> ErrorLines()
         {
             yield return "1";

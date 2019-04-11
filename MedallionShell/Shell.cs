@@ -59,7 +59,7 @@ namespace Medallion.Shell
             }
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 
-            var command = new ProcessCommand(
+            Command command = new ProcessCommand(
                 processStartInfo,
                 throwOnError: finalOptions.ThrowExceptionOnError,
                 disposeOnExit: finalOptions.DisposeProcessOnExit,
@@ -67,8 +67,12 @@ namespace Medallion.Shell
                 cancellationToken: finalOptions.ProcessCancellationToken,
                 standardInputEncoding: finalOptions.ProcessStreamEncoding
             );
-            finalOptions.CommandInitializers.ForEach(a => a(command));
-
+            foreach (var initializer in finalOptions.CommandInitializers)
+            {
+                command = initializer(command);
+                if (command == null) { throw new InvalidOperationException($"{nameof(Command)} initializer passed to {nameof(Options)}.{nameof(Options.Command)} must not return null!"); }
+            }
+            
             return command;
         }
 
@@ -168,7 +172,7 @@ namespace Medallion.Shell
         #region ---- Options ----
         /// <summary>
         /// Provides a builder interface for configuring the options for creating and executing
-        /// a <see cref="Command"/>
+        /// a <see cref="Medallion.Shell.Command"/>
         /// </summary>
         public sealed class Options
         {
@@ -178,7 +182,7 @@ namespace Medallion.Shell
             }
 
             internal List<Action<ProcessStartInfo>> StartInfoInitializers { get; private set; }
-            internal List<Action<Command>> CommandInitializers { get; private set; }
+            internal List<Func<Command, Command>> CommandInitializers { get; private set; }
             internal CommandLineSyntax CommandLineSyntax { get; private set; }
             internal bool ThrowExceptionOnError { get; private set; }
             internal bool DisposeProcessOnExit { get; private set; }
@@ -193,7 +197,7 @@ namespace Medallion.Shell
             public Options RestoreDefaults()
             {
                 this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
-                this.CommandInitializers = new List<Action<Command>>();
+                this.CommandInitializers = new List<Func<Command, Command>>();
                 this.CommandLineSyntax = new WindowsCommandLineSyntax();
                 this.ThrowExceptionOnError = false;
                 this.DisposeProcessOnExit = true;
@@ -209,26 +213,42 @@ namespace Medallion.Shell
             /// </summary>
             public Options StartInfo(Action<ProcessStartInfo> initializer)
             {
-                Throw.IfNull(initializer, "initializer");
+                Throw.IfNull(initializer, nameof(initializer));
 
                 this.StartInfoInitializers.Add(initializer);
                 return this;
             }
 
             /// <summary>
-            /// Specifies a function which can modify the <see cref="Command"/>. Multiple such functions
+            /// Specifies a function which can modify the <see cref="Medallion.Shell.Command"/>. Multiple such functions
             /// can be specified this way
             /// </summary>
             public Options Command(Action<Command> initializer)
             {
-                Throw.IfNull(initializer, "initializer");
+                Throw.IfNull(initializer, nameof(initializer));
+
+                this.Command(c => 
+                {
+                    initializer(c);
+                    return c;
+                });
+                return this;
+            }
+
+            /// <summary>
+            /// Specifies a function which can project the <see cref="Medallion.Shell.Command"/> to a new <see cref="Medallion.Shell.Command"/>.
+            /// Intended to be used with <see cref="Medallion.Shell.Command"/>-producing "pipe" functions like <see cref="Medallion.Shell.Command.RedirectTo(ICollection{char})"/>
+            /// </summary>
+            public Options Command(Func<Command, Command> initializer)
+            {
+                Throw.IfNull(initializer, nameof(initializer));
 
                 this.CommandInitializers.Add(initializer);
                 return this;
             }
 
             /// <summary>
-            /// Sets the initial working directory of the <see cref="Command"/> (defaults to the current working directory)
+            /// Sets the initial working directory of the <see cref="Medallion.Shell.Command"/> (defaults to the current working directory)
             /// </summary>.
             public Options WorkingDirectory(string path)
             {
@@ -237,7 +257,7 @@ namespace Medallion.Shell
 
 #if !NETSTANDARD1_3
             /// <summary>
-            /// Adds or overwrites an environment variable to be passed to the <see cref="Command"/>
+            /// Adds or overwrites an environment variable to be passed to the <see cref="Medallion.Shell.Command"/>
             /// </summary>
             public Options EnvironmentVariable(string name, string value)
             {
@@ -247,7 +267,7 @@ namespace Medallion.Shell
             }
 
             /// <summary>
-            /// Adds or overwrites a set of environmental variables to be passed to the <see cref="Command"/>
+            /// Adds or overwrites a set of environmental variables to be passed to the <see cref="Medallion.Shell.Command"/>
             /// </summary>
             public Options EnvironmentVariables(IEnumerable<KeyValuePair<string, string>> environmentVariables)
             {
@@ -259,7 +279,7 @@ namespace Medallion.Shell
 #endif
 
             /// <summary>
-            /// If specified, a non-zero exit code will cause the <see cref="Command"/>'s <see cref="Task"/> to fail
+            /// If specified, a non-zero exit code will cause the <see cref="Medallion.Shell.Command"/>'s <see cref="Task"/> to fail
             /// with <see cref="ErrorExitCodeException"/>. Defaults to false
             /// </summary>
             public Options ThrowOnError(bool value = true)
@@ -270,7 +290,7 @@ namespace Medallion.Shell
 
             /// <summary>
             /// If specified, the underlying <see cref="Process"/> object for the command will be disposed when the process exits.
-            /// This means that there is no need to dispose of a <see cref="Command"/>.
+            /// This means that there is no need to dispose of a <see cref="Medallion.Shell.Command"/>.
             ///
             /// This also means that <see cref="Medallion.Shell.Command.Process"/> cannot be reliably accessed,
             /// since it may exit at any time.
