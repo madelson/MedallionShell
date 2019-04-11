@@ -72,11 +72,18 @@ namespace SampleCommand
 
         public static void TestAttaching()
         {
-            var processCommand = Command.Run("SampleCommand", new[] { "sleep", "10000" });
-            var processId = processCommand.ProcessId;
-            if (!Command.TryAttachToProcess(processId, out _))
+            var processCommand = Command.Run(SampleCommandPath, new[] { "sleep", "10000" });
+            try
             {
-                throw new InvalidOperationException("Wasn't able to attach to the running process.");
+                var processId = processCommand.ProcessId;
+                if (!Command.TryAttachToProcess(processId, out _))
+                {
+                    throw new InvalidOperationException("Wasn't able to attach to the running process.");
+                }
+            }
+            finally
+            {
+                processCommand.Kill();
             }
         }
 
