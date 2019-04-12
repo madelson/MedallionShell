@@ -1,26 +1,27 @@
 ﻿using System;
 using System.Threading;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
-    [TestClass]
+    using static UnitTestHelpers;
+
     public class AttachingTests
     {
-        [TestMethod]
+        [Test]
         public void TestAttachingToExistingProcess()
         {
-            var processCommand = Command.Run("SampleCommand", new[] { "sleep", "10000" });
+            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(processId, out _)
                 .ShouldEqual(true, "Attaching to process failed.");
             processCommand.Kill();
         }
 
-        [TestMethod]
+        [Test]
         public void TestWaitingForAttachedProcessExit()
         {
-            var processCommand = Command.Run("SampleCommand", new[] { "sleep", "100" });
+            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "100" });
             Command.TryAttachToProcess(processCommand.ProcessId, out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
             var commandResult = attachedCommand.Task;
@@ -29,10 +30,10 @@ namespace Medallion.Shell.Tests
             commandResult.IsCompleted.ShouldEqual(true, "Task has not finished on time.");
         }
 
-        [TestMethod]
+        [Test]
         public void TestGettingExitCodeFromAttachedProcess()
         {
-            var processCommand = Command.Run("SampleCommand", new[] { "exit", "16" });
+            var processCommand = Command.Run(SampleCommand, new[] { "exit", "16" });
             Command.TryAttachToProcess(processCommand.ProcessId, out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
             var task = attachedCommand.Task;
@@ -40,20 +41,20 @@ namespace Medallion.Shell.Tests
             task.Result.ExitCode.ShouldEqual(16, "Exit code was not correct.");
         }
 
-        [TestMethod]
+        [Test]
         public void TestAttachingToNonExistingProcess()
         {
-            var processCommand = Command.Run("SampleCommand", new[] { "exit", "0" });
+            var processCommand = Command.Run(SampleCommand, new[] { "exit", "0" });
             var processId = processCommand.ProcessId;
             processCommand.Task.Wait(1000).ShouldEqual(true, "Process has not exited, test is inconclusive.");
             Command.TryAttachToProcess(processId, out _)
                 .ShouldEqual(false, "Attaching succeeded although process has already exited.");
         }
 
-        [TestMethod]
+        [Test]
         public void TestKillingAttachedProcess()
         {
-            var processCommand = Command.Run("SampleCommand", new[] { "sleep", "10000" });
+            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(
                     processId,
@@ -66,12 +67,12 @@ namespace Medallion.Shell.Tests
                 .ShouldEqual(true, "The process is still alive after Kill() has finished.");
         }
 
-        [TestMethod]
+        [Test]
         public void TestAttachingWithAlreadyCancelledToken()
         {
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
-            var processCommand = Command.Run("SampleCommand", new[] { "sleep", "10000" });
+            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(
                 processId, 
@@ -80,12 +81,12 @@ namespace Medallion.Shell.Tests
             attachedCommand.Process.HasExited.ShouldEqual(true, "The process wasn't killed.");
         }
 
-        [TestMethod]
+        [Test]
         public void TestTimeout()
         {
             const string expectedTimeoutexceptionDidNotOccur = "Expected TimeoutException did not occur.";
 
-            var processCommand = Command.Run("SampleCommand", new[] { "sleep", "10000" });
+            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
             Thread.Sleep(200);
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(
@@ -97,7 +98,7 @@ namespace Medallion.Shell.Tests
             attachedCommand.Task.Wait(100); 
 
             // but should eventually throw
-            var exception = UnitTestHelpers.AssertThrows<AggregateException>(
+            var exception = Assert.Throws<AggregateException>(
                 () => attachedCommand.Task.Wait(150),
                 expectedTimeoutexceptionDidNotOccur);
             

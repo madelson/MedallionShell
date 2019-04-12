@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
-    [TestClass]
+    using static UnitTestHelpers;
+
     public class CommandLineSyntaxTest
     {
-        [TestMethod]
+        [Test]
         public void TestArgumentsRoundTrip()
         {
             this.TestRoundTrip(" ");
@@ -31,12 +32,12 @@ namespace Medallion.Shell.Tests
             this.TestRoundTrip(@"a\\b c", "d", "e");
         }
 
-        [TestMethod]
+        [Test]
         public void TestArgumentValidation()
         {
             var syntax = new WindowsCommandLineSyntax();
-            UnitTestHelpers.AssertThrows<ArgumentNullException>(() => syntax.CreateArgumentString(null));
-            UnitTestHelpers.AssertThrows<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null, "b" }));
+            Assert.Throws<ArgumentNullException>(() => syntax.CreateArgumentString(null));
+            Assert.Throws<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null, "b" }));
         }
         
         private void TestRoundTrip(params string[] arguments)
@@ -47,7 +48,7 @@ namespace Medallion.Shell.Tests
 
         private void TestRealRoundTrip(string[] arguments)
         {
-            var output = Command.Run("SampleCommand", new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError()).Result.StandardOutput;
+            var output = Command.Run(SampleCommand, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError()).Result.StandardOutput;
             var expected = string.Join(string.Empty, arguments.Select(a => a + Environment.NewLine));
             output.ShouldEqual(expected);
         }
