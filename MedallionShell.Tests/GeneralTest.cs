@@ -16,15 +16,15 @@ namespace Medallion.Shell.Tests
 
     public class GeneralTest
     {
-        //[Test]
-        //public void TestGrep()
-        //{
-        //    var command = Shell.Default.Run(SampleCommand, "grep", "a+");
-        //    command.StandardInput.WriteLine("hi");
-        //    command.StandardInput.WriteLine("aa");
-        //    command.StandardInput.Dispose();
-        //    command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
-        //}
+        [Test]
+        public void TestGrep()
+        {
+            var command = Shell.Default.Run(SampleCommand, "grep", "a+");
+            command.StandardInput.WriteLine("hi");
+            command.StandardInput.WriteLine("aa");
+            command.StandardInput.Dispose();
+            command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+        }
 
         //[Test]
         //public void TestPipedGrep()
