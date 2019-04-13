@@ -103,10 +103,21 @@ namespace Medallion.Shell.Tests
         }
 
         [Test]
+        [Timeout(10000)]
         public void TestErrorEchoLinux()
         {
             var command = Command.Run("/usr/bin/mono", SampleCommand, "errecho") < "abc";
+            Console.WriteLine("Created command");
             command.Result.StandardError.ShouldEqual("abc");
+        }
+
+        [Test]
+        [Timeout(10000)]
+        public void TestArgEchoLinux()
+        {
+            var command = Command.Run("/usr/bin/mono", SampleCommand, "argecho", "hello", "world");
+            Console.WriteLine("Created command");
+            Console.WriteLine("STDOUT: " + command.StandardOutput.ReadToEnd());
         }
 
         //[Test]

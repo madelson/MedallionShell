@@ -65,7 +65,7 @@ namespace Medallion.Shell.Streams
             // error messages
 
             try { this.stream.Write(buffer, offset, count); }
-            catch (IOException) { }
+            catch (IOException ex) { Console.WriteLine("WRITE exception: " + ex); }
         }
 
         public async override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -73,7 +73,7 @@ namespace Medallion.Shell.Streams
             // see comment in Write()
 
             try { await this.stream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false); }
-            catch (IOException) { }
+            catch (IOException ex) { Console.WriteLine("WRITEASYNC exception: " + ex); }
         }
     }
 }
