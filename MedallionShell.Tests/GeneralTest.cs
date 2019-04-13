@@ -20,13 +20,14 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestGrepLinux()
         {
-            Console.WriteLine($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)}");
+            Console.WriteLine($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
+            Assert.Fail($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
 
-            var command = Shell.Default.Run("mono", SampleCommand, "grep", "a+");
-            command.StandardInput.WriteLine("hi");
-            command.StandardInput.WriteLine("aa");
-            command.StandardInput.Dispose();
-            command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+            //var command = Shell.Default.Run("mono", SampleCommand, "grep", "a+");
+            //command.StandardInput.WriteLine("hi");
+            //command.StandardInput.WriteLine("aa");
+            //command.StandardInput.Dispose();
+            //command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
         }
 
         //[Test]
