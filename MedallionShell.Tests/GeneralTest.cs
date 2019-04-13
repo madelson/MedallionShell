@@ -30,6 +30,7 @@ namespace Medallion.Shell.Tests
                     FileName = "/usr/bin/mono",
                     Arguments = $"{SampleCommand} exit 0",
                     UseShellExecute = false,
+                    RedirectStandardInput = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
@@ -53,6 +54,52 @@ namespace Medallion.Shell.Tests
             //command.StandardInput.WriteLine("aa");
             //command.StandardInput.Dispose();
             //command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+        }
+
+        [Test]
+        [NUnit.Framework.Timeout(60000)]
+        public void TestRawLinuxGrep()
+        {
+            var proc = new System.Diagnostics.Process
+            {
+                StartInfo =
+                {
+                    FileName = "/usr/bin/mono",
+                    Arguments = $"{SampleCommand} grep a+",
+                    UseShellExecute = false,
+                    RedirectStandardInput = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            proc.Start();
+            var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
+            var readStdErr = Task.Run(() => proc.StandardError.ReadToEndAsync());
+            proc.StandardInput.WriteLine("hi");
+            proc.StandardInput.WriteLine("aa");
+            proc.StandardInput.Dispose();
+            if (!proc.WaitForExit(30000))
+            {
+                Console.WriteLine("Did not exit; killing");
+                proc.Kill();
+            }
+            if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
+            else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
+            if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
+            else { Console.WriteLine("STDERR: " + readStdErr.Result); }
+        }
+
+        [Test]
+        public void TestExitLinux()
+        {
+            var command = Shell.Default.Run("/usr/bin/mono", new object[] { SampleCommand, "exit", 0 });
+            if (!command.Task.Wait(10000))
+            {
+                Console.WriteLine("Did not exit: killing");
+                command.Kill();
+            }
+            Console.WriteLine(command.Task.Wait(1000));
         }
 
         //[Test]
