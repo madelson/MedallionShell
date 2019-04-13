@@ -28,6 +28,7 @@ namespace Medallion.Shell.Tests
                 StartInfo =
                 {
                     FileName = "/usr/bin/mono",
+                    Arguments = $"{SampleCommand} exit 0",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
