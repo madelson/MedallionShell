@@ -12,45 +12,45 @@ namespace Medallion.Shell.Tests
 
     public class PipeTest : IDisposable
     {
-        [Test]
-        public void TestPiping()
-        {
-            var shell = new Shell(o => o.ThrowOnError());
+        //[Test]
+        //public void TestPiping()
+        //{
+        //    var shell = new Shell(o => o.ThrowOnError());
 
-            var kinds = Enum.GetValues(typeof(Kind)).Cast<Kind>();
-            foreach (var inKind in kinds)
-            {
-                foreach (var outKind in kinds.Where(k => k != Kind.String))
-                {
-                    dynamic input = this.CreateSinkOrSource(inKind, isOut: false);
-                    dynamic output = this.CreateSinkOrSource(outKind, isOut: true);
-                    var command = shell.Run(SampleCommand, "echo");
-                    var tasks = new List<Task>();
-                    if (input is TextReader)
-                    {
-                        tasks.Add(command.StandardInput.PipeFromAsync((TextReader)input));
-                    }
-                    else
-                    {
-                        command = command < input;
-                    }
-                    if (output is TextWriter)
-                    {
-                        tasks.Add(command.StandardOutput.PipeToAsync((TextWriter)output));
-                    }
-                    else
-                    {
-                        command = command > output;
-                    }
-                    tasks.Add(command.Task);
-                    Task.WaitAll(tasks.ToArray());
+        //    var kinds = Enum.GetValues(typeof(Kind)).Cast<Kind>();
+        //    foreach (var inKind in kinds)
+        //    {
+        //        foreach (var outKind in kinds.Where(k => k != Kind.String))
+        //        {
+        //            dynamic input = this.CreateSinkOrSource(inKind, isOut: false);
+        //            dynamic output = this.CreateSinkOrSource(outKind, isOut: true);
+        //            var command = shell.Run(SampleCommand, "echo");
+        //            var tasks = new List<Task>();
+        //            if (input is TextReader)
+        //            {
+        //                tasks.Add(command.StandardInput.PipeFromAsync((TextReader)input));
+        //            }
+        //            else
+        //            {
+        //                command = command < input;
+        //            }
+        //            if (output is TextWriter)
+        //            {
+        //                tasks.Add(command.StandardOutput.PipeToAsync((TextWriter)output));
+        //            }
+        //            else
+        //            {
+        //                command = command > output;
+        //            }
+        //            tasks.Add(command.Task);
+        //            Task.WaitAll(tasks.ToArray());
 
-                    string result = this.Read(outKind, output);
-                    // MA: the output changes slightly if we are inputting as lines (adds a newline) and not outputting as lines
-                    result.ShouldEqual(Content + (inKind == Kind.Lines && outKind != Kind.Lines ? Environment.NewLine : string.Empty), inKind + " => " + outKind);
-                }
-            }
-        }
+        //            string result = this.Read(outKind, output);
+        //            // MA: the output changes slightly if we are inputting as lines (adds a newline) and not outputting as lines
+        //            result.ShouldEqual(Content + (inKind == Kind.Lines && outKind != Kind.Lines ? Environment.NewLine : string.Empty), inKind + " => " + outKind);
+        //        }
+        //    }
+        //}
 
         private static readonly string Content = string.Join(Environment.NewLine, Enumerable.Range(1, 100).Select(i => string.Join(string.Empty, Enumerable.Repeat(i.As<object>(), i))));
 

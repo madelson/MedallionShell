@@ -11,34 +11,34 @@ namespace Medallion.Shell.Tests
 
     public class CommandLineSyntaxTest
     {
-        [Test]
-        public void TestArgumentsRoundTrip()
-        {
-            this.TestRoundTrip(" ");
-            this.TestRoundTrip(@"c:\temp", @"a\\b");
-            this.TestRoundTrip("\" a \"", @"\\", @"\""", @"\\""");
-            this.TestRoundTrip("a\"b");
-            this.TestRoundTrip("a\"b\"");
-            this.TestRoundTrip("a\"b", "c\"d");
-            this.TestRoundTrip("\v", "\t");
-            this.TestRoundTrip("\r", "\n", "\r\n");
-            this.TestRoundTrip(string.Empty, "\"", "\\", string.Empty);
-            this.TestRoundTrip("abc", "a\\b", "a\\ b\"");
+        //[Test]
+        //public void TestArgumentsRoundTrip()
+        //{
+        //    this.TestRoundTrip(" ");
+        //    this.TestRoundTrip(@"c:\temp", @"a\\b");
+        //    this.TestRoundTrip("\" a \"", @"\\", @"\""", @"\\""");
+        //    this.TestRoundTrip("a\"b");
+        //    this.TestRoundTrip("a\"b\"");
+        //    this.TestRoundTrip("a\"b", "c\"d");
+        //    this.TestRoundTrip("\v", "\t");
+        //    this.TestRoundTrip("\r", "\n", "\r\n");
+        //    this.TestRoundTrip(string.Empty, "\"", "\\", string.Empty);
+        //    this.TestRoundTrip("abc", "a\\b", "a\\ b\"");
 
-            // cases from https://docs.microsoft.com/en-us/cpp/cpp/parsing-cpp-command-line-arguments?view=vs-2019
-            this.TestRoundTrip("abc", "d", "e");
-            this.TestRoundTrip(@"a\\b", "de fg", "h");
-            this.TestRoundTrip(@"a\""b", "c", "d");
-            this.TestRoundTrip(@"a\\b c", "d", "e");
-        }
+        //    // cases from https://docs.microsoft.com/en-us/cpp/cpp/parsing-cpp-command-line-arguments?view=vs-2019
+        //    this.TestRoundTrip("abc", "d", "e");
+        //    this.TestRoundTrip(@"a\\b", "de fg", "h");
+        //    this.TestRoundTrip(@"a\""b", "c", "d");
+        //    this.TestRoundTrip(@"a\\b c", "d", "e");
+        //}
 
-        [Test]
-        public void TestArgumentValidation()
-        {
-            var syntax = new WindowsCommandLineSyntax();
-            Assert.Throws<ArgumentNullException>(() => syntax.CreateArgumentString(null));
-            Assert.Throws<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null, "b" }));
-        }
+        //[Test]
+        //public void TestArgumentValidation()
+        //{
+        //    var syntax = new WindowsCommandLineSyntax();
+        //    Assert.Throws<ArgumentNullException>(() => syntax.CreateArgumentString(null));
+        //    Assert.Throws<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null, "b" }));
+        //}
         
         private void TestRoundTrip(params string[] arguments)
         {

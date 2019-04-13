@@ -11,26 +11,26 @@ namespace Medallion.Shell.Tests
 {
     public class PlatformCompatibilityTest
     {
-        [Test]
-        public void TestReadAfterExit() => RunTest(() => PlatformCompatibilityTests.TestReadAfterExit());
+        //[Test]
+        //public void TestReadAfterExit() => RunTest(() => PlatformCompatibilityTests.TestReadAfterExit());
 
-        [Test]
-        public void TestWriteAfterExit() => RunTest(() => PlatformCompatibilityTests.TestWriteAfterExit());
+        //[Test]
+        //public void TestWriteAfterExit() => RunTest(() => PlatformCompatibilityTests.TestWriteAfterExit());
 
-        [Test]
-        public void TestFlushAfterExit() => RunTest(() => PlatformCompatibilityTests.TestFlushAfterExit());
+        //[Test]
+        //public void TestFlushAfterExit() => RunTest(() => PlatformCompatibilityTests.TestFlushAfterExit());
 
-        [Test]
-        public void TestExitWithMinusOne() => RunTest(() => PlatformCompatibilityTests.TestExitWithMinusOne());
+        //[Test]
+        //public void TestExitWithMinusOne() => RunTest(() => PlatformCompatibilityTests.TestExitWithMinusOne());
 
-        [Test]
-        public void TestExitWithOne() => RunTest(() => PlatformCompatibilityTests.TestExitWithOne());
+        //[Test]
+        //public void TestExitWithOne() => RunTest(() => PlatformCompatibilityTests.TestExitWithOne());
 
-        [Test]
-        public void TestBadProcessFile() => RunTest(() => PlatformCompatibilityTests.TestBadProcessFile());
+        //[Test]
+        //public void TestBadProcessFile() => RunTest(() => PlatformCompatibilityTests.TestBadProcessFile());
 
-        [Test]
-        public void TestAttaching() => RunTest(() => PlatformCompatibilityTests.TestAttaching());
+        //[Test]
+        //public void TestAttaching() => RunTest(() => PlatformCompatibilityTests.TestAttaching());
 
         private static void RunTest(Expression<Action> testMethod)
         {
