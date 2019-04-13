@@ -23,11 +23,35 @@ namespace Medallion.Shell.Tests
             Console.WriteLine($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
             //Assert.Fail($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
 
-            var command = Shell.Default.Run("/usr/bin/mono", SampleCommand, "grep", "a+");
-            command.StandardInput.WriteLine("hi");
-            command.StandardInput.WriteLine("aa");
-            command.StandardInput.Dispose();
-            command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+            var proc = new System.Diagnostics.Process
+            {
+                StartInfo =
+                {
+                    FileName = "/usr/bin/mono",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            proc.Start();
+            var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
+            var readStdErr = Task.Run(() => proc.StandardError.ReadToEndAsync());
+            if (!proc.WaitForExit(30000))
+            {
+                Console.WriteLine("Did not exit; killing");
+                proc.Kill();
+            }
+            if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
+            else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
+            if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
+            else { Console.WriteLine("STDERR: " + readStdErr.Result); }
+
+            //var command = Shell.Default.Run("/usr/bin/mono", SampleCommand, "grep", "a+");
+            //command.StandardInput.WriteLine("hi");
+            //command.StandardInput.WriteLine("aa");
+            //command.StandardInput.Dispose();
+            //command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
         }
 
         //[Test]
