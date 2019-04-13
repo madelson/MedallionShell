@@ -12,19 +12,32 @@ using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
+    using System.Runtime.InteropServices;
     using static UnitTestHelpers;
 
     public class GeneralTest
     {
         [Test]
-        public void TestGrep()
+        public void TestGrepLinux()
         {
-            var command = Shell.Default.Run(SampleCommand, "grep", "a+");
+            Console.WriteLine($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)}");
+
+            var command = Shell.Default.Run("mono", SampleCommand, "grep", "a+");
             command.StandardInput.WriteLine("hi");
             command.StandardInput.WriteLine("aa");
             command.StandardInput.Dispose();
             command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
         }
+
+        //[Test]
+        //public void TestGrep()
+        //{
+        //    var command = Shell.Default.Run(SampleCommand, "grep", "a+");
+        //    command.StandardInput.WriteLine("hi");
+        //    command.StandardInput.WriteLine("aa");
+        //    command.StandardInput.Dispose();
+        //    command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+        //}
 
         //[Test]
         //public void TestPipedGrep()
