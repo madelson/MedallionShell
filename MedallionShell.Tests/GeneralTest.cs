@@ -15,6 +15,7 @@ namespace Medallion.Shell.Tests
     using System.Runtime.InteropServices;
     using static UnitTestHelpers;
 
+    [NUnit.Framework.Timeout(40000)]
     public class GeneralTest
     {
         [Test]
@@ -57,7 +58,6 @@ namespace Medallion.Shell.Tests
         }
 
         [Test]
-        [NUnit.Framework.Timeout(60000)]
         public void TestRawLinuxGrep()
         {
             var proc = new System.Diagnostics.Process
@@ -67,7 +67,7 @@ namespace Medallion.Shell.Tests
                     FileName = "/usr/bin/mono",
                     Arguments = $"{SampleCommand} grep a+",
                     UseShellExecute = false,
-                    RedirectStandardInput = false,
+                    RedirectStandardInput = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
@@ -100,6 +100,13 @@ namespace Medallion.Shell.Tests
                 command.Kill();
             }
             Console.WriteLine(command.Task.Wait(1000));
+        }
+
+        [Test]
+        public void TestErrorEchoLinux()
+        {
+            var command = Command.Run("/usr/bin/mono", SampleCommand, "errecho") < "abc";
+            command.Result.StandardError.ShouldEqual("abc");
         }
 
         //[Test]
