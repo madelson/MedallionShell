@@ -106,8 +106,9 @@ namespace Medallion.Shell.Tests
         [Timeout(10000)]
         public void TestErrorEchoLinux()
         {
-            var command = Command.Run("/usr/bin/mono", SampleCommand, "errecho") < "abc";
+            var command = Command.Run("/usr/bin/mono", new[] { SampleCommand, "errecho" }, options: o => o.DisposeOnExit(false)) < "abc";
             Console.WriteLine("Created command");
+            Console.WriteLine($"Process exited: {command.Process.WaitForExit(3000)}");
             command.Result.StandardError.ShouldEqual("abc");
         }
 
