@@ -131,7 +131,19 @@ namespace Medallion.Shell.Tests
             };
             proc.Start();
             var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
-            var readStdErr = Task.Run(() => new StreamReader(proc.StandardError.BaseStream).ReadToEndAsync());
+            var readStdErr = Task.Run(async () =>
+            {
+                var bytes = new MemoryStream();
+                var buffer = new byte[Constants.ByteBufferSize];
+                int bytesRead;
+                while ((bytesRead = await proc.StandardError.BaseStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                {
+                    Console.WriteLine($"Read {bytesRead} bytes; writing to pipe");
+                    bytes.Write(buffer, 0, bytesRead);
+                }
+                bytes.Position = 0;
+                return new StreamReader(bytes).ReadToEnd();
+            });
             proc.StandardInput.Write("abc");
             proc.StandardInput.Dispose();
             if (!proc.WaitForExit(5000))
