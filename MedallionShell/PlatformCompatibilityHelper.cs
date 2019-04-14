@@ -64,6 +64,7 @@ namespace Medallion.Shell
                 // theory be thrown here and trigger this
                 when (IsMono && ex.GetType() == typeof(IOException))
             {
+                Console.WriteLine("Caught proc start ex: " + ex);
                 standardInput = redirectStandardInput ? new StreamWriter(Stream.Null, Console.InputEncoding) { AutoFlush = true } : null;
                 standardOutput = redirectStandardOutput ? new StreamReader(Stream.Null, Console.OutputEncoding) : null;
                 standardError = redirectStandardError ? new StreamReader(Stream.Null, Console.OutputEncoding) : null;

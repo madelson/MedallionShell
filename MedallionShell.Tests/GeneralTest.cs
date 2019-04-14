@@ -114,6 +114,39 @@ namespace Medallion.Shell.Tests
 
         [Test]
         [Timeout(10000)]
+        public void TestRawErrorEchoLinux()
+        {
+            var proc = new System.Diagnostics.Process
+            {
+                StartInfo =
+                {
+                    FileName = "/usr/bin/mono",
+                    Arguments = $"{SampleCommand} errecho",
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            proc.Start();
+            var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
+            var readStdErr = Task.Run(() => new StreamReader(proc.StandardError.BaseStream).ReadToEndAsync());
+            proc.StandardInput.Write("abc");
+            proc.StandardInput.Dispose();
+            if (!proc.WaitForExit(5000))
+            {
+                Console.WriteLine("Did not exit; killing");
+                proc.Kill();
+            }
+            if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
+            else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
+            if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
+            else { Console.WriteLine("STDERR: " + readStdErr.Result); }
+        }
+
+        [Test]
+        [Timeout(10000)]
         public void TestArgEchoLinux()
         {
             var command = Command.Run("/usr/bin/mono", SampleCommand, "argecho", "hello", "world");
