@@ -30,6 +30,7 @@ namespace Medallion.Shell.Streams
 
         private async Task BufferLoop()
         {
+            Console.WriteLine("Beginning buffer loop");
             try
             {
                 var buffer = new byte[Constants.ByteBufferSize];
@@ -39,11 +40,13 @@ namespace Medallion.Shell.Streams
                     && (bytesRead = await this.processStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0
                 )
                 {
+                    Console.WriteLine($"Read {bytesRead} bytes; writing to pipe");
                     await this.pipe.InputStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
                 }
             }
             finally
             {
+                Console.WriteLine("Buffer loop exiting");
 #if NETSTANDARD1_3
                 this.processStream.Dispose();
                 this.pipe.InputStream.Dispose();

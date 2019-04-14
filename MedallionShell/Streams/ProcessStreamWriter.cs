@@ -355,6 +355,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public override Task WriteAsync(string value)
         {
+            Console.WriteLine($"Calling WriteAsync '{value}'");
             return this.writer.WriteAsync(value);
         }
 

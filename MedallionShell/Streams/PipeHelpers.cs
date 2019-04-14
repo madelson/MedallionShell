@@ -85,12 +85,14 @@ namespace Medallion.Shell.Streams
 
         public static async Task PipeAsync(this IDisposable @this, Func<Task> pipeTaskFactory, bool leaveOpen, Action extraDisposeAction = null)
         {
+            Console.WriteLine("Beginning Pipe opp");
             try
             {
                 await pipeTaskFactory().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
+                Console.WriteLine("Caught pipe exception " + ex);
                 if (!ex.IsExpectedPipeException())
                 {
                     throw;
@@ -100,9 +102,11 @@ namespace Medallion.Shell.Streams
             {
                 if (!leaveOpen)
                 {
+                    Console.WriteLine("Closing pipe stream");
                     @this.Dispose();
                 }
                 extraDisposeAction?.Invoke();
+                Console.WriteLine("Ending PipeAsync");
             }
         }
     }
