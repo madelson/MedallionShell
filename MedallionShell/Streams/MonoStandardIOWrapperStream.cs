@@ -75,5 +75,12 @@ namespace Medallion.Shell.Streams
             try { await this.stream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false); }
             catch (IOException ex) { Console.WriteLine("WRITEASYNC exception: " + ex); }
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            Console.WriteLine("Disposing wrapper stream");
+            this.stream.Dispose();
+            base.Dispose(disposing);
+        }
     }
 }

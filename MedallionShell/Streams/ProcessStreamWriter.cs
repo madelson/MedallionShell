@@ -158,7 +158,6 @@ namespace Medallion.Shell.Streams
             Console.WriteLine($"Calling Dispose({disposing})");
             if (disposing)
             {
-                this.writer.BaseStream.Dispose();
                 this.writer.Dispose();
             }
         }
