@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MedallionShell\MedallionShell.csproj" />
-	<ProjectReference Include="..\SampleCommand\SampleCommand.csproj" />
+	  <ProjectReference Include="..\SampleCommand\SampleCommand.csproj" />
   </ItemGroup>
 
   <ItemGroup>

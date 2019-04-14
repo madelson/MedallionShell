@@ -10,7 +10,7 @@ namespace Medallion.Shell
     internal static class PlatformCompatibilityHelper
     {
         // see http://www.mono-project.com/docs/faq/technical/
-        private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+        public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
 
         public static Stream WrapStandardInputStreamIfNeeded(Stream stream)
         {
