@@ -15,166 +15,166 @@ namespace Medallion.Shell.Tests
     using System.Runtime.InteropServices;
     using static UnitTestHelpers;
 
-    [NUnit.Framework.Timeout(10000)]
+    [NUnit.Framework.Timeout(40000)]
     public class GeneralTest
     {
-        //[Test]
-        //public void TestGrepLinux()
-        //{
-        //    Console.WriteLine($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
-        //    //Assert.Fail($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
+        [Test]
+        public void TestGrepLinux()
+        {
+            Console.WriteLine($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
+            //Assert.Fail($"{SampleCommand} {File.Exists(SampleCommand)} {RuntimeInformation.IsOSPlatform(OSPlatform.Linux)} {File.Exists("/usr/bin/mono")}");
 
-        //    var proc = new System.Diagnostics.Process
-        //    {
-        //        StartInfo =
-        //        {
-        //            FileName = "/usr/bin/mono",
-        //            Arguments = $"{SampleCommand} exit 0",
-        //            UseShellExecute = false,
-        //            RedirectStandardInput = false,
-        //            RedirectStandardOutput = true,
-        //            RedirectStandardError = true,
-        //            CreateNoWindow = true,
-        //        },
-        //    };
-        //    proc.Start();
-        //    var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
-        //    var readStdErr = Task.Run(() => proc.StandardError.ReadToEndAsync());
-        //    if (!proc.WaitForExit(30000))
-        //    {
-        //        Console.WriteLine("Did not exit; killing");
-        //        proc.Kill();
-        //    }
-        //    if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
-        //    else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
-        //    if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
-        //    else { Console.WriteLine("STDERR: " + readStdErr.Result); }
+            var proc = new System.Diagnostics.Process
+            {
+                StartInfo =
+                {
+                    FileName = "/usr/bin/mono",
+                    Arguments = $"{SampleCommand} exit 0",
+                    UseShellExecute = false,
+                    RedirectStandardInput = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            proc.Start();
+            var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
+            var readStdErr = Task.Run(() => proc.StandardError.ReadToEndAsync());
+            if (!proc.WaitForExit(30000))
+            {
+                Console.WriteLine("Did not exit; killing");
+                proc.Kill();
+            }
+            if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
+            else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
+            if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
+            else { Console.WriteLine("STDERR: " + readStdErr.Result); }
 
-        //    //var command = Shell.Default.Run("/usr/bin/mono", SampleCommand, "grep", "a+");
-        //    //command.StandardInput.WriteLine("hi");
-        //    //command.StandardInput.WriteLine("aa");
-        //    //command.StandardInput.Dispose();
-        //    //command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
-        //}
-
-        //[Test]
-        //public void TestRawLinuxGrep()
-        //{
-        //    var proc = new System.Diagnostics.Process
-        //    {
-        //        StartInfo =
-        //        {
-        //            FileName = "/usr/bin/mono",
-        //            Arguments = $"{SampleCommand} grep a+",
-        //            UseShellExecute = false,
-        //            RedirectStandardInput = true,
-        //            RedirectStandardOutput = true,
-        //            RedirectStandardError = true,
-        //            CreateNoWindow = true,
-        //        },
-        //    };
-        //    proc.Start();
-        //    var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
-        //    var readStdErr = Task.Run(() => proc.StandardError.ReadToEndAsync());
-        //    proc.StandardInput.WriteLine("hi");
-        //    proc.StandardInput.WriteLine("aa");
-        //    proc.StandardInput.Dispose();
-        //    if (!proc.WaitForExit(30000))
-        //    {
-        //        Console.WriteLine("Did not exit; killing");
-        //        proc.Kill();
-        //    }
-        //    if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
-        //    else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
-        //    if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
-        //    else { Console.WriteLine("STDERR: " + readStdErr.Result); }
-        //}
-
-        //[Test]
-        //public void TestExitLinux()
-        //{
-        //    var command = Shell.Default.Run("/usr/bin/mono", new object[] { SampleCommand, "exit", 0 });
-        //    if (!command.Task.Wait(10000))
-        //    {
-        //        Console.WriteLine("Did not exit: killing");
-        //        command.Kill();
-        //    }
-        //    Console.WriteLine(command.Task.Wait(1000));
-        //}
-
-        //[Test]
-        //[Timeout(10000)]
-        //public void TestErrorEchoLinux()
-        //{
-        //    var command = Command.Run("/usr/bin/mono", new[] { SampleCommand, "errecho" }, options: o => o.DisposeOnExit(false)) < "abc";
-        //    Console.WriteLine("Created command");
-        //    Console.WriteLine($"Process exited: {command.Process.WaitForExit(3000)}");
-        //    command.Result.StandardError.ShouldEqual("abc");
-        //}
-
-        //[Test]
-        //[Timeout(10000)]
-        //public void TestRawErrorEchoLinux()
-        //{
-        //    var proc = new System.Diagnostics.Process
-        //    {
-        //        StartInfo =
-        //        {
-        //            FileName = "/usr/bin/mono",
-        //            Arguments = $"{SampleCommand} errecho",
-        //            UseShellExecute = false,
-        //            RedirectStandardInput = true,
-        //            RedirectStandardOutput = true,
-        //            RedirectStandardError = true,
-        //            CreateNoWindow = true,
-        //        },
-        //    };
-        //    proc.Start();
-        //    var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
-        //    var readStdErr = Task.Run(async () =>
-        //    {
-        //        var bytes = new MemoryStream();
-        //        var buffer = new byte[Constants.ByteBufferSize];
-        //        int bytesRead;
-        //        while ((bytesRead = await proc.StandardError.BaseStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
-        //        {
-        //            Console.WriteLine($"Read {bytesRead} bytes; writing to pipe");
-        //            bytes.Write(buffer, 0, bytesRead);
-        //        }
-        //        bytes.Position = 0;
-        //        return new StreamReader(bytes).ReadToEnd();
-        //    });
-        //    proc.StandardInput.Write("abc");
-        //    proc.StandardInput.Dispose();
-        //    if (!proc.WaitForExit(5000))
-        //    {
-        //        Console.WriteLine("Did not exit; killing");
-        //        proc.Kill();
-        //    }
-        //    if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
-        //    else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
-        //    if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
-        //    else { Console.WriteLine("STDERR: " + readStdErr.Result); }
-        //}
-
-        //[Test]
-        //[Timeout(10000)]
-        //public void TestArgEchoLinux()
-        //{
-        //    var command = Command.Run("/usr/bin/mono", SampleCommand, "argecho", "hello", "world");
-        //    Console.WriteLine("Created command");
-        //    Console.WriteLine("STDOUT: " + command.StandardOutput.ReadToEnd());
-        //}
+            //var command = Shell.Default.Run("/usr/bin/mono", SampleCommand, "grep", "a+");
+            //command.StandardInput.WriteLine("hi");
+            //command.StandardInput.WriteLine("aa");
+            //command.StandardInput.Dispose();
+            //command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+        }
 
         [Test]
-        public void TestGrep()
+        public void TestRawLinuxGrep()
         {
-            var command = Shell.Default.Run(SampleCommand, "grep", "a+");
-            command.StandardInput.WriteLine("hi");
-            command.StandardInput.WriteLine("aa");
-            command.StandardInput.Dispose();
-            command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+            var proc = new System.Diagnostics.Process
+            {
+                StartInfo =
+                {
+                    FileName = "/usr/bin/mono",
+                    Arguments = $"{SampleCommand} grep a+",
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            proc.Start();
+            var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
+            var readStdErr = Task.Run(() => proc.StandardError.ReadToEndAsync());
+            proc.StandardInput.WriteLine("hi");
+            proc.StandardInput.WriteLine("aa");
+            proc.StandardInput.Dispose();
+            if (!proc.WaitForExit(30000))
+            {
+                Console.WriteLine("Did not exit; killing");
+                proc.Kill();
+            }
+            if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
+            else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
+            if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
+            else { Console.WriteLine("STDERR: " + readStdErr.Result); }
         }
+
+        [Test]
+        public void TestExitLinux()
+        {
+            var command = Shell.Default.Run("/usr/bin/mono", new object[] { SampleCommand, "exit", 0 });
+            if (!command.Task.Wait(10000))
+            {
+                Console.WriteLine("Did not exit: killing");
+                command.Kill();
+            }
+            Console.WriteLine(command.Task.Wait(1000));
+        }
+
+        [Test]
+        [Timeout(10000)]
+        public void TestErrorEchoLinux()
+        {
+            var command = Command.Run("/usr/bin/mono", new[] { SampleCommand, "errecho" }, options: o => o.DisposeOnExit(false)) < "abc";
+            Console.WriteLine("Created command");
+            Console.WriteLine($"Process exited: {command.Process.WaitForExit(3000)}");
+            command.Result.StandardError.ShouldEqual("abc");
+        }
+
+        [Test]
+        [Timeout(10000)]
+        public void TestRawErrorEchoLinux()
+        {
+            var proc = new System.Diagnostics.Process
+            {
+                StartInfo =
+                {
+                    FileName = "/usr/bin/mono",
+                    Arguments = $"{SampleCommand} errecho",
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+            };
+            proc.Start();
+            var readStdOut = Task.Run(() => proc.StandardOutput.ReadToEndAsync());
+            var readStdErr = Task.Run(async () =>
+            {
+                var bytes = new MemoryStream();
+                var buffer = new byte[Constants.ByteBufferSize];
+                int bytesRead;
+                while ((bytesRead = await proc.StandardError.BaseStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                {
+                    Console.WriteLine($"Read {bytesRead} bytes; writing to pipe");
+                    bytes.Write(buffer, 0, bytesRead);
+                }
+                bytes.Position = 0;
+                return new StreamReader(bytes).ReadToEnd();
+            });
+            proc.StandardInput.Write("abc");
+            proc.StandardInput.Dispose();
+            if (!proc.WaitForExit(5000))
+            {
+                Console.WriteLine("Did not exit; killing");
+                proc.Kill();
+            }
+            if (!readStdOut.Wait(1000)) { Console.WriteLine("STDOUT did not finish"); }
+            else { Console.WriteLine("STDOUT: " + readStdOut.Result); }
+            if (!readStdErr.Wait(1000)) { Console.WriteLine("STDERR did not finish"); }
+            else { Console.WriteLine("STDERR: " + readStdErr.Result); }
+        }
+
+        [Test]
+        [Timeout(10000)]
+        public void TestArgEchoLinux()
+        {
+            var command = Command.Run("/usr/bin/mono", SampleCommand, "argecho", "hello", "world");
+            Console.WriteLine("Created command");
+            Console.WriteLine("STDOUT: " + command.StandardOutput.ReadToEnd());
+        }
+
+        //[Test]
+        //public void TestGrep()
+        //{
+        //    var command = Shell.Default.Run(SampleCommand, "grep", "a+");
+        //    command.StandardInput.WriteLine("hi");
+        //    command.StandardInput.WriteLine("aa");
+        //    command.StandardInput.Dispose();
+        //    command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+        //}
 
         //[Test]
         //public void TestPipedGrep()

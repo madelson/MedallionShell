@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -11,33 +10,7 @@ namespace Medallion.Shell.Tests
 {
     public static class UnitTestHelpers
     {
-        public static string SampleCommand => SampleCommandPath.Value;
-
-        private static readonly Lazy<string> SampleCommandPath = new Lazy<string>(() =>
-        {
-            var binDirectory = Path.GetDirectoryName(typeof(UnitTestHelpers).Assembly.Location);
-            var sampleCommandExePath = Path.Combine(binDirectory, "SampleCommand.exe");
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return sampleCommandExePath;
-            }
-
-            const string MonoPath = "/usr/bin/mono";
-            if (PlatformCompatibilityHelper.IsMono)
-            {
-                var shellScriptPath = Path.Combine(binDirectory, "SampleCommand.sh");
-                // from https://www.mono-project.com/archived/guiderunning_mono_applications/
-                File.WriteAllText(
-                    Path.Combine(binDirectory, shellScriptPath),
-                    $"!/bin/sh{Environment.NewLine}{MonoPath} {sampleCommandExePath} \"$@\""
-                );
-
-                Command.Run("chmod", new[] { "u+x", shellScriptPath }, options: o => o.ThrowOnError()).Wait();
-                return shellScriptPath;
-            }
-
-            throw new NotSupportedException();
-        });
+        public static readonly string SampleCommand = Path.Combine(Path.GetDirectoryName(typeof(UnitTestHelpers).Assembly.Location), "SampleCommand.exe");
 
         public static T ShouldEqual<T>(this T @this, T that, string message = null)
         {
