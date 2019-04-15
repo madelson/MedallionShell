@@ -33,6 +33,9 @@ namespace Medallion.Shell.Tests
         [TestMethod]
         public void TestAttaching() => RunTest(() => PlatformCompatibilityTests.TestAttaching());
 
+        [TestMethod]
+        public void TestWriteToStandardInput() => RunTest(() => PlatformCompatibilityTests.TestWriteToStandardInput());
+
         private static void RunTest(Expression<Action> testMethod)
         {
             var compiled = testMethod.Compile();

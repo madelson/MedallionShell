@@ -33,6 +33,10 @@ namespace Medallion.Shell.Streams
             set => this.stream.Position = value;
         }
 
+        public override bool CanTimeout => this.stream.CanTimeout;
+        public override int ReadTimeout { get => this.stream.ReadTimeout; set => this.stream.ReadTimeout = value; }
+        public override int WriteTimeout { get => this.stream.WriteTimeout; set => this.stream.WriteTimeout = value; }
+
         public override void Flush() => this.stream.Flush();
 
         public override Task FlushAsync(CancellationToken cancellationToken) => this.stream.FlushAsync(cancellationToken);
@@ -74,6 +78,15 @@ namespace Medallion.Shell.Streams
 
             try { await this.stream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false); }
             catch (IOException) { }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.stream.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }
