@@ -87,6 +87,14 @@ namespace SampleCommand
             }
         }
 
+        public static void TestWriteToStandardInput()
+        {
+            var command = Command.Run(SampleCommandPath, new[] { "echo" }, options: o => o.Timeout(TimeSpan.FromSeconds(5)));
+            command.StandardInput.WriteLine("abcd");
+            command.StandardInput.Dispose();
+            if (command.Result.StandardOutput != ("abcd" + Environment.NewLine)) { throw new InvalidOperationException($"Was '{command.StandardOutput}'"); }
+        }
+
         private static void AssertThrows<TException>(Action action) where TException : Exception
         {
             try { action(); }
