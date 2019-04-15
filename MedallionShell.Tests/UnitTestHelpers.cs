@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
+[assembly: Timeout(15000)]
+
 namespace Medallion.Shell.Tests
 {
     public static class UnitTestHelpers

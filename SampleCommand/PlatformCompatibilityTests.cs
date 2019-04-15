@@ -27,7 +27,7 @@ namespace SampleCommand
             command.Wait();
             command.StandardInput.Flush();
             command.StandardInput.BaseStream.Flush();
-            command.StandardInput.BaseStream.FlushAsync();
+            command.StandardInput.BaseStream.FlushAsync().Wait();
         }
 
         public static void TestReadAfterExit()
