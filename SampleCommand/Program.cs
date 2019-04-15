@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace SampleCommand
 {
-    class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             Log("started: " + string.Join(", ", args.Select(a => "'" + a + "'")));
 
@@ -106,7 +106,7 @@ namespace SampleCommand
                     }
                     break;
                 case "echoLinesToBothStreams":
-                    async Task echoLines(TextWriter output)
+                    async Task EchoLinesAsync(TextWriter output)
                     {
                         while (true)
                         {
@@ -120,7 +120,7 @@ namespace SampleCommand
                             await output.WriteLineAsync(lineToEcho);
                         }
                     }
-                    Task.WaitAll(Task.Run(() => echoLines(Console.Error)), Task.Run(() => echoLines(Console.Out)));
+                    Task.WaitAll(Task.Run(() => EchoLinesAsync(Console.Error)), Task.Run(() => EchoLinesAsync(Console.Out)));
                     break;
                 case nameof(PlatformCompatibilityTests):
                     var method = typeof(PlatformCompatibilityTests).GetMethod(args[1]);
