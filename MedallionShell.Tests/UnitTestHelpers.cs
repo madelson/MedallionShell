@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using SampleCommand;
 
 [assembly: Timeout(15000)]
 
@@ -12,7 +13,10 @@ namespace Medallion.Shell.Tests
 {
     public static class UnitTestHelpers
     {
-        public static readonly string SampleCommand = Path.Combine(Path.GetDirectoryName(typeof(UnitTestHelpers).Assembly.Location), "SampleCommand.exe");
+        public static string SampleCommand => PlatformCompatibilityTests.SampleCommandPath;
+        public static Shell TestShell => PlatformCompatibilityTests.TestShell;
+
+        public static Shell MakeTestShell(Action<Shell.Options> options) => new Shell(TestShell.Configuration + options);
 
         public static T ShouldEqual<T>(this T @this, T that, string message = null)
         {

@@ -48,7 +48,7 @@ namespace Medallion.Shell.Tests
 
         private void TestRealRoundTrip(string[] arguments)
         {
-            var output = Command.Run(SampleCommand, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError()).Result.StandardOutput;
+            var output = TestShell.Run(SampleCommand, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError()).Result.StandardOutput;
             var expected = string.Join(string.Empty, arguments.Select(a => a + Environment.NewLine));
             output.ShouldEqual(expected);
         }

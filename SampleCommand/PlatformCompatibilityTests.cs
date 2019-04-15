@@ -1,21 +1,34 @@
-﻿using Medallion.Shell;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Medallion.Shell;
 
 namespace SampleCommand
 {
     public static class PlatformCompatibilityTests
     {
-        private static readonly string SampleCommandPath = typeof(Program).Assembly.Location;
+        public static readonly string SampleCommandPath = typeof(Program).Assembly.Location;
+
+        public static readonly Shell TestShell = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? new Shell(options: o => o.StartInfo(si =>
+            {
+                // on linux, you can't run mono exes directly so instead we invoke them through Mono
+                if (si.FileName == SampleCommandPath)
+                {
+                    si.Arguments = !string.IsNullOrEmpty(si.Arguments) ? $"{si.FileName} {si.Arguments}" : si.FileName;
+                    si.FileName = "/usr/bin/mono";
+                }
+            }))
+            : Shell.Default;
 
         public static void TestWriteAfterExit()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
             command.StandardInput.WriteLine(); // no-op
             command.StandardInput.BaseStream.WriteAsync(new byte[1], 0, 1).Wait(); // no-op
@@ -23,7 +36,7 @@ namespace SampleCommand
 
         public static void TestFlushAfterExit()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
             command.StandardInput.Flush();
             command.StandardInput.BaseStream.Flush();
@@ -32,7 +45,7 @@ namespace SampleCommand
 
         public static void TestReadAfterExit()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
             if (command.StandardOutput.ReadLine() != null)
             {
@@ -49,7 +62,7 @@ namespace SampleCommand
         /// </summary>
         public static void TestExitWithMinusOne()
         {
-            var command = Command.Run(SampleCommandPath, "exit", -1);
+            var command = TestShell.Run(SampleCommandPath, "exit", -1);
             if (command.Result.ExitCode != -1) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
         }
 
@@ -58,7 +71,7 @@ namespace SampleCommand
         /// </summary>
         public static void TestExitWithOne()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             if (command.Result.ExitCode != 1) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
         }
 
@@ -72,7 +85,7 @@ namespace SampleCommand
 
         public static void TestAttaching()
         {
-            var processCommand = Command.Run(SampleCommandPath, new[] { "sleep", "10000" });
+            var processCommand = TestShell.Run(SampleCommandPath, new[] { "sleep", "10000" });
             try
             {
                 var processId = processCommand.ProcessId;
@@ -89,7 +102,7 @@ namespace SampleCommand
 
         public static void TestWriteToStandardInput()
         {
-            var command = Command.Run(SampleCommandPath, new[] { "echo" }, options: o => o.Timeout(TimeSpan.FromSeconds(5)));
+            var command = TestShell.Run(SampleCommandPath, new[] { "echo" }, options: o => o.Timeout(TimeSpan.FromSeconds(5)));
             command.StandardInput.WriteLine("abcd");
             command.StandardInput.Dispose();
             if (command.Result.StandardOutput != ("abcd" + Environment.NewLine)) { throw new InvalidOperationException($"Was '{command.StandardOutput}'"); }

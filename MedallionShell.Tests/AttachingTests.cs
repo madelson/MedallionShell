@@ -11,7 +11,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestAttachingToExistingProcess()
         {
-            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
+            var processCommand = TestShell.Run(SampleCommand, new[] { "sleep", "10000" });
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(processId, out _)
                 .ShouldEqual(true, "Attaching to process failed.");
@@ -21,7 +21,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestWaitingForAttachedProcessExit()
         {
-            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "100" });
+            var processCommand = TestShell.Run(SampleCommand, new[] { "sleep", "100" });
             Command.TryAttachToProcess(processCommand.ProcessId, out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
             var commandResult = attachedCommand.Task;
@@ -33,7 +33,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestGettingExitCodeFromAttachedProcess()
         {
-            var processCommand = Command.Run(SampleCommand, new[] { "exit", "16" });
+            var processCommand = TestShell.Run(SampleCommand, new[] { "exit", "16" });
             Command.TryAttachToProcess(processCommand.ProcessId, out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
             var task = attachedCommand.Task;
@@ -44,7 +44,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestAttachingToNonExistingProcess()
         {
-            var processCommand = Command.Run(SampleCommand, new[] { "exit", "0" });
+            var processCommand = TestShell.Run(SampleCommand, new[] { "exit", "0" });
             var processId = processCommand.ProcessId;
             processCommand.Task.Wait(1000).ShouldEqual(true, "Process has not exited, test is inconclusive.");
             Command.TryAttachToProcess(processId, out _)
@@ -54,7 +54,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestKillingAttachedProcess()
         {
-            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
+            var processCommand = TestShell.Run(SampleCommand, new[] { "sleep", "10000" });
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(
                     processId,
@@ -72,7 +72,7 @@ namespace Medallion.Shell.Tests
         {
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();
-            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
+            var processCommand = TestShell.Run(SampleCommand, new[] { "sleep", "10000" });
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(
                 processId, 
@@ -86,7 +86,7 @@ namespace Medallion.Shell.Tests
         {
             const string expectedTimeoutexceptionDidNotOccur = "Expected TimeoutException did not occur.";
 
-            var processCommand = Command.Run(SampleCommand, new[] { "sleep", "10000" });
+            var processCommand = TestShell.Run(SampleCommand, new[] { "sleep", "10000" });
             Thread.Sleep(200);
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(
