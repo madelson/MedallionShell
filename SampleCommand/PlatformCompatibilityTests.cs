@@ -63,6 +63,12 @@ namespace SampleCommand
         public static void TestExitWithMinusOne()
         {
             var command = TestShell.Run(SampleCommandPath, "exit", -1);
+            var exitCode = command.Result.ExitCode;
+            var isExpectedExitCode = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? exitCode == -1
+                // Linux only returns the lower 8 bits of the exit code. Sounds like this may change in the future so we're just asserting that the lower 8 bits match
+                // https://unix.stackexchange.com/questions/418784/what-is-the-min-and-max-values-of-exit-codes-in-linux/418802#418802?newreg=5f906406f0f04a1980a77192e3c64a6b
+                : (exitCode & 0xff) == (-1 & 0xff);
             if (command.Result.ExitCode != -1) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
         }
 

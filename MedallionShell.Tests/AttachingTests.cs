@@ -68,7 +68,7 @@ namespace Medallion.Shell.Tests
         }
 
         [Test]
-        public void TestAttachingWithAlreadyCancelledToken()
+        public void TestAttachingWithAlreadyCanceledToken()
         {
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.Cancel();

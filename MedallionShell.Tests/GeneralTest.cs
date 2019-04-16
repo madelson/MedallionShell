@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ namespace Medallion.Shell.Tests
             command.StandardInput.WriteLine("hi");
             command.StandardInput.WriteLine("aa");
             command.StandardInput.Dispose();
-            command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+            command.StandardOutput.ReadToEnd().ShouldEqual("aa" + Environment.NewLine);
         }
 
         [Test]
@@ -262,7 +263,7 @@ namespace Medallion.Shell.Tests
                         command.StandardOutput.Discard();
                     }
 
-                    task.Wait(TimeSpan.FromSeconds(.5)).ShouldEqual(true, "can finish after read");
+                    task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true, "can finish after read");
                     if (state == 1)
                     {
                         command.StandardInput.Dispose();
@@ -283,7 +284,8 @@ namespace Medallion.Shell.Tests
 
             command.Kill();
             command.Result.Success.ShouldEqual(false);
-            command.Result.ExitCode.ShouldEqual(-1);
+            // https://www.tldp.org/LDP/abs/html/exitcodes.html
+            command.Result.ExitCode.ShouldEqual(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? -1 : 137);
 
             command.StandardOutput.ReadLine().ShouldEqual("abc");
         }
@@ -448,9 +450,15 @@ namespace Medallion.Shell.Tests
                         }
                     }
 
-                    GetCommandLine(command1.ProcessId).ShouldContain("--id1");
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        GetCommandLine(command1.ProcessId).ShouldContain("--id1");
+                    }
                     command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
-                    GetCommandLine(command2.ProcessId).ShouldContain("--id2");
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        GetCommandLine(command2.ProcessId).ShouldContain("--id2");
+                    }
                     command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
                     pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
                     pipeCommand.ProcessIds.SequenceEqual(new[] { command1.ProcessId, command2.ProcessId }).ShouldEqual(true);
@@ -469,23 +477,27 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestToString()
         {
+            var sampleCommandString = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? SampleCommand
+                : $"/usr/bin/mono {SampleCommand}";
+
             var command0 = TestShell.Run(SampleCommand, new[] { "grep", "a+" }, options => options.DisposeOnExit(true));
-            command0.ToString().ShouldEqual($"{SampleCommand} grep a+");
+            command0.ToString().ShouldEqual($"{sampleCommandString} grep a+");
 
             var command1 = TestShell.Run(SampleCommand, "exit", 0);
-            command1.ToString().ShouldEqual($"{SampleCommand} exit 0");
+            command1.ToString().ShouldEqual($"{sampleCommandString} exit 0");
 
             var command2 = TestShell.Run(SampleCommand, "ex it", "0 0");
-            command2.ToString().ShouldEqual($"{SampleCommand} \"ex it\" \"0 0\"");
+            command2.ToString().ShouldEqual($"{sampleCommandString} \"ex it\" \"0 0\"");
 
             var command3 = command1 < new[] { "a" };
-            command3.ToString().ShouldEqual($"{SampleCommand} exit 0 < System.String[]");
+            command3.ToString().ShouldEqual($"{sampleCommandString} exit 0 < System.String[]");
 
             var command4 = command3 | TestShell.Run(SampleCommand, "echo");
-            command4.ToString().ShouldEqual($"{SampleCommand} exit 0 < System.String[] | {SampleCommand} echo");
+            command4.ToString().ShouldEqual($"{sampleCommandString} exit 0 < System.String[] | {sampleCommandString} echo");
 
             var command5 = command2.RedirectStandardErrorTo(Stream.Null);
-            command5.ToString().ShouldEqual($"{SampleCommand} \"ex it\" \"0 0\" 2> {Stream.Null}");
+            command5.ToString().ShouldEqual($"{sampleCommandString} \"ex it\" \"0 0\" 2> {Stream.Null}");
 
             var command6 = command5.RedirectTo(new StringWriter());
             command6.Wait();
