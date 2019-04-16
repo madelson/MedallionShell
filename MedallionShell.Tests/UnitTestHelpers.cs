@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using SampleCommand;
 
-[assembly: Timeout(15000)]
+// don't allow things to hang when running on a CI server
+[assembly: Timeout(60000)]
 
 namespace Medallion.Shell.Tests
 {
