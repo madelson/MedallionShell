@@ -11,7 +11,7 @@ namespace Medallion.Shell
     internal static class Log
     {
         // TODO REVERT CHANGES
-        //[Conditional("TESTING")]
+        [Conditional("TESTING")]
         public static void WriteLine(string format, params object[] args)
         {
             Console.WriteLine(format, args);

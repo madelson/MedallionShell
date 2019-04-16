@@ -69,7 +69,7 @@ namespace SampleCommand
                 // Linux only returns the lower 8 bits of the exit code. Sounds like this may change in the future so we're just asserting that the lower 8 bits match
                 // https://unix.stackexchange.com/questions/418784/what-is-the-min-and-max-values-of-exit-codes-in-linux/418802#418802?newreg=5f906406f0f04a1980a77192e3c64a6b
                 : (exitCode & 0xff) == (-1 & 0xff);
-            if (command.Result.ExitCode != -1) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
+            if (!isExpectedExitCode) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
         }
 
         /// <summary>

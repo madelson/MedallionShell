@@ -376,6 +376,9 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestEncoding()
         {
+            // TODO REMOVE
+            Console.WriteLine($"OUT={Console.OutputEncoding.WebName}, IN={Console.InputEncoding.WebName}");
+
             // pick a string that will be different in UTF8 vs the default to make sure we use the default
             var bytes = new byte[] { 255 };
             var inputEncoded = Console.InputEncoding.GetString(bytes);
