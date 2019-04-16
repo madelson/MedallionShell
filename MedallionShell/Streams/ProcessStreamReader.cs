@@ -22,6 +22,11 @@ namespace Medallion.Shell.Streams
         public abstract Stream BaseStream { get; }
 
         /// <summary>
+        /// Specifies the encoding being used by the <see cref="TextReader"/>. Equivalent to <see cref="StreamReader.CurrentEncoding"/>
+        /// </summary>
+        public abstract Encoding Encoding { get; }
+
+        /// <summary>
         /// Enumerates each remaining line of output. The enumerable cannot be re-used
         /// </summary>
         public IEnumerable<string> GetLines()

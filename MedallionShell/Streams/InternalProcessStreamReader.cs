@@ -55,10 +55,9 @@ namespace Medallion.Shell.Streams
         }
 
 #region ---- ProcessStreamReader implementation ----
-        public override Stream BaseStream
-        {
-            get { return this.reader.BaseStream; }
-        }
+        public override Stream BaseStream => this.reader.BaseStream;
+
+        public override Encoding Encoding => this.reader.CurrentEncoding;
 
         public override void Discard()
         {
