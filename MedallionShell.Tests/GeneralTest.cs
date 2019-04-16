@@ -376,22 +376,35 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestEncoding()
         {
-            // TODO REMOVE
-            Console.WriteLine($"OUT={Console.OutputEncoding.WebName}, IN={Console.InputEncoding.WebName}");
-
             // pick a string that will be different in UTF8 vs the default to make sure we use the default
             var bytes = new byte[] { 255 };
             var inputEncoded = Console.InputEncoding.GetString(bytes);
-            inputEncoded.ShouldEqual(Console.OutputEncoding.GetString(bytes));
-            inputEncoded.ShouldNotEqual(Encoding.UTF8.GetString(bytes));
+            inputEncoded.ShouldEqual(Console.OutputEncoding.GetString(bytes)); // sanity check
+            // mono and .NET Core will default to UTF8
+            var defaultsToUtf8 = Console.InputEncoding.WebName == Encoding.UTF8.WebName;
+            if (!defaultsToUtf8)
+            {
+                inputEncoded.ShouldNotEqual(Encoding.UTF8.GetString(bytes), $"Matched with {Console.InputEncoding.WebName}"); // sanity check
+            }
             var command = TestShell.Run(SampleCommand, "echo") < inputEncoded;
             command.Result.StandardOutput.ShouldEqual(inputEncoded);
 
             const string InternationalText = "漢字";
             command = TestShell.Run(SampleCommand, "echo") < InternationalText;
-            command.Result.StandardOutput.ShouldEqual("??", "Default encoding does not support international chars");
+            if (defaultsToUtf8)
+            {
+                command.Result.StandardOutput.ShouldEqual(InternationalText);
+            }
+            else
+            {
+                command.Result.StandardOutput.ShouldEqual("??", "Default encoding does not support international chars");
+            }
 
             command = TestShell.Run(SampleCommand, new[] { "echo", "--utf8" }, options: o => o.Encoding(Encoding.UTF8)) < InternationalText;
+            command.Result.StandardOutput.ShouldEqual(InternationalText);
+
+            // since some platforms use UTF8 by default, also echo test with UTF32
+            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf32" }, options: o => o.Encoding(Encoding.UTF32)) < InternationalText;
             command.Result.StandardOutput.ShouldEqual(InternationalText);
         }
 
