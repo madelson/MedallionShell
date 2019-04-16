@@ -21,10 +21,12 @@ namespace SampleCommand
             {
                 case "echo":
                     var isPerChar = args.Contains("--per-char");
-                    var isUtf8 = args.Contains("--utf8");
-                    if (isUtf8)
+                    var encoding = args.Contains("--utf8") ? Encoding.UTF8
+                        : args.Contains("--utf162") ? Encoding.Unicode
+                        : null;
+                    if (encoding != null)
                     {
-                        Console.InputEncoding = Console.OutputEncoding = Encoding.UTF8;
+                        Console.InputEncoding = Console.OutputEncoding = encoding;
                     }
 
                     if (isPerChar)

@@ -403,9 +403,12 @@ namespace Medallion.Shell.Tests
             command = TestShell.Run(SampleCommand, new[] { "echo", "--utf8" }, options: o => o.Encoding(Encoding.UTF8)) < InternationalText;
             command.Result.StandardOutput.ShouldEqual(InternationalText);
 
-            // since some platforms use UTF8 by default, also echo test with UTF32
-            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf32" }, options: o => o.Encoding(Encoding.UTF32)) < InternationalText;
-            command.Result.StandardOutput.ShouldEqual(InternationalText);
+            // since some platforms use UTF8 by default, also echo test with UTF16
+            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf16" }, options: o => o.Encoding(Encoding.Unicode));
+            command.StandardInput.Encoding.ShouldEqual(Encoding.Unicode);
+            command.StandardOutput.Encoding.ShouldEqual(Encoding.Unicode);
+            command.StandardError.Encoding.ShouldEqual(Encoding.Unicode);
+            (command < InternationalText).Result.StandardOutput.ShouldEqual(InternationalText);
         }
 
         [Test]
