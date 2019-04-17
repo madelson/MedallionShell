@@ -265,13 +265,13 @@ namespace Medallion.Shell.Tests
                     }
 
                     task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
-                    ++linesWritten;
                     if (state == 1)
                     {
                         command.StandardInput.Dispose();
                     }
                     state++;
                 }
+                ++linesWritten;
             }
         }
 
@@ -403,7 +403,10 @@ namespace Medallion.Shell.Tests
             }
 
             command = TestShell.Run(SampleCommand, new[] { "echo", "--utf8" }, options: o => o.Encoding(Encoding.UTF8)) < InternationalText;
-            command.Result.StandardOutput.ShouldEqual(InternationalText, "UTF8 encoding should support international chars");
+            command.Result.StandardOutput.ShouldEqual(
+                InternationalText, 
+                $"UTF8 encoding should support international chars: Expected bytes [{string.Join(", ", Encoding.UTF8.GetBytes(InternationalText))}]. Received [{string.Join(", ", Encoding.UTF8.GetBytes(command.Result.StandardOutput))}]"
+            );
 
             // since some platforms use UTF8 by default, also echo test with UTF16
             command = TestShell.Run(SampleCommand, new[] { "echo", "--utf16" }, options: o => o.Encoding(Encoding.Unicode));
