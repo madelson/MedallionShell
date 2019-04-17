@@ -253,10 +253,15 @@ namespace Medallion.Shell.Tests
                 {
                     if (state == 0)
                     {
-                        Log.WriteLine("Buffer full: read one line");
-                        var outLine = command.StandardOutput.ReadLine();
-                        outLine.ShouldEqual(line);
-                        // after this, we need to read more than one line to re-block since the readers buffer internally
+                        Log.WriteLine("Buffer full: read");
+                        var linesToRead = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 1 : Math.Max((int)(.1 * linesWritten), 1);
+                        for (var i = 0; i < linesToRead; ++i)
+                        {
+                            var outLine = command.StandardOutput.ReadLine();
+                            outLine.ShouldEqual(line);
+                        }
+                        // after this, we may need to write more content than we read to re-block since the reader
+                        // buffers internally
                     }
                     else
                     {
@@ -402,14 +407,16 @@ namespace Medallion.Shell.Tests
                 command.Result.StandardOutput.ShouldEqual("??", "Default encoding does not support international chars");
             }
 
-            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf8" }, options: o => o.Encoding(Encoding.UTF8)) < InternationalText;
+            var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf8" }, options: o => o.Encoding(utf8NoBom)) < InternationalText;
             command.Result.StandardOutput.ShouldEqual(
                 InternationalText, 
-                $"UTF8 encoding should support international chars: Expected bytes [{string.Join(", ", Encoding.UTF8.GetBytes(InternationalText))}]. Received [{string.Join(", ", Encoding.UTF8.GetBytes(command.Result.StandardOutput))}]"
+                $"UTF8 encoding should support international chars: Expected bytes [{string.Join(", ", utf8NoBom.GetBytes(InternationalText))}]. Received [{string.Join(", ", utf8NoBom.GetBytes(command.Result.StandardOutput))}]"
             );
 
             // since some platforms use UTF8 by default, also echo test with UTF16
-            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf16" }, options: o => o.Encoding(Encoding.Unicode));
+            var unicodeNoBom = new UnicodeEncoding(bigEndian: false, byteOrderMark: false);
+            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf16" }, options: o => o.Encoding(unicodeNoBom));
             command.StandardInput.Encoding.ShouldEqual(Encoding.Unicode);
             command.StandardOutput.Encoding.ShouldEqual(Encoding.Unicode);
             command.StandardError.Encoding.ShouldEqual(Encoding.Unicode);
