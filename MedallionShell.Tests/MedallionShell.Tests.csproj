@@ -14,8 +14,8 @@
     <PackageReference Include="nunit" Version="3.11.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.11.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
-	<PackageReference Include="Moq" Version="4.7.63" />
-	<PackageReference Include="StyleCop.Analyzers" Version="1.1.1-rc.94">
+	  <PackageReference Include="Moq" Version="4.7.63" />
+	  <PackageReference Include="StyleCop.Analyzers" Version="1.1.1-rc.94">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
   </ItemGroup>

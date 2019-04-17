@@ -41,6 +41,9 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3' Or '$(TargetFramework)' == 'netstandard2.0'">
 	  <PackageReference Include="System.Diagnostics.Process" version="4.3.0" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
+    <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="microsoft.dotnet.analyzers.compatibility" Version="0.2.12-alpha">

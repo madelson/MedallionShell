@@ -187,7 +187,7 @@ namespace Medallion.Shell
             {
                 this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
                 this.CommandInitializers = new List<Func<Command, Command>>();
-                this.CommandLineSyntax = new WindowsCommandLineSyntax();
+                this.CommandLineSyntax = PlatformCompatibilityHelper.GetDefaultCommandLineSyntax();
                 this.ThrowExceptionOnError = false;
                 this.DisposeProcessOnExit = true;
                 this.ProcessTimeout = System.Threading.Timeout.InfiniteTimeSpan;
@@ -293,10 +293,10 @@ namespace Medallion.Shell
             }
 
             /// <summary>
-            /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to an instance of
-            /// <see cref="WindowsCommandLineSyntax"/>
+            /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to
+            /// an appropriate value for the current platform
             /// </summary>
-            [Obsolete(".NET Core uses Windows escaping to parse the argument string, so there is no need to customize this by platform")]
+            [Obsolete("The default should work across platforms")]
             public Options Syntax(CommandLineSyntax syntax)
             {
                 Throw.IfNull(syntax, "syntax");

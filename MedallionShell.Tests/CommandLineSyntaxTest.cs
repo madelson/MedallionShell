@@ -24,7 +24,8 @@ namespace Medallion.Shell.Tests
             this.TestRoundTrip("\r", "\n", "\r\n");
             this.TestRoundTrip(string.Empty, "\"", "\\", string.Empty);
             this.TestRoundTrip("abc", "a\\b", "a\\ b\"");
-
+            this.TestRoundTrip("`,\\`");
+            
             // cases from https://docs.microsoft.com/en-us/cpp/cpp/parsing-cpp-command-line-arguments?view=vs-2019
             this.TestRoundTrip("abc", "d", "e");
             this.TestRoundTrip(@"a\\b", "de fg", "h");

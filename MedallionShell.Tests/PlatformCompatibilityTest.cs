@@ -38,6 +38,9 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestWriteToStandardInput() => RunTest(() => PlatformCompatibilityTests.TestWriteToStandardInput());
 
+        [Test]
+        public void TestArgumentsRoundTrip() => RunTest(() => PlatformCompatibilityTests.TestArgumentRoundTrip());
+
         private static void RunTest(Expression<Action> testMethod)
         {
             var compiled = testMethod.Compile();

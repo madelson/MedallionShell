@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using Medallion.Shell.Streams;
 
@@ -11,6 +12,40 @@ namespace Medallion.Shell
     {
         // see http://www.mono-project.com/docs/faq/technical/
         private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+
+        private static bool IsWindows
+        {
+            get
+            {
+#if !NET45
+                return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+#else
+                if (!IsMono) { return true; }
+#pragma warning disable DE0007, DE0009
+                switch (Environment.OSVersion.Platform)
+                {
+                    case PlatformID.Win32S:
+                    case PlatformID.Win32Windows:
+                    case PlatformID.Win32NT:
+                    case PlatformID.WinCE:
+                    case PlatformID.Xbox:
+                        return true;
+                    default:
+                        return false;
+                }
+#pragma warning restore DE0007, DE0009
+#endif
+            }
+        }
+
+        public static CommandLineSyntax GetDefaultCommandLineSyntax()
+        {
+            if (IsMono && !IsWindows)
+            {
+                return new MonoUnixCommandLineSyntax();
+            }
+            return new WindowsCommandLineSyntax();
+        }
 
         public static Stream WrapStandardInputStreamIfNeeded(Stream stream)
         {

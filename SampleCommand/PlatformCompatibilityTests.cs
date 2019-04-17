@@ -113,6 +113,26 @@ namespace SampleCommand
             command.StandardInput.Dispose();
             if (command.Result.StandardOutput != ("abcd" + Environment.NewLine)) { throw new InvalidOperationException($"Was '{command.StandardOutput}'"); }
         }
+        
+        public static void TestArgumentRoundTrip()
+        {
+            var arguments = new[]
+            {
+                @"c:\temp",
+                @"a\\b",
+                @"\\\",
+                @"``\`\\",
+                @"C:\temp\blah",
+                " leading and trailing\twhitespace!  ",
+            };
+            var command = TestShell.Run(SampleCommandPath, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError());
+            var outputLines = command.StandardOutput.GetLines().ToArray();
+            command.Wait();
+            if (!outputLines.SequenceEqual(arguments))
+            {
+                throw new InvalidOperationException($"Was {string.Join(" ", outputLines.Select((l, index) => $"'{l}' ({(index >= arguments.Length ? "EXTRA" : (l == arguments[index]).ToString())})"))}");
+            }
+        }
 
         private static void AssertThrows<TException>(Action action) where TException : Exception
         {
