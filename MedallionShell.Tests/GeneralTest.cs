@@ -393,7 +393,7 @@ namespace Medallion.Shell.Tests
             command = TestShell.Run(SampleCommand, "echo") < InternationalText;
             if (defaultsToUtf8)
             {
-                command.Result.StandardOutput.ShouldEqual(InternationalText);
+                command.Result.StandardOutput.ShouldEqual(InternationalText, $"Default encoding should support international chars");
             }
             else
             {
@@ -401,14 +401,14 @@ namespace Medallion.Shell.Tests
             }
 
             command = TestShell.Run(SampleCommand, new[] { "echo", "--utf8" }, options: o => o.Encoding(Encoding.UTF8)) < InternationalText;
-            command.Result.StandardOutput.ShouldEqual(InternationalText);
+            command.Result.StandardOutput.ShouldEqual(InternationalText, "UTF8 encoding should support international chars");
 
             // since some platforms use UTF8 by default, also echo test with UTF16
             command = TestShell.Run(SampleCommand, new[] { "echo", "--utf16" }, options: o => o.Encoding(Encoding.Unicode));
             command.StandardInput.Encoding.ShouldEqual(Encoding.Unicode);
             command.StandardOutput.Encoding.ShouldEqual(Encoding.Unicode);
             command.StandardError.Encoding.ShouldEqual(Encoding.Unicode);
-            (command < InternationalText).Result.StandardOutput.ShouldEqual(InternationalText);
+            (command < InternationalText).Result.StandardOutput.ShouldEqual(InternationalText, "UTF16 should support international chars");
         }
 
         [Test]
