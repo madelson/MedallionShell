@@ -134,6 +134,13 @@ namespace SampleCommand
             }
         }
 
+        public static void TestKill()
+        {
+            var command = TestShell.Run(SampleCommandPath, "sleep", "10000");
+            command.Kill();
+            if (!command.Task.Wait(1000)) { throw new InvalidOperationException("Should have exited after kill"); }
+        }
+
         private static void AssertThrows<TException>(Action action) where TException : Exception
         {
             try { action(); }

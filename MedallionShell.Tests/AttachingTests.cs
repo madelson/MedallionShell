@@ -58,18 +58,12 @@ namespace Medallion.Shell.Tests
             var processId = processCommand.ProcessId;
             Command.TryAttachToProcess(
                     processId,
-                    options => options.DisposeOnExit(false),
                     out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
             
             attachedCommand.Kill();
-
-            // TODO CHANGE
-            var now = DateTime.UtcNow;
-            attachedCommand.Task.Wait(11000);
-            Console.WriteLine($"Died after {DateTime.UtcNow - now}");
-
-            attachedCommand.Process.HasExited
+            
+            attachedCommand.Task.Wait(TimeSpan.FromSeconds(1))
                 .ShouldEqual(true, "The process is still alive after Kill() has finished.");
         }
 
@@ -83,8 +77,12 @@ namespace Medallion.Shell.Tests
             Command.TryAttachToProcess(
                 processId, 
                 options => options.CancellationToken(cancellationTokenSource.Token).DisposeOnExit(false),
-                out var attachedCommand);
-            attachedCommand.Process.HasExited.ShouldEqual(true, "The process wasn't killed.");
+                out var attachedCommand)
+                .ShouldEqual(true, "attaching failed");
+            using (attachedCommand)
+            {
+                attachedCommand.Process.WaitForExit(1000).ShouldEqual(true, "The process wasn't killed.");
+            }
         }
 
         [Test]

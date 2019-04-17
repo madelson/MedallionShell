@@ -41,6 +41,9 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestArgumentsRoundTrip() => RunTest(() => PlatformCompatibilityTests.TestArgumentRoundTrip());
 
+        [Test]
+        public void TestKill() => RunTest(() => PlatformCompatibilityTests.TestKill());
+
         private static void RunTest(Expression<Action> testMethod)
         {
             var compiled = testMethod.Compile();
