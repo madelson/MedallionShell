@@ -63,6 +63,12 @@ namespace Medallion.Shell.Tests
                 .ShouldEqual(true, "Attaching to process failed.");
             
             attachedCommand.Kill();
+
+            // TODO CHANGE
+            var now = DateTime.UtcNow;
+            attachedCommand.Task.Wait(11000);
+            Console.WriteLine($"Died after {DateTime.UtcNow - now}");
+
             attachedCommand.Process.HasExited
                 .ShouldEqual(true, "The process is still alive after Kill() has finished.");
         }
