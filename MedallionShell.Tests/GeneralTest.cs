@@ -244,6 +244,7 @@ namespace Medallion.Shell.Tests
             command.StandardOutput.StopBuffering();
             var line = new string('a', 100);
             var state = 0;
+            var linesWritten = 0;
             while (state < 2)
             {
                 Log.WriteLine("Write to unbuffered command");
@@ -263,7 +264,8 @@ namespace Medallion.Shell.Tests
                         command.StandardOutput.Discard();
                     }
 
-                    task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true, "can finish after read");
+                    task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
+                    ++linesWritten;
                     if (state == 1)
                     {
                         command.StandardInput.Dispose();
