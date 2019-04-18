@@ -417,9 +417,9 @@ namespace Medallion.Shell.Tests
             // since some platforms use UTF8 by default, also echo test with UTF16
             var unicodeNoBom = new UnicodeEncoding(bigEndian: false, byteOrderMark: false);
             command = TestShell.Run(SampleCommand, new[] { "echo", "--utf16" }, options: o => o.Encoding(unicodeNoBom));
-            command.StandardInput.Encoding.ShouldEqual(Encoding.Unicode);
-            command.StandardOutput.Encoding.ShouldEqual(Encoding.Unicode);
-            command.StandardError.Encoding.ShouldEqual(Encoding.Unicode);
+            command.StandardInput.Encoding.ShouldEqual(unicodeNoBom);
+            command.StandardOutput.Encoding.ShouldEqual(unicodeNoBom);
+            command.StandardError.Encoding.ShouldEqual(unicodeNoBom);
             (command < InternationalText).Result.StandardOutput.ShouldEqual(InternationalText, "UTF16 should support international chars");
         }
 
