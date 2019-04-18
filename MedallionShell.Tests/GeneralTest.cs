@@ -254,6 +254,7 @@ namespace Medallion.Shell.Tests
                     if (state == 0)
                     {
                         Log.WriteLine("Buffer full: read");
+                        // for whatever reason, on Unix I need to read a few lines to get things flowing again
                         var linesToRead = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 1 : Math.Max((int)(.1 * linesWritten), 1);
                         for (var i = 0; i < linesToRead; ++i)
                         {
