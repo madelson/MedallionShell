@@ -20,25 +20,9 @@ namespace Medallion.Shell
         /// <summary>
         /// Provides <see cref="CommandLineSyntax"/> functionality for windows
         /// </summary>
-        public override string CreateArgumentString(IEnumerable<string> arguments)
-        {
-            Throw.IfNull(arguments, nameof(arguments));
+        public override string CreateArgumentString(IEnumerable<string> arguments) => CreateArgumentString(arguments, AppendArgument);
 
-            var builder = new StringBuilder();
-            var isFirstArgument = true;
-            foreach (var argument in arguments)
-            {
-                Throw.If(argument == null, nameof(arguments) + ": must not contain null");
-
-                if (isFirstArgument) { isFirstArgument = false; }
-                else { builder.Append(' '); }
-                AddArgument(argument, builder);
-            }
-
-            return builder.ToString();
-        }
-
-        private static void AddArgument(string argument, StringBuilder builder)
+        private static void AppendArgument(string argument, StringBuilder builder)
         {
             // based on the logic from http://stackoverflow.com/questions/5510343/escape-command-line-arguments-in-c-sharp.
             // The method given there doesn't minimize the use of quotation. For that, I drew from
