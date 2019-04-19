@@ -15,19 +15,15 @@ namespace Medallion.Shell
     /// </summary>
     public sealed class Shell
     {
-        private readonly Action<Options> configuration;
-
-        private Shell()
-        {
-        }
+        internal Action<Options> Configuration { get; }
 
         /// <summary>
         /// Creates a shell whose commands will receive the given configuration options
         /// </summary>
         public Shell(Action<Options> options)
         {
-            Throw.IfNull(options, "configuration");
-            this.configuration = options;
+            Throw.IfNull(options, nameof(options));
+            this.Configuration = options;
         }
 
         #region ---- Instance API ----
@@ -148,24 +144,17 @@ namespace Medallion.Shell
         #endregion
 
         #region ---- Static API ----
-        private static readonly Shell DefaultShell = new Shell();
         /// <summary>
         /// A <see cref="Shell"/> that uses default options
         /// </summary>
-        public static Shell Default { get { return DefaultShell; } }
+        public static Shell Default { get; } = new Shell(_ => { });
         #endregion
 
         private Options GetOptions(Action<Options> additionalConfiguration)
         {
             var builder = new Options();
-            if (this.configuration != null)
-            {
-                this.configuration(builder);
-            }
-            if (additionalConfiguration != null)
-            {
-                additionalConfiguration(builder);
-            }
+            this.Configuration.Invoke(builder);
+            additionalConfiguration?.Invoke(builder);
             return builder;
         }
 
@@ -198,7 +187,7 @@ namespace Medallion.Shell
             {
                 this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
                 this.CommandInitializers = new List<Func<Command, Command>>();
-                this.CommandLineSyntax = new WindowsCommandLineSyntax();
+                this.CommandLineSyntax = PlatformCompatibilityHelper.GetDefaultCommandLineSyntax();
                 this.ThrowExceptionOnError = false;
                 this.DisposeProcessOnExit = true;
                 this.ProcessTimeout = System.Threading.Timeout.InfiniteTimeSpan;
@@ -304,10 +293,10 @@ namespace Medallion.Shell
             }
 
             /// <summary>
-            /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to an instance of
-            /// <see cref="WindowsCommandLineSyntax"/>
+            /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to
+            /// an appropriate value for the current platform
             /// </summary>
-            [Obsolete(".NET Core uses Windows escaping to parse the argument string, so there is no need to customize this by platform")]
+            [Obsolete("The default should work across platforms")]
             public Options Syntax(CommandLineSyntax syntax)
             {
                 Throw.IfNull(syntax, "syntax");

@@ -1,12 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <RuleSet Name="Rules for StyleCop.Analyzers" Description="Code analysis rules" ToolsVersion="15.0">
   <Rules AnalyzerId="StyleCop.Analyzers" RuleNamespace="StyleCop.Analyzers">
-    <Rule Id="SA1009" Action="None" />
+	<!-- just too annoying for iteration -->
+    <Rule Id="SA1005" Action="None" />
+	<Rule Id="SA1009" Action="None" />
     <Rule Id="SA1028" Action="None" />
     <Rule Id="SA1108" Action="None" />
     <Rule Id="SA1111" Action="None" />
     <Rule Id="SA1114" Action="None" />
     <Rule Id="SA1124" Action="None" />
+	<Rule Id="SA1127" Action="None" />
     <Rule Id="SA1132" Action="None" />
     <Rule Id="SA1200" Action="None" />
     <Rule Id="SA1201" Action="None" />

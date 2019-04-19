@@ -1,14 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
+using SampleCommand;
+
+// don't allow things to hang when running on a CI server
+[assembly: Timeout(60000)]
 
 namespace Medallion.Shell.Tests
 {
     public static class UnitTestHelpers
     {
+        public static string SampleCommand => PlatformCompatibilityTests.SampleCommandPath;
+        public static Shell TestShell => PlatformCompatibilityTests.TestShell;
+
+        public static Shell MakeTestShell(Action<Shell.Options> options) => new Shell(TestShell.Configuration + options);
+
         public static T ShouldEqual<T>(this T @this, T that, string message = null)
         {
             Assert.AreEqual(that, @this, message);
@@ -19,38 +29,6 @@ namespace Medallion.Shell.Tests
         {
             Assert.AreNotEqual(that, @this, message);
             return @this;
-        }
-
-        public static TException AssertThrows<TException>(Action action, string message = null)
-            where TException : Exception
-        {
-            try
-            {
-                action();
-            }
-            catch (TException ex) { return ex; }
-            catch (Exception other)
-            {
-                Assert.Fail($"{(message != null ? message + ": " : string.Empty)}Expected {typeof(TException)}. Found {other}");
-            }
-
-            Assert.Fail($"{(message != null ? message + ": " : string.Empty)}Expected {typeof(TException)}, but no exception was thrown");
-
-            throw new InvalidOperationException("Should never get here");
-        }
-
-        public static void AssertDoesNotThrow(Action action, string message = null)
-        {
-            try { action(); }
-            catch (Exception ex)
-            {
-                Assert.Fail($"Expected: no failure; was: '{ex}'{(message != null ? message + ": " : string.Empty)}");
-            }
-        }
-
-        public static void AssertIsInstanceOf<T>(object value, string message = null)
-        {
-            Assert.IsInstanceOfType(value, typeof(T), message);
         }
 
         public static string ShouldContain(this string haystack, string needle, string message = null)

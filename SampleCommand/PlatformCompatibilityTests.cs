@@ -1,21 +1,34 @@
-﻿using Medallion.Shell;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Medallion.Shell;
 
 namespace SampleCommand
 {
     public static class PlatformCompatibilityTests
     {
-        private static readonly string SampleCommandPath = typeof(Program).Assembly.Location;
+        public static readonly string SampleCommandPath = typeof(Program).Assembly.Location;
+
+        public static readonly Shell TestShell = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? new Shell(options: o => o.StartInfo(si =>
+            {
+                // on linux, you can't run mono exes directly so instead we invoke them through Mono
+                if (si.FileName == SampleCommandPath)
+                {
+                    si.Arguments = !string.IsNullOrEmpty(si.Arguments) ? $"{si.FileName} {si.Arguments}" : si.FileName;
+                    si.FileName = "/usr/bin/mono";
+                }
+            }))
+            : Shell.Default;
 
         public static void TestWriteAfterExit()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
             command.StandardInput.WriteLine(); // no-op
             command.StandardInput.BaseStream.WriteAsync(new byte[1], 0, 1).Wait(); // no-op
@@ -23,16 +36,16 @@ namespace SampleCommand
 
         public static void TestFlushAfterExit()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
             command.StandardInput.Flush();
             command.StandardInput.BaseStream.Flush();
-            command.StandardInput.BaseStream.FlushAsync();
+            command.StandardInput.BaseStream.FlushAsync().Wait();
         }
 
         public static void TestReadAfterExit()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
             if (command.StandardOutput.ReadLine() != null)
             {
@@ -49,8 +62,17 @@ namespace SampleCommand
         /// </summary>
         public static void TestExitWithMinusOne()
         {
-            var command = Command.Run(SampleCommandPath, "exit", -1);
-            if (command.Result.ExitCode != -1) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
+            var command = TestShell.Run(SampleCommandPath, "exit", -1);
+            var exitCode = command.Result.ExitCode;
+            // Linux only returns the lower 8 bits of the exit code. Sounds like this may change in the future so we'll be robust to either
+            // https://unix.stackexchange.com/questions/418784/what-is-the-min-and-max-values-of-exit-codes-in-linux/418802#418802?newreg=5f906406f0f04a1980a77192e3c64a6b
+            var isExpectedExitCode = exitCode == -1
+                || (
+                    !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    && (exitCode & ~0xff) == 0
+                    && (exitCode & 0xff) == (-1 & 0xff)
+                );
+            if (!isExpectedExitCode) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
         }
 
         /// <summary>
@@ -58,7 +80,7 @@ namespace SampleCommand
         /// </summary>
         public static void TestExitWithOne()
         {
-            var command = Command.Run(SampleCommandPath, "exit", 1);
+            var command = TestShell.Run(SampleCommandPath, "exit", 1);
             if (command.Result.ExitCode != 1) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
         }
 
@@ -72,7 +94,7 @@ namespace SampleCommand
 
         public static void TestAttaching()
         {
-            var processCommand = Command.Run(SampleCommandPath, new[] { "sleep", "10000" });
+            var processCommand = TestShell.Run(SampleCommandPath, new[] { "sleep", "10000" });
             try
             {
                 var processId = processCommand.ProcessId;
@@ -89,10 +111,37 @@ namespace SampleCommand
 
         public static void TestWriteToStandardInput()
         {
-            var command = Command.Run(SampleCommandPath, new[] { "echo" }, options: o => o.Timeout(TimeSpan.FromSeconds(5)));
+            var command = TestShell.Run(SampleCommandPath, new[] { "echo" }, options: o => o.Timeout(TimeSpan.FromSeconds(5)));
             command.StandardInput.WriteLine("abcd");
             command.StandardInput.Dispose();
             if (command.Result.StandardOutput != ("abcd" + Environment.NewLine)) { throw new InvalidOperationException($"Was '{command.StandardOutput}'"); }
+        }
+        
+        public static void TestArgumentsRoundTrip()
+        {
+            var arguments = new[]
+            {
+                @"c:\temp",
+                @"a\\b",
+                @"\\\",
+                @"``\`\\",
+                @"C:\temp\blah",
+                " leading and trailing\twhitespace!  ",
+            };
+            var command = TestShell.Run(SampleCommandPath, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError());
+            var outputLines = command.StandardOutput.GetLines().ToArray();
+            command.Wait();
+            if (!outputLines.SequenceEqual(arguments))
+            {
+                throw new InvalidOperationException($"Was {string.Join(" ", outputLines.Select((l, index) => $"'{l}' ({(index >= arguments.Length ? "EXTRA" : (l == arguments[index]).ToString())})"))}");
+            }
+        }
+
+        public static void TestKill()
+        {
+            var command = TestShell.Run(SampleCommandPath, "sleep", "10000");
+            command.Kill();
+            if (!command.Task.Wait(1000)) { throw new InvalidOperationException("Should have exited after kill"); }
         }
 
         private static void AssertThrows<TException>(Action action) where TException : Exception

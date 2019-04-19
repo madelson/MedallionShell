@@ -1,50 +1,53 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
-    [TestClass]
+    using static UnitTestHelpers;
+
     public class GeneralTest
     {
-        [TestMethod]
+        [Test]
         public void TestGrep()
         {
-            var command = Shell.Default.Run("SampleCommand", "grep", "a+");
+            var command = Shell.Default.Run(SampleCommand, "grep", "a+");
             command.StandardInput.WriteLine("hi");
             command.StandardInput.WriteLine("aa");
             command.StandardInput.Dispose();
-            command.StandardOutput.ReadToEnd().ShouldEqual("aa\r\n");
+            command.StandardOutput.ReadToEnd().ShouldEqual("aa" + Environment.NewLine);
         }
 
-        [TestMethod]
+        [Test]
         public void TestPipedGrep()
         {
             Log.WriteLine("******** TestPipedGrep starting *********");
 
-            var command = Command.Run("SampleCommand", "grep", "a") < new[] { "abcd", "a", "ab", "abc" }
-                | Command.Run("SampleCommand", "grep", "b")
-                | Command.Run("SampleCommand", "grep", "c");
+            var command = TestShell.Run(SampleCommand, "grep", "a") < new[] { "abcd", "a", "ab", "abc" }
+                | TestShell.Run(SampleCommand, "grep", "b")
+                | TestShell.Run(SampleCommand, "grep", "c");
 
             var results = command.StandardOutput.GetLines().ToArray();
 
             results.SequenceEqual(new[] { "abcd", "abc" }).ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Test]
         public void TestLongWriteWithInfrequentReads()
         {
             var lines = Enumerable.Range(0, 100).Select(i => i.ToString())
                 .ToArray();
 
-            var command = Command.Run("SampleCommand", "grep", ".") < lines;
+            var command = TestShell.Run(SampleCommand, "grep", ".") < lines;
             var outputLines = new List<string>();
             var readTask = Task.Run(() =>
             {
@@ -75,89 +78,89 @@ namespace Medallion.Shell.Tests
             string.Join("/", outputLines).ShouldEqual(string.Join("/", lines));
         }
 
-        [TestMethod]
+        [Test]
         public void TestHead()
         {
-            var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
-            var command = shell.Run("SampleCommand", "head", "10") < Enumerable.Range(0, 100).Select(i => i.ToString());
+            var shell = MakeTestShell(o => o.StartInfo(si => si.RedirectStandardError = false));
+            var command = shell.Run(SampleCommand, "head", "10") < Enumerable.Range(0, 100).Select(i => i.ToString());
             command.Task.Result.StandardOutput.Trim().ShouldEqual(string.Join(Environment.NewLine, Enumerable.Range(0, 10)));
         }
 
-        [TestMethod]
+        [Test]
         public void TestCloseStandardOutput()
         {
-            var shell = new Shell(o => o.StartInfo(si => si.RedirectStandardError = false));
-            var command = shell.Run("SampleCommand", "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
+            var shell = MakeTestShell(o => o.StartInfo(si => si.RedirectStandardError = false));
+            var command = shell.Run(SampleCommand, "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
             command.StandardOutput.BaseStream.ReadByte();
             command.StandardOutput.BaseStream.Dispose();
 
-            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.BaseStream.ReadByte());
-            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
+            Assert.Throws<ObjectDisposedException>(() => command.StandardOutput.BaseStream.ReadByte());
+            Assert.Throws<ObjectDisposedException>(() => command.StandardOutput.ReadToEnd());
 
-            var command2 = shell.Run("SampleCommand", "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
+            var command2 = shell.Run(SampleCommand, "grep", "a") < Enumerable.Repeat(new string('a', 1000), 1000);
             command2.Wait();
             command2.StandardOutput.Dispose();
-            UnitTestHelpers.AssertThrows<ObjectDisposedException>(() => command2.StandardOutput.Read());
+            Assert.Throws<ObjectDisposedException>(() => command2.StandardOutput.Read());
         }
 
-        [TestMethod]
+        [Test]
         public void TestExitCode()
         {
-            Assert.IsTrue(Command.Run("SampleCommand", "exit", 0).Result.Success);
-            Assert.IsFalse(Command.Run("SampleCommand", "exit", 1).Result.Success);
+            Assert.IsTrue(TestShell.Run(SampleCommand, "exit", 0).Result.Success);
+            Assert.IsFalse(TestShell.Run(SampleCommand, "exit", 1).Result.Success);
 
-            var shell = new Shell(o => o.ThrowOnError());
-            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => shell.Run("SampleCommand", "exit", -1).Task.Wait());
+            var shell = MakeTestShell(o => o.ThrowOnError());
+            var ex = Assert.Throws<AggregateException>(() => shell.Run(SampleCommand, "exit", -1).Task.Wait());
             ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
                 .ShouldEqual(true);
 
-            shell.Run("SampleCommand", "exit", 0).Task.Wait();
+            shell.Run(SampleCommand, "exit", 0).Task.Wait();
         }
 
-        [TestMethod]
+        [Test]
         public void TestThrowOnErrorWithTimeout()
         {
-            var command = Command.Run("SampleCommand", new object[] { "exit", 1 }, o => o.ThrowOnError().Timeout(TimeSpan.FromDays(1)));
-            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => command.Task.Wait());
+            var command = TestShell.Run(SampleCommand, new object[] { "exit", 1 }, o => o.ThrowOnError().Timeout(TimeSpan.FromDays(1)));
+            var ex = Assert.Throws<AggregateException>(() => command.Task.Wait());
             ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
                 .ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Test]
         public void TestTimeout()
         {
-            var willTimeout = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.FromMilliseconds(200)));
-            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => willTimeout.Task.Wait());
-            Assert.IsInstanceOfType(ex.InnerException, typeof(TimeoutException));
+            var willTimeout = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.FromMilliseconds(200)));
+            var ex = Assert.Throws<AggregateException>(() => willTimeout.Task.Wait());
+            Assert.IsInstanceOf<TimeoutException>(ex.InnerException);
         }
 
-        [TestMethod]
+        [Test]
         public void TestZeroTimeout()
         {
-            var willTimeout = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.Zero));
-            var ex = UnitTestHelpers.AssertThrows<AggregateException>(() => willTimeout.Task.Wait());
-            Assert.IsInstanceOfType(ex.InnerException, typeof(TimeoutException));
+            var willTimeout = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.Zero));
+            var ex = Assert.Throws<AggregateException>(() => willTimeout.Task.Wait());
+            Assert.IsInstanceOf<TimeoutException>(ex.InnerException);
         }
 
-        [TestMethod]
+        [Test]
         public void TestCancellationAlreadyCanceled()
         {
             using (var alreadyCanceled = new CancellationTokenSource(millisecondsDelay: 0))
             {
-                var command = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.CancellationToken(alreadyCanceled.Token));
-                UnitTestHelpers.AssertThrows<TaskCanceledException>(() => command.Wait());
-                UnitTestHelpers.AssertThrows<TaskCanceledException>(() => command.Result.ToString());
+                var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(alreadyCanceled.Token));
+                Assert.Throws<TaskCanceledException>(() => command.Wait());
+                Assert.Throws<TaskCanceledException>(() => command.Result.ToString());
                 command.Task.Status.ShouldEqual(TaskStatus.Canceled);
-                UnitTestHelpers.AssertDoesNotThrow(() => command.ProcessId.ToString(), "still executes a command and gets a process ID");
+                Assert.DoesNotThrow(() => command.ProcessId.ToString(), "still executes a command and gets a process ID");
             }
         }
 
-        [TestMethod]
+        [Test]
         public void TestCancellationNotCanceled()
         {
             using (var notCanceled = new CancellationTokenSource())
             {
-                var command = Command.Run("SampleCommand", new object[] { "sleep", 1000000 }, o => o.CancellationToken(notCanceled.Token));
+                var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(notCanceled.Token));
                 command.Task.Wait(50).ShouldEqual(false);
                 command.Kill();
                 command.Task.Wait(1000).ShouldEqual(true);
@@ -165,31 +168,31 @@ namespace Medallion.Shell.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void TestCancellationCanceledPartway()
         {
             using (var cancellationTokenSource = new CancellationTokenSource())
             {
                 var results = new SynchronizedCollection<string>();
-                var command = Command.Run("SampleCommand", new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+                var command = TestShell.Run(SampleCommand, new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
                 command.StandardInput.WriteLine("hello");
                 var timeout = Task.Delay(TimeSpan.FromSeconds(10));
                 while (results.Count == 0 && !timeout.IsCompleted) { }
                 results.Count.ShouldEqual(1);
                 cancellationTokenSource.Cancel();
-                var aggregateException = UnitTestHelpers.AssertThrows<AggregateException>(() => command.Task.Wait(1000));
-                UnitTestHelpers.AssertIsInstanceOf<TaskCanceledException>(aggregateException.GetBaseException());
+                var aggregateException = Assert.Throws<AggregateException>(() => command.Task.Wait(1000));
+                Assert.IsInstanceOf<TaskCanceledException>(aggregateException.GetBaseException());
                 CollectionAssert.AreEqual(results, new[] { "hello" });
             }
         }
 
-        [TestMethod]
+        [Test]
         public void TestCancellationCanceledAfterCompletion()
         {
             using (var cancellationTokenSource = new CancellationTokenSource())
             {
                 var results = new List<string>();
-                var command = Command.Run("SampleCommand", new object[] { "echo" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+                var command = TestShell.Run(SampleCommand, new object[] { "echo" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
                 command.StandardInput.WriteLine("hello");
                 command.StandardInput.Close();
                 command.Task.Wait(1000).ShouldEqual(true);
@@ -198,49 +201,50 @@ namespace Medallion.Shell.Tests
             }
         }
 
-        [TestMethod]
+        [Test]
         public void TestCancellationWithTimeoutTimeoutWins()
         {
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var command = Command.Run(
-                "SampleCommand",
+            var command = TestShell.Run(
+                SampleCommand,
                 new object[] { "sleep", 1000000 },
                 o => o.CancellationToken(cancellationTokenSource.Token)
                     .Timeout(TimeSpan.FromMilliseconds(50))
             );
-            UnitTestHelpers.AssertThrows<TimeoutException>(() => command.Wait());
+            Assert.Throws<TimeoutException>(() => command.Wait());
         }
 
-        [TestMethod]
+        [Test]
         public void TestCancellationWithTimeoutCancellationWins()
         {
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
-            var command = Command.Run(
-                "SampleCommand",
+            var command = TestShell.Run(
+                SampleCommand,
                 new object[] { "sleep", 1000000 },
                 o => o.CancellationToken(cancellationTokenSource.Token)
                     .Timeout(TimeSpan.FromSeconds(5))
             );
-            UnitTestHelpers.AssertThrows<TaskCanceledException>(() => command.Wait());
+            Assert.Throws<TaskCanceledException>(() => command.Wait());
         }
 
-        [TestMethod]
+        [Test]
         public void TestErrorHandling()
         {
-            var command = Command.Run("SampleCommand", "echo") < "abc" > new char[0];
-            UnitTestHelpers.AssertThrows<NotSupportedException>(() => command.Wait());
+            var command = TestShell.Run(SampleCommand, "echo") < "abc" > new char[0];
+            Assert.Throws<NotSupportedException>(() => command.Wait());
 
-            var command2 = Command.Run("SampleCommand", "echo") < this.ErrorLines();
-            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command2.Wait());
+            var command2 = TestShell.Run(SampleCommand, "echo") < this.ErrorLines();
+            Assert.Throws<InvalidOperationException>(() => command2.Wait());
         }
 
-        [TestMethod]
+        [Test]
         public void TestStopBufferingAndDiscard()
         {
-            var command = Command.Run("SampleCommand", "pipe");
+            var command = TestShell.Run(SampleCommand, "pipe");
             command.StandardOutput.StopBuffering();
             var line = new string('a', 100);
             var state = 0;
+            var linesWritten = 0;
             while (state < 2)
             {
                 Log.WriteLine("Write to unbuffered command");
@@ -249,10 +253,16 @@ namespace Medallion.Shell.Tests
                 {
                     if (state == 0)
                     {
-                        Log.WriteLine("Buffer full: read one line");
-                        var outLine = command.StandardOutput.ReadLine();
-                        outLine.ShouldEqual(line);
-                        // after this, we need to read more than one line to re-block since the readers buffer internally
+                        Log.WriteLine("Buffer full: read");
+                        // for whatever reason, on Unix I need to read a few lines to get things flowing again
+                        var linesToRead = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 1 : Math.Max((int)(.1 * linesWritten), 1);
+                        for (var i = 0; i < linesToRead; ++i)
+                        {
+                            var outLine = command.StandardOutput.ReadLine();
+                            outLine.ShouldEqual(line);
+                        }
+                        // after this, we may need to write more content than we read to re-block since the reader
+                        // buffers internally
                     }
                     else
                     {
@@ -260,20 +270,21 @@ namespace Medallion.Shell.Tests
                         command.StandardOutput.Discard();
                     }
 
-                    task.Wait(TimeSpan.FromSeconds(.5)).ShouldEqual(true, "can finish after read");
+                    task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
                     if (state == 1)
                     {
                         command.StandardInput.Dispose();
                     }
                     state++;
                 }
+                ++linesWritten;
             }
         }
 
-        [TestMethod]
+        [Test]
         public void TestKill()
         {
-            var command = Command.Run("SampleCommand", "pipe");
+            var command = TestShell.Run(SampleCommand, "pipe");
             command.StandardInput.WriteLine("abc");
             command.StandardInput.Flush();
             Thread.Sleep(100);
@@ -281,27 +292,28 @@ namespace Medallion.Shell.Tests
 
             command.Kill();
             command.Result.Success.ShouldEqual(false);
-            command.Result.ExitCode.ShouldEqual(-1);
+            // https://www.tldp.org/LDP/abs/html/exitcodes.html
+            command.Result.ExitCode.ShouldEqual(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? -1 : 137);
 
             command.StandardOutput.ReadLine().ShouldEqual("abc");
         }
 
-        [TestMethod]
+        [Test]
         public void TestKillAfterFinished()
         {
-            var command = Command.Run("SampleCommand", "bool", true, "something");
+            var command = TestShell.Run(SampleCommand, "bool", true, "something");
             command.Task.Wait();
             command.Kill();
             command.Result.Success.ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Test]
         public void TestNestedKill()
         {
             var lines = new List<string>();
-            var pipeline = Command.Run("SampleCommand", "pipe")
-                | Command.Run("SampleCommand", "pipe")
-                | Command.Run("SampleCommand", "pipe") > lines;
+            var pipeline = TestShell.Run(SampleCommand, "pipe")
+                | TestShell.Run(SampleCommand, "pipe")
+                | TestShell.Run(SampleCommand, "pipe") > lines;
 
             // demonstrate that a single line can make it all the way through the pipeline
             // without getting caught in a buffer along the way
@@ -319,7 +331,7 @@ namespace Medallion.Shell.Tests
             pipeline.Result.Success.ShouldEqual(false);
         }
 
-        [TestMethod]
+        [Test]
         public void TestVersioning()
         {
             var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version.ToString();
@@ -328,10 +340,10 @@ namespace Medallion.Shell.Tests
             version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
         }
 
-        [TestMethod]
+        [Test]
         public void TestShortFlush()
         {
-            var command = Command.Run("SampleCommand", "shortflush", "a");
+            var command = TestShell.Run(SampleCommand, "shortflush", "a");
             var readCommand = command.StandardOutput.ReadBlockAsync(new char[1], 0, 1);
             readCommand.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
 
@@ -339,10 +351,10 @@ namespace Medallion.Shell.Tests
             command.Task.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
         }
 
-        [TestMethod]
+        [Test]
         public void TestAutoFlush()
         {
-            var command = Command.Run("SampleCommand", "echo", "--per-char");
+            var command = TestShell.Run(SampleCommand, "echo", "--per-char");
             command.StandardInput.AutoFlush.ShouldEqual(true);
             command.StandardInput.Write('a');
 
@@ -362,69 +374,93 @@ namespace Medallion.Shell.Tests
             command.StandardInput.Dispose();
         }
 
-        [TestMethod]
+        [Test]
         public void TestErrorEcho()
         {
-            var command = Command.Run("SampleCommand", "errecho") < "abc";
+            var command = TestShell.Run(SampleCommand, "errecho") < "abc";
             command.Result.StandardError.ShouldEqual("abc");
         }
 
-        [TestMethod]
+        [Test]
         public void TestEncoding()
         {
             // pick a string that will be different in UTF8 vs the default to make sure we use the default
             var bytes = new byte[] { 255 };
             var inputEncoded = Console.InputEncoding.GetString(bytes);
-            inputEncoded.ShouldEqual(Console.OutputEncoding.GetString(bytes));
-            inputEncoded.ShouldNotEqual(Encoding.UTF8.GetString(bytes));
-            var command = Command.Run("SampleCommand", "echo") < inputEncoded;
+            inputEncoded.ShouldEqual(Console.OutputEncoding.GetString(bytes)); // sanity check
+            // mono and .NET Core will default to UTF8
+            var defaultsToUtf8 = Console.InputEncoding.WebName == Encoding.UTF8.WebName;
+            if (!defaultsToUtf8)
+            {
+                inputEncoded.ShouldNotEqual(Encoding.UTF8.GetString(bytes), $"Matched with {Console.InputEncoding.WebName}"); // sanity check
+            }
+            var command = TestShell.Run(SampleCommand, "echo") < inputEncoded;
             command.Result.StandardOutput.ShouldEqual(inputEncoded);
 
             const string InternationalText = "漢字";
-            command = Command.Run("SampleCommand", "echo") < InternationalText;
-            command.Result.StandardOutput.ShouldEqual("??", "Default encoding does not support international chars");
+            command = TestShell.Run(SampleCommand, "echo") < InternationalText;
+            if (defaultsToUtf8)
+            {
+                command.Result.StandardOutput.ShouldEqual(InternationalText, $"Default encoding should support international chars");
+            }
+            else
+            {
+                command.Result.StandardOutput.ShouldEqual("??", "Default encoding does not support international chars");
+            }
 
-            command = Command.Run("SampleCommand", new[] { "echo", "--utf8" }, options: o => o.Encoding(Encoding.UTF8)) < InternationalText;
-            command.Result.StandardOutput.ShouldEqual(InternationalText);
+            var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf8" }, options: o => o.Encoding(utf8NoBom)) < InternationalText;
+            command.Result.StandardOutput.ShouldEqual(
+                InternationalText, 
+                $"UTF8 encoding should support international chars: Expected bytes [{string.Join(", ", utf8NoBom.GetBytes(InternationalText))}]. Received [{string.Join(", ", utf8NoBom.GetBytes(command.Result.StandardOutput))}]"
+            );
+
+            // since some platforms use UTF8 by default, also echo test with UTF16
+            var unicodeNoBom = new UnicodeEncoding(bigEndian: false, byteOrderMark: false);
+            command = TestShell.Run(SampleCommand, new[] { "echo", "--utf16" }, options: o => o.Encoding(unicodeNoBom));
+            command.StandardInput.Encoding.ShouldEqual(unicodeNoBom);
+            command.StandardOutput.Encoding.ShouldEqual(unicodeNoBom);
+            command.StandardError.Encoding.ShouldEqual(unicodeNoBom);
+            (command < InternationalText).Result.StandardOutput.ShouldEqual(InternationalText, "UTF16 should support international chars");
         }
 
-        [TestMethod]
+        [Test]
         public void TestGetOutputAndErrorLines()
         {
             // simple echo case
-            var command = Command.Run("SampleCommand", "echo") < new[] { "a", "b", "c" };
+            var command = TestShell.Run(SampleCommand, "echo") < new[] { "a", "b", "c" };
             string.Join(", ", command.GetOutputAndErrorLines().ToList()).ShouldEqual("a, b, c");
 
             // failure case: stderr not redirected
-            command = Command.Run("SampleCommand", new[] { "echo" }, options: o => o.StartInfo(s => s.RedirectStandardError = false)) < new[] { "a" };
-            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command.GetOutputAndErrorLines());
+            command = TestShell.Run(SampleCommand, new[] { "echo" }, options: o => o.StartInfo(s => s.RedirectStandardError = false)) < new[] { "a" };
+            Assert.Throws<InvalidOperationException>(() => command.GetOutputAndErrorLines());
 
             // fuzz case
             var lines = Enumerable.Range(0, 5000).Select(_ => Guid.NewGuid().ToString()).ToArray();
-            command = Command.Run("SampleCommand", "echoLinesToBothStreams") < lines;
+            command = TestShell.Run(SampleCommand, "echoLinesToBothStreams") < lines;
             var outputLines = command.GetOutputAndErrorLines().ToList();
             CollectionAssert.AreEquivalent(lines, outputLines);
         }
 
-        [TestMethod]
+        [Test]
         public void TestProcessAndProcessId()
         {
             void TestHelper(bool disposeOnExit)
             {
-                var shell = new Shell(o => o.DisposeOnExit(disposeOnExit));
-                var command1 = shell.Run("SampleCommand", "pipe", "--id1");
-                var command2 = shell.Run("SampleCommand", "pipe", "--id2");
+                var shell = MakeTestShell(o => o.DisposeOnExit(disposeOnExit));
+                var command1 = shell.Run(SampleCommand, "pipe", "--id1");
+                var command2 = shell.Run(SampleCommand, "pipe", "--id2");
                 var pipeCommand = command1.PipeTo(command2);
                 try
                 {
                     if (disposeOnExit)
                     {
                         // invalid due to DisposeOnExit()
-                        UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command1.Process.ToString())
+                        Assert.Throws<InvalidOperationException>(() => command1.Process.ToString())
                             .Message.ShouldContain("dispose on exit");
-                        UnitTestHelpers.AssertThrows<InvalidOperationException>(() => command2.Processes.Count())
+                        Assert.Throws<InvalidOperationException>(() => command2.Processes.Count())
                             .Message.ShouldContain("dispose on exit");
-                        UnitTestHelpers.AssertThrows<InvalidOperationException>(() => pipeCommand.Processes.Count())
+                        Assert.Throws<InvalidOperationException>(() => pipeCommand.Processes.Count())
                             .Message.ShouldContain("dispose on exit");
                     }
                     else
@@ -446,9 +482,15 @@ namespace Medallion.Shell.Tests
                         }
                     }
 
-                    GetCommandLine(command1.ProcessId).ShouldContain("--id1");
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        GetCommandLine(command1.ProcessId).ShouldContain("--id1");
+                    }
                     command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
-                    GetCommandLine(command2.ProcessId).ShouldContain("--id2");
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        GetCommandLine(command2.ProcessId).ShouldContain("--id2");
+                    }
                     command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
                     pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
                     pipeCommand.ProcessIds.SequenceEqual(new[] { command1.ProcessId, command2.ProcessId }).ShouldEqual(true);
@@ -464,42 +506,46 @@ namespace Medallion.Shell.Tests
             TestHelper(disposeOnExit: false);
         }
 
-        [TestMethod]
+        [Test]
         public void TestToString()
         {
-            var command0 = Command.Run("SampleCommand", new[] { "grep", "a+" }, options => options.DisposeOnExit(true));
-            command0.ToString().ShouldEqual($"SampleCommand grep a+");
+            var sampleCommandString = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? SampleCommand
+                : $"/usr/bin/mono {SampleCommand}";
 
-            var command1 = Command.Run("SampleCommand", "exit", 0);
-            command1.ToString().ShouldEqual("SampleCommand exit 0");
+            var command0 = TestShell.Run(SampleCommand, new[] { "grep", "a+" }, options => options.DisposeOnExit(true));
+            command0.ToString().ShouldEqual($"{sampleCommandString} grep a+");
 
-            var command2 = Command.Run("SampleCommand", "ex it", "0 0");
-            command2.ToString().ShouldEqual("SampleCommand \"ex it\" \"0 0\"");
+            var command1 = TestShell.Run(SampleCommand, "exit", 0);
+            command1.ToString().ShouldEqual($"{sampleCommandString} exit 0");
+
+            var command2 = TestShell.Run(SampleCommand, "ex it", "0 0");
+            command2.ToString().ShouldEqual($"{sampleCommandString} \"ex it\" \"0 0\"");
 
             var command3 = command1 < new[] { "a" };
-            command3.ToString().ShouldEqual("SampleCommand exit 0 < System.String[]");
+            command3.ToString().ShouldEqual($"{sampleCommandString} exit 0 < System.String[]");
 
-            var command4 = command3 | Command.Run("SampleCommand", "echo");
-            command4.ToString().ShouldEqual("SampleCommand exit 0 < System.String[] | SampleCommand echo");
+            var command4 = command3 | TestShell.Run(SampleCommand, "echo");
+            command4.ToString().ShouldEqual($"{sampleCommandString} exit 0 < System.String[] | {sampleCommandString} echo");
 
             var command5 = command2.RedirectStandardErrorTo(Stream.Null);
-            command5.ToString().ShouldEqual($"SampleCommand \"ex it\" \"0 0\" 2> {Stream.Null}");
+            command5.ToString().ShouldEqual($"{sampleCommandString} \"ex it\" \"0 0\" 2> {Stream.Null}");
 
             var command6 = command5.RedirectTo(new StringWriter());
             command6.Wait();
             command6.ToString().ShouldEqual($"{command5} > {new StringWriter()}");
         }
 
-        [TestMethod]
+        [Test]
         public void TestCommandOption()
         {
-            var command = Command.Run("SampleCommand", new[] { "echo" }, options: o => o.Command(c => c.StandardInput.Write("!!!")))
+            var command = TestShell.Run(SampleCommand, new[] { "echo" }, options: o => o.Command(c => c.StandardInput.Write("!!!")))
                 .RedirectFrom("abc");
             command.Wait();
             command.Result.StandardOutput.ShouldEqual("!!!abc");
 
             var writer = new StringWriter();
-            command = Command.Run("SampleCommand", new[] { "echo" }, options: o => o.Command(c => c.RedirectTo(writer)))
+            command = TestShell.Run(SampleCommand, new[] { "echo" }, options: o => o.Command(c => c.RedirectTo(writer)))
                 .RedirectFrom("abc123");
             command.Wait();
             writer.ToString().ShouldEqual("abc123");

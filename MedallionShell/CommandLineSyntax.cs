@@ -19,5 +19,23 @@ namespace Medallion.Shell
         /// <param name="arguments">the arguments to the process</param>
         /// <returns>the argument string</returns>
         public abstract string CreateArgumentString(IEnumerable<string> arguments);
+
+        internal static string CreateArgumentString(IEnumerable<string> arguments, Action<string, StringBuilder> appendArgument)
+        {
+            Throw.IfNull(arguments, nameof(arguments));
+
+            var builder = new StringBuilder();
+            var isFirstArgument = true;
+            foreach (var argument in arguments)
+            {
+                Throw.If(argument == null, nameof(arguments) + ": must not contain null");
+
+                if (isFirstArgument) { isFirstArgument = false; }
+                else { builder.Append(' '); }
+                appendArgument(argument, builder);
+            }
+
+            return builder.ToString();
+        }
     }
 }

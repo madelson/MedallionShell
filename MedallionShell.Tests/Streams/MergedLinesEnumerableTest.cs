@@ -6,15 +6,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Medallion.Shell.Streams;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using NUnit.Framework;
 
 namespace Medallion.Shell.Tests.Streams
 {
-    [TestClass]
     public class MergedLinesEnumerableTest
     {
-        [TestMethod]
+        [Test]
         public void TestOneIsEmpty()
         {
             var empty1 = new StringReader(string.Empty);
@@ -33,14 +32,14 @@ namespace Medallion.Shell.Tests.Streams
                 .ShouldEqual(true, string.Join(", ", list2));
         }
 
-        [TestMethod]
+        [Test]
         public void TestBothAreEmpty()
         {
             var list = new MergedLinesEnumerable(new StringReader(string.Empty), new StringReader(string.Empty)).ToList();
             list.Count.ShouldEqual(0, string.Join(", ", list));
         }
 
-        [TestMethod]
+        [Test]
         public void TestBothArePopulatedEqualSizes()
         {
             var list = new MergedLinesEnumerable(
@@ -51,7 +50,7 @@ namespace Medallion.Shell.Tests.Streams
             string.Join(", ", list).ShouldEqual("a, 1, bb, 22, ccc, 333");
         }
 
-        [TestMethod]
+        [Test]
         public void TestBothArePopulatedDifferenceSizes()
         {
             var lines1 = string.Join("\n", new[] { "x", "y", "z" });
@@ -66,15 +65,15 @@ namespace Medallion.Shell.Tests.Streams
             string.Join(", ", list2).ShouldEqual("1, x, 2, y, 3, z, 4, 5");
         }
 
-        [TestMethod]
+        [Test]
         public void TestConsumeTwice()
         {
             var enumerable = new MergedLinesEnumerable(new StringReader("a"), new StringReader("b"));
             enumerable.GetEnumerator();
-            UnitTestHelpers.AssertThrows<InvalidOperationException>(() => enumerable.GetEnumerator());
+            Assert.Throws<InvalidOperationException>(() => enumerable.GetEnumerator());
         }
 
-        [TestMethod]
+        [Test]
         public void TestOneThrows()
         {
             void TestOneThrows(bool reverse)
@@ -85,7 +84,7 @@ namespace Medallion.Shell.Tests.Streams
                 mockReader.Setup(r => r.ReadLineAsync())
                     .ReturnsAsync(() => ++count < 3 ? "LINE" : throw new TimeZoneNotFoundException());
 
-                UnitTestHelpers.AssertThrows<TimeZoneNotFoundException>(
+                Assert.Throws<TimeZoneNotFoundException>(
                     () => new MergedLinesEnumerable(
                             reverse ? mockReader.Object : reader1,
                             reverse ? reader1 : mockReader.Object
@@ -98,7 +97,7 @@ namespace Medallion.Shell.Tests.Streams
             TestOneThrows(reverse: true);
         }
 
-        [TestMethod]
+        [Test]
         public void FuzzTest()
         {
             var pipe1 = new Pipe();

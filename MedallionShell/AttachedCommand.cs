@@ -30,14 +30,17 @@ namespace Medallion.Shell
             var processMonitoringTask = CreateProcessMonitoringTask(process);
             var processTask = ProcessHelper.CreateProcessTask(this.process, processMonitoringTask, throwOnError, timeout, cancellationToken);
 
-            this.commandResultTask = processTask.ContinueWith(continuedTask =>
-            {
-                if (disposeOnExit)
+            this.commandResultTask = processTask.ContinueWith(
+                continuedTask =>
                 {
-                    this.process.Dispose();
-                }
-                return new CommandResult(continuedTask.Result, this);
-            });
+                    if (disposeOnExit)
+                    {
+                        this.process.Dispose();
+                    }
+                    return new CommandResult(continuedTask.Result, this);
+                },
+                TaskContinuationOptions.ExecuteSynchronously
+            );
 
             this.processes = new Lazy<ReadOnlyCollection<Process>>(() => new ReadOnlyCollection<Process>(new[] { this.process }));
         }
@@ -93,22 +96,23 @@ namespace Medallion.Shell
 
         protected override void DisposeInternal()
         {
-            this.Process.Dispose();
+            this.process.Dispose();
         }
 
         private static Task CreateProcessMonitoringTask(Process process)
         {
             var taskBuilder = new TaskCompletionSource<bool>();
-
-            // EnableRaisingEvents will throw if the process has already exited; to account for
-            // that race condition we return a simple blocking task in that case
+            
             try
             {
                 process.EnableRaisingEvents = true;
             }
-            catch (InvalidOperationException)
+            // EnableRaisingEvents will throw if the process has already exited; to account for
+            // that race condition we return a completed task in that case
+            catch (InvalidOperationException) when (process.HasExited)
             {
-                return System.Threading.Tasks.Task.Run(() => process.WaitForExit());
+                taskBuilder.SetResult(false);
+                return taskBuilder.Task;
             }
 
             process.Exited += (sender, e) => taskBuilder.TrySetResult(false);

@@ -3,51 +3,58 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
-    [TestClass]
+    using static UnitTestHelpers;
+
     public class CommandLineSyntaxTest
     {
-        [TestMethod]
-        public void TestArgumentsRoundTrip()
+        [Test]
+        public void TestArgumentValidation([Values] bool isWindowsSyntax)
         {
-            this.TestRoundTrip(" ");
-            this.TestRoundTrip(@"c:\temp", @"a\\b");
-            this.TestRoundTrip("\" a \"", @"\\", @"\""", @"\\""");
-            this.TestRoundTrip("a\"b");
-            this.TestRoundTrip("a\"b\"");
-            this.TestRoundTrip("a\"b", "c\"d");
-            this.TestRoundTrip("\v", "\t");
-            this.TestRoundTrip("\r", "\n", "\r\n");
-            this.TestRoundTrip(string.Empty, "\"", "\\", string.Empty);
-            this.TestRoundTrip("abc", "a\\b", "a\\ b\"");
-
-            // cases from https://docs.microsoft.com/en-us/cpp/cpp/parsing-cpp-command-line-arguments?view=vs-2019
-            this.TestRoundTrip("abc", "d", "e");
-            this.TestRoundTrip(@"a\\b", "de fg", "h");
-            this.TestRoundTrip(@"a\""b", "c", "d");
-            this.TestRoundTrip(@"a\\b c", "d", "e");
-        }
-
-        [TestMethod]
-        public void TestArgumentValidation()
-        {
-            var syntax = new WindowsCommandLineSyntax();
-            UnitTestHelpers.AssertThrows<ArgumentNullException>(() => syntax.CreateArgumentString(null));
-            UnitTestHelpers.AssertThrows<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null, "b" }));
+            var syntax = isWindowsSyntax ? new WindowsCommandLineSyntax() : new MonoUnixCommandLineSyntax().As<CommandLineSyntax>();
+            Assert.Throws<ArgumentNullException>(() => syntax.CreateArgumentString(null));
+            Assert.Throws<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null, "b" }));
         }
         
-        private void TestRoundTrip(params string[] arguments)
+        [TestCase(" ")]
+        [TestCase(@"c:\temp", @"a\\b")]
+        [TestCase("\" a \"", @"\\", @"\""", @"\\""")]
+        [TestCase("a\"b")]
+        [TestCase("a\"b\"")]
+        [TestCase("a\"b", "c\"d")]
+        [TestCase("\v", "\t")]
+        [TestCase("\r", "\n", "\r\n")]
+        [TestCase("", "\"", "\\", "")]
+        [TestCase("abc", "a\\b", "a\\ b\"")]
+        // these chars are treated specially on mono unix
+        [TestCase("`,\\`", "`", "$ $", "$", "\\", "\\$\r\n")]
+        // cases from https://docs.microsoft.com/en-us/cpp/cpp/parsing-cpp-command-line-arguments?view=vs-2019
+        [TestCase("abc", "d", "e")]
+        [TestCase(@"a\\b", "de fg", "h")]
+        [TestCase(@"a\""b", "c", "d")]
+        [TestCase(@"a\\b c", "d", "e")]
+        public void TestArgumentsRoundTrip(object[] arguments)
+        {
+            var argumentStrings = arguments.Cast<string>().ToArray();
+            this.TestArgumentsRoundTripHelper(argumentStrings);
+        }
+
+        [Test]
+        public void TestEmptyArgumentsRoundTrip() => this.TestArgumentsRoundTripHelper(Array.Empty<string>());
+
+        private void TestArgumentsRoundTripHelper(string[] arguments)
         {
             this.TestRealRoundTrip(arguments);
             this.TestAgainstNetCoreArgumentParser(arguments);
+            this.TestAgainstMonoUnixArgumentParser(arguments);
         }
 
         private void TestRealRoundTrip(string[] arguments)
         {
-            var output = Command.Run("SampleCommand", new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError()).Result.StandardOutput;
+            var output = TestShell.Run(SampleCommand, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError()).Result.StandardOutput;
             var expected = string.Join(string.Empty, arguments.Select(a => a + Environment.NewLine));
             output.ShouldEqual(expected);
         }
@@ -60,7 +67,14 @@ namespace Medallion.Shell.Tests
             CollectionAssert.AreEqual(actual: result, expected: arguments);
         }
 
-        #region ---- Arguments Parser ----
+        private void TestAgainstMonoUnixArgumentParser(string[] arguments)
+        {
+            var argumentString = new MonoUnixCommandLineSyntax().CreateArgumentString(arguments);
+            var result = SplitCommandLine(argumentString);
+            CollectionAssert.AreEqual(actual: result, expected: arguments);
+        }
+
+        #region ---- .NET Core Arguments Parser ----
         // copied from https://github.com/dotnet/corefx/blob/ccb68c0602656cea9a2a33f35f54dccba9eef784/src/System.Diagnostics.Process/src/System/Diagnostics/Process.Unix.cs#L785
 
         /// <summary>Parses a command-line argument string into a list of arguments.</summary>
@@ -166,6 +180,105 @@ namespace Medallion.Shell.Tests
             }
 
             return currentArgument.ToString();
+        }
+        #endregion
+
+        #region ---- Mono Unix Arguments Parser ----
+        // based on https://github.com/mono/mono/blob/c114ff59d96baba4479361b2679b7de602517877/mono/eglib/gshell.c
+
+        public static List<string> SplitCommandLine(string commandLine)
+        {
+            var escaped = false;
+            var fresh = true;
+            var quoteChar = '\0';
+            var str = new StringBuilder();
+            var result = new List<string>();
+
+            for (var i = 0; i < commandLine.Length; ++i)
+            {
+                var c = commandLine[i];
+                if (escaped)
+                {
+                    /*
+                     * \CHAR is only special inside a double quote if CHAR is
+                     * one of: $`"\ and newline
+                     */
+                    if (quoteChar == '"')
+                    {
+                        if (!(c == '$' || c == '`' || c == '"' || c == '\\'))
+                        {
+                            str.Append('\\');
+                        }
+                        str.Append(c);
+                    }
+                    else
+                    {
+                        if (!char.IsWhiteSpace(c))
+                        {
+                            str.Append(c);
+                        }
+                    }
+                    escaped = false;
+                }
+                else if (quoteChar != '\0')
+                {
+                    if (c == quoteChar)
+                    {
+                        quoteChar = '\0';
+                        if (fresh && (i + 1 == commandLine.Length || char.IsWhiteSpace(commandLine[i + 1])))
+                        {
+                            result.Add(str.ToString());
+                            str.Clear();
+                        }
+                    }
+                    else if (c == '\\')
+                    {
+                        escaped = true;
+                    }
+                    else
+                    {
+                        str.Append(c);
+                    }
+                }
+                else if (char.IsWhiteSpace(c))
+                {
+                    if (str.Length > 0)
+                    {
+                        result.Add(str.ToString());
+                        str.Clear();
+                    }
+                }
+                else if (c == '\\')
+                {
+                    escaped = true;
+                }
+                else if (c == '\'' || c == '"')
+                {
+                    fresh = str.Length == 0;
+                    quoteChar = c;
+                }
+                else
+                {
+                    str.Append(c);
+                }
+            }
+
+            if (escaped)
+            {
+                throw new FormatException($"Unfinished escape: '{commandLine}'");
+            }
+
+            if (quoteChar != '\0')
+            {
+                throw new FormatException($"Unfinished quote: '{commandLine}'");
+            }
+
+            if (str.Length > 0)
+            {
+                result.Add(str.ToString());
+            }
+
+            return result;
         }
         #endregion
     }

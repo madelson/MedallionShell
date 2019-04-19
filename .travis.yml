@@ -5,4 +5,4 @@ install:
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
 script:
   - msbuild /p:Configuration=Release MedallionShell.sln
-  - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/MyProject.Tests.dll
+  - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net46/MedallionShell.Tests.dll
