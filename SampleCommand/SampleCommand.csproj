@@ -10,7 +10,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.1-rc.94">
       <PrivateAssets>All</PrivateAssets>

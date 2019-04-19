@@ -39,7 +39,7 @@ namespace Medallion.Shell.Tests
         public void TestWriteToStandardInput() => RunTest(() => PlatformCompatibilityTests.TestWriteToStandardInput());
 
         [Test]
-        public void TestArgumentsRoundTrip() => RunTest(() => PlatformCompatibilityTests.TestArgumentRoundTrip());
+        public void TestArgumentsRoundTrip() => RunTest(() => PlatformCompatibilityTests.TestArgumentsRoundTrip());
 
         [Test]
         public void TestKill() => RunTest(() => PlatformCompatibilityTests.TestKill());

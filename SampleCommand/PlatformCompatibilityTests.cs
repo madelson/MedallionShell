@@ -64,11 +64,14 @@ namespace SampleCommand
         {
             var command = TestShell.Run(SampleCommandPath, "exit", -1);
             var exitCode = command.Result.ExitCode;
-            var isExpectedExitCode = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? exitCode == -1
-                // Linux only returns the lower 8 bits of the exit code. Sounds like this may change in the future so we're just asserting that the lower 8 bits match
-                // https://unix.stackexchange.com/questions/418784/what-is-the-min-and-max-values-of-exit-codes-in-linux/418802#418802?newreg=5f906406f0f04a1980a77192e3c64a6b
-                : (exitCode & 0xff) == (-1 & 0xff);
+            // Linux only returns the lower 8 bits of the exit code. Sounds like this may change in the future so we'll be robust to either
+            // https://unix.stackexchange.com/questions/418784/what-is-the-min-and-max-values-of-exit-codes-in-linux/418802#418802?newreg=5f906406f0f04a1980a77192e3c64a6b
+            var isExpectedExitCode = exitCode == -1
+                || (
+                    !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    && (exitCode & ~0xff) == 0
+                    && (exitCode & 0xff) == (-1 & 0xff)
+                );
             if (!isExpectedExitCode) { throw new InvalidOperationException($"Was: {command.Result.ExitCode}"); }
         }
 
@@ -114,7 +117,7 @@ namespace SampleCommand
             if (command.Result.StandardOutput != ("abcd" + Environment.NewLine)) { throw new InvalidOperationException($"Was '{command.StandardOutput}'"); }
         }
         
-        public static void TestArgumentRoundTrip()
+        public static void TestArgumentsRoundTrip()
         {
             var arguments = new[]
             {
