@@ -1,6 +1,8 @@
 language: csharp
 solution: MedallionShell.sln
 mono: latest
+# recommended here: https://travis-ci.community/t/c-builds-are-failing-net-core-installation-error/3063
+dist: xenial
 dotnet: 2.2
 install:
   - nuget restore MedallionShell.sln
