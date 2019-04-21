@@ -342,7 +342,8 @@ namespace Medallion.Shell.Tests
                 if (lines.Count > 0) { break; }
                 Thread.Sleep(10);
             }
-            lines.First().ShouldEqual("a line");
+            pipeline.Task.IsCompleted.ShouldEqual(false);
+            lines.FirstOrDefault().ShouldEqual("a line");
 
             pipeline.Task.IsCompleted.ShouldEqual(false);
             pipeline.Kill();
