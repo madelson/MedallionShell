@@ -14,7 +14,7 @@ namespace SampleCommand
     {
         public static readonly string DotNetPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? @"C:\Program Files\dotnet\dotnet.exe"
-            : "/usr/local/bin/dotnet";
+            : "/usr/bin/dotnet";
 
         public static readonly string SampleCommandPath = GetSampleCommandPath();
 
