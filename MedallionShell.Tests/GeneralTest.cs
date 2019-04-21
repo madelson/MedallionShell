@@ -328,7 +328,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestNestedKill()
         {
-            var lines = new List<string>();
+            var lines = new SyncCollection();
             var pipeline = TestShell.Run(SampleCommand, "pipe")
                 | TestShell.Run(SampleCommand, "pipe")
                 | TestShell.Run(SampleCommand, "pipe") > lines;
@@ -342,7 +342,7 @@ namespace Medallion.Shell.Tests
                 if (lines.Count > 0) { break; }
                 Thread.Sleep(10);
             }
-            lines[0].ShouldEqual("a line");
+            lines.First().ShouldEqual("a line");
 
             pipeline.Task.IsCompleted.ShouldEqual(false);
             pipeline.Kill();
