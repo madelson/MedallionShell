@@ -1,7 +1,7 @@
 language: csharp
 solution: MedallionShell.sln
 mono: latest
-dotnet: 2.2.104
+dotnet: 2.2
 install:
   - nuget restore MedallionShell.sln
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
