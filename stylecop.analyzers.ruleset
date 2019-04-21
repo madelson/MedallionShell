@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <RuleSet Name="Rules for StyleCop.Analyzers" Description="Code analysis rules" ToolsVersion="15.0">
   <Rules AnalyzerId="StyleCop.Analyzers" RuleNamespace="StyleCop.Analyzers">
+	<Rule Id="SA1000" Action="None" />
 	<!-- just too annoying for iteration -->
     <Rule Id="SA1005" Action="None" />
 	<Rule Id="SA1009" Action="None" />

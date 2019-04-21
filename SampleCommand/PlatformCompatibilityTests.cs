@@ -12,16 +12,35 @@ namespace SampleCommand
 {
     public static class PlatformCompatibilityTests
     {
-        public static readonly string SampleCommandPath = typeof(Program).Assembly.Location;
+        public static readonly string DotNetPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? @"C:\Program Files\dotnet\dotnet.exe"
+            : "/usr/local/bin/dotnet";
 
-        public static readonly Shell TestShell = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+        public static readonly string SampleCommandPath = GetSampleCommandPath();
+
+        private static string GetSampleCommandPath()
+        {
+            var assemblyLocation = typeof(Program).Assembly.Location;
+#if !NETCOREAPP2_2
+            return assemblyLocation;
+#else
+            return assemblyLocation.Replace("MedallionShell.Tests", "SampleCommand");
+#endif
+        }
+
+        public static readonly Shell TestShell =
+#if !NETCOREAPP2_2
+            !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+#else
+            true // on nextcore we always have to do this
+#endif
             ? new Shell(options: o => o.StartInfo(si =>
             {
-                // on linux, you can't run mono exes directly so instead we invoke them through Mono
+                // on linux, you can't run .net exes directly so instead we invoke them through mono / dotnet
                 if (si.FileName == SampleCommandPath)
                 {
                     si.Arguments = !string.IsNullOrEmpty(si.Arguments) ? $"{si.FileName} {si.Arguments}" : si.FileName;
-                    si.FileName = "/usr/bin/mono";
+                    si.FileName = Path.GetExtension(SampleCommandPath) == ".exe" ? "/usr/bin/mono" : DotNetPath;
                 }
             }))
             : Shell.Default;
@@ -47,13 +66,14 @@ namespace SampleCommand
         {
             var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
-            if (command.StandardOutput.ReadLine() != null)
+            string line;
+            if ((line = command.StandardOutput.ReadLine()) != null)
             {
-                throw new InvalidOperationException("StdOut");
+                throw new InvalidOperationException($"StdOut was '{line}'");
             }
-            if (command.StandardError.ReadLine() != null)
+            if ((line = command.StandardError.ReadLine()) != null)
             {
-                throw new InvalidOperationException("StdErr");
+                throw new InvalidOperationException($"StdErr was '{line}'");
             }
         }
 
@@ -114,7 +134,7 @@ namespace SampleCommand
             var command = TestShell.Run(SampleCommandPath, new[] { "echo" }, options: o => o.Timeout(TimeSpan.FromSeconds(5)));
             command.StandardInput.WriteLine("abcd");
             command.StandardInput.Dispose();
-            if (command.Result.StandardOutput != ("abcd" + Environment.NewLine)) { throw new InvalidOperationException($"Was '{command.StandardOutput}'"); }
+            if (command.Result.StandardOutput != ("abcd" + Environment.NewLine)) { throw new InvalidOperationException($"Was '{command.Result.StandardOutput}'"); }
         }
         
         public static void TestArgumentsRoundTrip()

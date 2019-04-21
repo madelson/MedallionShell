@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using SampleCommand;
 
+#if !NETCOREAPP2_2
 // don't allow things to hang when running on a CI server
 [assembly: Timeout(60000)]
+#endif
 
 namespace Medallion.Shell.Tests
 {
@@ -16,6 +18,7 @@ namespace Medallion.Shell.Tests
     {
         public static string SampleCommand => PlatformCompatibilityTests.SampleCommandPath;
         public static Shell TestShell => PlatformCompatibilityTests.TestShell;
+        public static string DotNetPath => PlatformCompatibilityTests.DotNetPath;
 
         public static Shell MakeTestShell(Action<Shell.Options> options) => new Shell(TestShell.Configuration + options);
 

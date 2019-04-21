@@ -15,7 +15,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestPiping()
         {
-            var shell = new Shell(o => o.ThrowOnError());
+            var shell = new Shell(TestShell.Configuration + (o => o.ThrowOnError()));
 
             var kinds = Enum.GetValues(typeof(Kind)).Cast<Kind>();
             foreach (var inKind in kinds)
