@@ -49,7 +49,7 @@ namespace Medallion.Shell
 
         public static Stream WrapStandardInputStreamIfNeeded(Stream stream)
         {
-            return IsMono ? new MonoStandardIOWrapperStream(stream) : stream;
+            return IsMono || !IsWindows ? new MonoStandardIOWrapperStream(stream) : stream;
         }
 
         public static int SafeGetExitCode(this Process process)
