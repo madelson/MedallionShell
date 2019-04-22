@@ -8,9 +8,9 @@ install:
   # - nuget restore MedallionShell.sln
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
 script:
-  # - msbuild /p:Configuration=Release MedallionShell.sln
+  - msbuild /p:Configuration=Release MedallionShell.sln
   # from https://stackoverflow.com/questions/44770702/build-nuget-package-on-linux-that-targets-net-framework
   #- export FrameworkPathOverride=/usr/lib/mono/4.5/
-  - dotnet build -c Release MedallionShell.sln
+  #- dotnet build -c Release MedallionShell.sln
   - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net46/MedallionShell.Tests.dll
   - dotnet test --no-build -f netcoreapp2.2
