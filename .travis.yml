@@ -5,7 +5,7 @@ mono: latest
 dist: xenial
 dotnet: 2.2.1
 install:
-  # - nuget restore MedallionShell.sln
+  - nuget restore MedallionShell.sln
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
 script:
   - msbuild /p:Configuration=Release MedallionShell.sln
