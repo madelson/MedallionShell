@@ -37,9 +37,19 @@ namespace Medallion.Shell.Streams
         public override int ReadTimeout { get => this.stream.ReadTimeout; set => this.stream.ReadTimeout = value; }
         public override int WriteTimeout { get => this.stream.WriteTimeout; set => this.stream.WriteTimeout = value; }
 
-        public override void Flush() => this.stream.Flush();
+        public override void Flush()
+        {
+            // from my testing, try-catching on Flush() appears necessary with .NET core on Linux, but not on Mono
+            try { this.stream.Flush(); }
+            catch (IOException) { }
+        }
 
-        public override Task FlushAsync(CancellationToken cancellationToken) => this.stream.FlushAsync(cancellationToken);
+        public async override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            // from my testing, try-catching on Flush() appears necessary with .NET core on Linux, but not on Mono
+            try { await this.stream.FlushAsync(cancellationToken).ConfigureAwait(false); }
+            catch (IOException) { }
+        }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
