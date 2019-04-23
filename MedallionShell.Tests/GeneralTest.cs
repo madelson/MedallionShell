@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Management;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -13,6 +12,7 @@ using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
+    using System.Collections;
     using static UnitTestHelpers;
 
     public class GeneralTest
@@ -20,11 +20,11 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestGrep()
         {
-            var command = Shell.Default.Run(SampleCommand, "grep", "a+");
+            var command = TestShell.Run(SampleCommand, "grep", "a+");
             command.StandardInput.WriteLine("hi");
             command.StandardInput.WriteLine("aa");
             command.StandardInput.Dispose();
-            command.StandardOutput.ReadToEnd().ShouldEqual("aa" + Environment.NewLine);
+            command.StandardOutput.ReadToEnd().ShouldEqual("aa" + Environment.NewLine, $"Exit code: {command.Result.ExitCode}, StdErr: '{command.Result.StandardError}'");
         }
 
         [Test]
@@ -173,7 +173,7 @@ namespace Medallion.Shell.Tests
         {
             using (var cancellationTokenSource = new CancellationTokenSource())
             {
-                var results = new SynchronizedCollection<string>();
+                var results = new SyncCollection();
                 var command = TestShell.Run(SampleCommand, new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
                 command.StandardInput.WriteLine("hello");
                 var timeout = Task.Delay(TimeSpan.FromSeconds(10));
@@ -184,6 +184,24 @@ namespace Medallion.Shell.Tests
                 Assert.IsInstanceOf<TaskCanceledException>(aggregateException.GetBaseException());
                 CollectionAssert.AreEqual(results, new[] { "hello" });
             }
+        }
+
+        private class SyncCollection : ICollection<string>
+        {
+            private readonly List<string> _list = new List<string>();
+
+            private T WithLock<T>(Func<List<string>, T> func) { lock(this._list) { return func(this._list); } }
+            private void WithLock(Action<List<string>> action) { lock(this._list) { action(this._list); } }
+
+            public int Count => this.WithLock(l => l.Count);
+            public bool IsReadOnly => false;
+            public void Add(string item) => this.WithLock(l => l.Add(item));
+            public void Clear() => this.WithLock(l => l.Clear());
+            public bool Contains(string item) => this.WithLock(l => l.Contains(item));
+            public void CopyTo(string[] array, int arrayIndex) => this.WithLock(l => l.CopyTo(array, arrayIndex));
+            public IEnumerator<string> GetEnumerator() => this.WithLock(l => l.ToList()).GetEnumerator();
+            public bool Remove(string item) => this.WithLock(l => l.Remove(item));
+            IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
         }
 
         [Test]
@@ -310,7 +328,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestNestedKill()
         {
-            var lines = new List<string>();
+            var lines = new SyncCollection();
             var pipeline = TestShell.Run(SampleCommand, "pipe")
                 | TestShell.Run(SampleCommand, "pipe")
                 | TestShell.Run(SampleCommand, "pipe") > lines;
@@ -324,7 +342,8 @@ namespace Medallion.Shell.Tests
                 if (lines.Count > 0) { break; }
                 Thread.Sleep(10);
             }
-            lines[0].ShouldEqual("a line");
+            pipeline.Task.IsCompleted.ShouldEqual(false);
+            lines.FirstOrDefault().ShouldEqual("a line");
 
             pipeline.Task.IsCompleted.ShouldEqual(false);
             pipeline.Kill();
@@ -473,24 +492,22 @@ namespace Medallion.Shell.Tests
                         pipeCommand.Processes.SequenceEqual(new[] { command1.Process, command2.Process }).ShouldEqual(true);
                     }
 
+#if !NETCOREAPP2_2
                     // https://stackoverflow.com/questions/2633628/can-i-get-command-line-arguments-of-other-processes-from-net-c
                     string GetCommandLine(int processId)
                     {
-                        using (var searcher = new ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId))
+                        using (var searcher = new System.Management.ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId))
                         {
-                            return searcher.Get().Cast<ManagementBaseObject>().Single()["CommandLine"].ToString();
+                            return searcher.Get().Cast<System.Management.ManagementBaseObject>().Single()["CommandLine"].ToString();
                         }
                     }
-
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         GetCommandLine(command1.ProcessId).ShouldContain("--id1");
-                    }
-                    command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
                         GetCommandLine(command2.ProcessId).ShouldContain("--id2");
                     }
+#endif
+                    command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
                     command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
                     pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
                     pipeCommand.ProcessIds.SequenceEqual(new[] { command1.ProcessId, command2.ProcessId }).ShouldEqual(true);
@@ -509,9 +526,12 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestToString()
         {
-            var sampleCommandString = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? SampleCommand
-                : $"/usr/bin/mono {SampleCommand}";
+            var sampleCommandString =
+#if !NETCOREAPP2_2
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? SampleCommand : $"/usr/bin/mono {SampleCommand}";
+#else
+                $@"{DotNetPath} {SampleCommand}";
+#endif
 
             var command0 = TestShell.Run(SampleCommand, new[] { "grep", "a+" }, options => options.DisposeOnExit(true));
             command0.ToString().ShouldEqual($"{sampleCommandString} grep a+");

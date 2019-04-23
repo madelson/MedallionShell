@@ -47,12 +47,15 @@ namespace Medallion.Shell.Tests
         private static void RunTest(Expression<Action> testMethod)
         {
             var compiled = testMethod.Compile();
-            Assert.DoesNotThrow(() => compiled(), "should run on .NET");
+            Assert.DoesNotThrow(() => compiled(), "should run on current platform");
 
+            // don't bother testing running Mono from .NET Core
+#if !NETCOREAPP2_2
             var methodName = ((MethodCallExpression)testMethod.Body).Method.Name;
             var monoPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"C:\Program Files\Mono\bin\mono.exe" : "/usr/bin/mono";
             var command = Command.Run(monoPath, SampleCommand, nameof(PlatformCompatibilityTests), methodName);
             command.Result.Success.ShouldEqual(true, "should run on Mono. Got: " + command.Result.StandardError);
+#endif
         }
     }
 }

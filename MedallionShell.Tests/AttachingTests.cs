@@ -88,8 +88,6 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestTimeout()
         {
-            const string expectedTimeoutexceptionDidNotOccur = "Expected TimeoutException did not occur.";
-
             var processCommand = TestShell.Run(SampleCommand, new[] { "sleep", "10000" });
             Thread.Sleep(200);
             var processId = processCommand.ProcessId;
@@ -103,10 +101,11 @@ namespace Medallion.Shell.Tests
 
             // but should eventually throw
             var exception = Assert.Throws<AggregateException>(
-                () => attachedCommand.Task.Wait(150),
-                expectedTimeoutexceptionDidNotOccur);
+                () => attachedCommand.Task.Wait(250),
+                "Did not time out"
+            );
             
-            (exception.InnerException.InnerException is TimeoutException).ShouldEqual(true, expectedTimeoutexceptionDidNotOccur);
+            Assert.IsInstanceOf<TimeoutException>(exception.GetBaseException());
         }
     }
 }
