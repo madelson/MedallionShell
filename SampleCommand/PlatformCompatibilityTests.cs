@@ -24,6 +24,7 @@ namespace SampleCommand
 #if !NETCOREAPP2_2
             return assemblyLocation;
 #else
+            // needed on .NET Core to make sure the right config files are alongside SampleCommand.dll
             return assemblyLocation.Replace("MedallionShell.Tests", "SampleCommand");
 #endif
         }
