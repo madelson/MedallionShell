@@ -305,7 +305,7 @@ namespace Medallion.Shell.Tests
             var command = TestShell.Run(SampleCommand, "pipe");
             command.StandardInput.WriteLine("abc");
             command.StandardInput.Flush();
-            Thread.Sleep(100);
+            Thread.Sleep(300);
             command.Task.IsCompleted.ShouldEqual(false);
 
             command.Kill();
