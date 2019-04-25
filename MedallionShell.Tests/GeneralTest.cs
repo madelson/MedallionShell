@@ -335,9 +335,10 @@ namespace Medallion.Shell.Tests
 
             // demonstrate that a single line can make it all the way through the pipeline
             // without getting caught in a buffer along the way
+            pipeline.StandardInput.AutoFlush.ShouldEqual(true);
             pipeline.StandardInput.WriteLine("a line");
             var start = DateTime.UtcNow;
-            while ((DateTime.UtcNow - start) < TimeSpan.FromSeconds(5))
+            while ((DateTime.UtcNow - start) < TimeSpan.FromSeconds(10))
             {
                 if (lines.Count > 0) { break; }
                 Thread.Sleep(10);
