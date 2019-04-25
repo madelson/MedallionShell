@@ -8,6 +8,7 @@ install:
   - nuget restore MedallionShell.sln
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
 script:
-  - msbuild /p:Configuration=Release MedallionShell.sln
+  - msbuild /p:Configuration=Release 
+  - msbuild /p:Configuration=Release MedallionShell/MedallionShell.ProcessSignaler/MedallionShell.ProcessSignaler.csproj
   - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net46/MedallionShell.Tests.dll
   - dotnet test --no-build -f netcoreapp2.2 -c Release
