@@ -11,6 +11,13 @@ namespace Medallion.Shell
         public const string ProcessNotAccessibleWithDisposeOnExitEnabled =
             "Process can only be accessed when the command is not set to dispose on exit. This is to prevent non-deterministic code which may access the process before or after it exits";
 
+        private static object _boxedCurrentProcessId;
+
+        public static int CurrentProcessId => (int)LazyInitializer.EnsureInitialized(
+            ref _boxedCurrentProcessId,
+            () => { using (var process = Process.GetCurrentProcess()) { return (object)process.Id; } }
+        );
+
         public static void TryKillProcess(Process process)
         {
             try

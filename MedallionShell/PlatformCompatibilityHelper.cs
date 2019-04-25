@@ -13,7 +13,7 @@ namespace Medallion.Shell
         // see http://www.mono-project.com/docs/faq/technical/
         private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
 
-        private static bool IsWindows
+        public static bool IsWindows
         {
             get
             {

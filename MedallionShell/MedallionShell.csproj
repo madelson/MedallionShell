@@ -53,4 +53,16 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
   </ItemGroup>
+
+  <!-- Pulls in ProcessSignaler as a reference for build dependency purposes so we can pack it's exe as an embedded resource -->
+  <ItemGroup>
+    <!-- based on https://blogs.msdn.microsoft.com/kirillosenkov/2015/04/04/how-to-have-a-project-reference-without-referencing-the-actual-binary/ -->
+    <ProjectReference Include="..\MedallionShell.ProcessSignaler\MedallionShell.ProcessSignaler.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+
+    <EmbeddedResource Include="..\MedallionShell.ProcessSignaler\bin\$(Configuration)\net45\MedallionShell.ProcessSignaler.exe">
+      <LogicalName>MedallionShell.ProcessSignaler.exe</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>

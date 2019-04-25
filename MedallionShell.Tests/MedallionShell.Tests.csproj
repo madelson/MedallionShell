@@ -4,9 +4,9 @@
     <TargetFrameworks>net46;netcoreapp2.2</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <LangVersion>7.2</LangVersion>
-	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
-	  <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
-	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	<CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
+	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
 
@@ -33,5 +33,5 @@
     <Reference Include="System.Management" />
     <Reference Include="System.ServiceModel" />
   </ItemGroup>
-
+  
 </Project>
