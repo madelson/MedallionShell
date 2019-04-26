@@ -30,12 +30,8 @@ namespace SampleCommand
         }
 
         public static readonly Shell TestShell =
-#if !NETCOREAPP2_2
-            !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-#else
-            true // on nextcore we always have to do this
-#endif
-            ? new Shell(options: o => o.StartInfo(si =>
+#if NETCOREAPP2_2
+            new Shell(options: o => o.StartInfo(si =>
             {
                 // on linux, you can't run .net exes directly so instead we invoke them through mono / dotnet
                 if (si.FileName == SampleCommandPath)
@@ -43,8 +39,10 @@ namespace SampleCommand
                     si.Arguments = !string.IsNullOrEmpty(si.Arguments) ? $"{si.FileName} {si.Arguments}" : si.FileName;
                     si.FileName = Path.GetExtension(SampleCommandPath) == ".exe" ? "/usr/bin/mono" : DotNetPath;
                 }
-            }))
-            : Shell.Default;
+            }));
+#else
+            Shell.Default;
+#endif
 
         public static void TestWriteAfterExit()
         {

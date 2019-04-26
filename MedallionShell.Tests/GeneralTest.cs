@@ -528,10 +528,10 @@ namespace Medallion.Shell.Tests
         public void TestToString()
         {
             var sampleCommandString =
-#if !NETCOREAPP2_2
-                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? SampleCommand : $"/usr/bin/mono {SampleCommand}";
-#else
+#if NETCOREAPP2_2
                 $@"{DotNetPath} {SampleCommand}";
+#else
+                SampleCommand;
 #endif
 
             var command0 = TestShell.Run(SampleCommand, new[] { "grep", "a+" }, options => options.DisposeOnExit(true));
