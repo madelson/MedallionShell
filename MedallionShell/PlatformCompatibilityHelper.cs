@@ -105,9 +105,9 @@ namespace Medallion.Shell
                 return false;
             }
 
-            standardInput = redirectStandardInput ? process.StandardInput : null;
-            standardOutput = redirectStandardOutput ? process.StandardOutput : null;
-            standardError = redirectStandardError ? process.StandardError : null;
+            standardInput = redirectStandardInput ? SwitchToAsync(process.StandardInput) : null;
+            standardOutput = redirectStandardOutput ? SwitchToAsync(process.StandardOutput) : null;
+            standardError = redirectStandardError ? SwitchToAsync(process.StandardError) : null;
             return true;
         }
 
