@@ -33,11 +33,11 @@ namespace SampleCommand
 #if NETCOREAPP2_2
             new Shell(options: o => o.StartInfo(si =>
             {
-                // on linux, you can't run .net exes directly so instead we invoke them through mono / dotnet
+                // on .net core, you can't run .net exes directly so instead we invoke them through mono
                 if (si.FileName == SampleCommandPath)
                 {
                     si.Arguments = !string.IsNullOrEmpty(si.Arguments) ? $"{si.FileName} {si.Arguments}" : si.FileName;
-                    si.FileName = Path.GetExtension(SampleCommandPath) == ".exe" ? "/usr/bin/mono" : DotNetPath;
+                    si.FileName = DotNetPath;
                 }
             }));
 #else
