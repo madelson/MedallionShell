@@ -4,5 +4,9 @@ build_script:
 # see comment in .travis.yml for why we need to build ProcessSignaler explicitly
 - cmd: >-
     nuget restore
+
+
     msbuild /p:Configuration=Release MedallionShell.ProcessSignaler\MedallionShell.ProcessSignaler.csproj
+
+
     msbuild /p:Configuration=Release MedallionShell.sln
