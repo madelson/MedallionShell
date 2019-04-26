@@ -101,7 +101,7 @@ namespace Medallion.Shell.Tests
 
             // but should eventually throw
             var exception = Assert.Throws<AggregateException>(
-                () => attachedCommand.Task.Wait(250),
+                () => attachedCommand.Task.Wait(3000), // much shorter than the natural runtime, but hopefully long enough for slow CI systems
                 "Did not time out"
             );
             
