@@ -110,5 +110,26 @@ namespace Medallion.Shell
             standardError = redirectStandardError ? process.StandardError : null;
             return true;
         }
+
+        private static StreamWriter SwitchToAsync(StreamWriter writer)
+        {
+            var asyncStream = SwitchToAsync(writer.BaseStream, FileAccess.Write);
+            return asyncStream == writer.BaseStream ? writer : new StreamWriter(asyncStream, writer.Encoding);
+        }
+
+        private static StreamReader SwitchToAsync(StreamReader reader)
+        {
+            var asyncStream = SwitchToAsync(reader.BaseStream, FileAccess.Read);
+            return asyncStream == reader.BaseStream ? reader : new StreamReader(asyncStream, reader.CurrentEncoding);
+        }
+
+        private static Stream SwitchToAsync(Stream stream, FileAccess access)
+        {
+            return !IsWindows
+                && stream is FileStream fileStream
+                && !fileStream.IsAsync
+                ? new FileStream(fileStream.SafeFileHandle, access, bufferSize: 4096, isAsync: true)
+                : stream;
+        }
     }
 }

@@ -352,6 +352,41 @@ namespace Medallion.Shell.Tests
         }
 
         [Test]
+        public void TestPipeline()
+        {
+            //ThreadPool.SetMinThreads(100, 100);
+            const int ProcessCount = 20;
+
+            var pipeline = Enumerable.Range(0, ProcessCount)
+                .Select(_ => TestShell.Run(SampleCommand, "pipebytes"))
+                .Aggregate((first, second) => first | second);
+            try
+            {
+                for (var i = 0; i < 10; ++i)
+                {
+                    char @char = (char)('a' + i);
+
+                    pipeline.StandardInput.AutoFlush.ShouldEqual(true);
+                    var writeTask = pipeline.StandardInput.WriteAsync(@char);
+                    writeTask.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true, $"write {i} should complete");
+
+                    var buffer = new char[10];
+                    var readTask = pipeline.StandardOutput.ReadAsync(buffer, 0, buffer.Length);
+                    readTask.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true, $"read {i} should complete");
+                    readTask.Result.ShouldEqual(1);
+                    buffer[0].ShouldEqual(@char);
+                }
+
+                pipeline.StandardInput.Dispose();
+                pipeline.Task.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true, "pipeline should exit");
+            }
+            finally
+            {
+                pipeline.Kill();
+            }
+        }
+
+        [Test]
         public void TestVersioning()
         {
             var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version.ToString();

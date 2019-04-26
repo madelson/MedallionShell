@@ -98,6 +98,20 @@ namespace SampleCommand
                         Console.Out.Flush();
                     }
                     break;
+                case "pipebytes":
+                    using (var standardInput = Console.OpenStandardInput())
+                    using (var standardOutput = Console.OpenStandardOutput())
+                    {
+                        var buffer = new byte[10];
+                        while (true)
+                        {
+                            var bytesRead = standardInput.Read(buffer, 0, buffer.Length);
+                            if (bytesRead == 0) { break; }
+                            standardOutput.Write(buffer, 0, bytesRead);
+                            standardOutput.Flush();
+                        }
+                    }
+                    break;
                 case "shortflush":
                     Console.Out.Write(args[1]);
                     Console.Out.Flush();
