@@ -72,7 +72,7 @@ await Command.Run("ProcssingStep1.exe") < new FileInfo("input.txt")
 
 ### Stopping a Command
 
-You can immediately terminate a command with the `Kill()` API. You can also use the `TrySignalAsync` API to send other types of signals which can allow for graceful shutdown if the target process handles them. `CommandSignal.ControlC` works across platform, while other signals are OS-specific.
+You can immediately terminate a command with the `Kill()` API. You can also use the `TrySignalAsync` API to send other types of signals which can allow for graceful shutdown if the target process handles them. `CommandSignal.ControlC` works across platforms, while other signals are OS-specific.
 
 ### Command Options
 
@@ -93,7 +93,7 @@ The supported options are:
 |**DisposeOnExit**|If true, the underlying `Process` object will be disposed when the process exits, removing the need to call `Command.Dispose()`|`true`|
 |**EnvironmentVariable(s)**|Specifies environment variable overrides for the process|`Environment.GetEnvironmentVariables()`|
 |**Encoding**|Specifies an `Encoding` to be used on all standard IO streams|`Console.OutputEncoding`/`Console.InputEncoding`: note that what this is varies by platform!|
-|**Command**|Specifies arbitrary additional configuration of the `Command` object after it is created (generally only useful with `Shell`s (described below)) | |
+|**Command**|Specifies arbitrary additional configuration of the `Command` object after it is created (generally only useful with `Shell`s, which are described below) | |
 
 ### Shells
 It is frequently the case that within the context of a single application all the `Command`s you invoke will want the same or very similar options. To simplify this, you can package up a set of options in a `Shell` object for convenient re-use:
@@ -109,6 +109,9 @@ var command = MyShell.Run("foo.exe", new[] { "arg1", ... }, options => /* can st
 Contributions are welcome! Please report any issues you encounter or ideas for enhancements. If you would like to contribute code, I ask that you file an issue first so that we can work out the details before you start coding and avoid wasted effort on your part.
 
 **To build the code**, you will need VisualStudio 2017 or higher (community edition is fine) [download](https://www.visualstudio.com/vs/community/). Running all tests will require that you have installed Mono (for the Mono compat tests only).
+
+Windows: [![Build status](https://ci.appveyor.com/api/projects/status/9idbmymiatbd8ncx/branch/master?svg=true)](https://ci.appveyor.com/project/madelson/medallionshell/branch/master) 
+Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch=master)](https://travis-ci.com/madelson/MedallionShell)
 
 ## Release Notes
 - 1.6.0
