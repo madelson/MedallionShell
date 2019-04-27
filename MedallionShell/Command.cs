@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Medallion.Shell.Signals;
 using Medallion.Shell.Streams;
 
 namespace Medallion.Shell
@@ -62,6 +64,35 @@ namespace Medallion.Shell
         /// Kills the <see cref="Process"/> if it is still executing
         /// </summary>
         public abstract void Kill();
+
+        /// <summary>
+        /// Attempts to send the specified <see cref="CommandSignal"/> to each <see cref="System.Diagnostics.Process"/>
+        /// underlying the current <see cref="Command"/>. Returns true if at least one <see cref="System.Diagnostics.Process"/>
+        /// received the signal and false otherwise.
+        /// 
+        /// There are several reasons that signaling could fail, for example:
+        /// * The provided signal number is not valid for the OS
+        /// * The <see cref="System.Diagnostics.Process"/> has already exited
+        /// * On Windows, signals can only be sent to console processes
+        /// </summary>
+        public Task<bool> TrySignalAsync(CommandSignal signal)
+        {
+            if (signal == null) { throw new ArgumentNullException(nameof(signal)); }
+
+            this.ThrowIfDisposed();
+
+            return TrySignalHelperAsync();
+
+            async Task<bool> TrySignalHelperAsync()
+            {
+                var result = false;
+                foreach (var processId in this.ProcessIds)
+                {
+                    result |= await ProcessSignaler.TrySignalAsync(processId, signal).ConfigureAwait(false);
+                }
+                return result;
+            }
+        }
 
         /// <summary>
         /// A convenience method for <code>command.Task.Wait()</code>. If the task faulted or was canceled,
@@ -408,6 +439,22 @@ namespace Medallion.Shell
         public static Command Run(string executable, IEnumerable<object> arguments = null, Action<Shell.Options> options = null)
         {
             return Shell.Default.Run(executable, arguments, options);
+        }
+
+        /// <summary>
+        /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, Action{Shell.Options}, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
+        /// </summary>
+        public static bool TryAttachToProcess(int processId, Action<Shell.Options> options, out Command attachedCommand)
+        {
+            return Shell.Default.TryAttachToProcess(processId, options, out attachedCommand);
+        }
+
+        /// <summary>
+        /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
+        /// </summary>
+        public static bool TryAttachToProcess(int processId, out Command attachedCommand)
+        {
+            return Shell.Default.TryAttachToProcess(processId, out attachedCommand);
         }
 
         /// <summary>

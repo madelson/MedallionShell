@@ -16,7 +16,6 @@ namespace Medallion.Shell.Streams
         private readonly Stream processStream;
         private readonly Pipe pipe;
         private readonly StreamReader reader;
-        private readonly Task task;
         private volatile bool discardContents;
 
         public InternalProcessStreamReader(StreamReader processStreamReader)
@@ -24,10 +23,10 @@ namespace Medallion.Shell.Streams
             this.processStream = processStreamReader.BaseStream;
             this.pipe = new Pipe();
             this.reader = new StreamReader(this.pipe.OutputStream, processStreamReader.CurrentEncoding);
-            this.task = Task.Run(() => this.BufferLoop());
+            this.Task = Task.Run(() => this.BufferLoop());
         }
 
-        public Task Task { get { return this.task; } }
+        public Task Task { get; }
 
         private async Task BufferLoop()
         {
@@ -56,10 +55,9 @@ namespace Medallion.Shell.Streams
         }
 
 #region ---- ProcessStreamReader implementation ----
-        public override Stream BaseStream
-        {
-            get { return this.reader.BaseStream; }
-        }
+        public override Stream BaseStream => this.reader.BaseStream;
+
+        public override Encoding Encoding => this.reader.CurrentEncoding;
 
         public override void Discard()
         {

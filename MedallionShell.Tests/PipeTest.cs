@@ -4,17 +4,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
-    [TestClass]
+    using static UnitTestHelpers;
+
     public class PipeTest : IDisposable
     {
-        [TestMethod]
+        [Test]
         public void TestPiping()
         {
-            var shell = new Shell(o => o.ThrowOnError());
+            var shell = new Shell(TestShell.Configuration + (o => o.ThrowOnError()));
 
             var kinds = Enum.GetValues(typeof(Kind)).Cast<Kind>();
             foreach (var inKind in kinds)
@@ -23,7 +24,7 @@ namespace Medallion.Shell.Tests
                 {
                     dynamic input = this.CreateSinkOrSource(inKind, isOut: false);
                     dynamic output = this.CreateSinkOrSource(outKind, isOut: true);
-                    var command = shell.Run("SampleCommand", "echo");
+                    var command = shell.Run(SampleCommand, "echo");
                     var tasks = new List<Task>();
                     if (input is TextReader)
                     {

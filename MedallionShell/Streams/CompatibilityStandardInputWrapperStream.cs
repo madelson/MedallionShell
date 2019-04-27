@@ -8,16 +8,18 @@ using System.Threading.Tasks;
 namespace Medallion.Shell.Streams
 {
     /// <summary>
-    /// Unlike .NET, Mono throws an exception if you try to write to standard input after the process exits.
-    /// To compensate for this, we wrap standard input with a stream that suppresses these errors.
-    ///
-    /// See https://github.com/madelson/MedallionShell/issues/6
+    /// On .NET Core and .NET Framework on Windows, writing to the standard input <see cref="Stream"/> after the process exits is a noop.
+    /// 
+    /// However, on Mono this will throw a "Write Fault" exception (https://github.com/madelson/MedallionShell/issues/6)
+    /// while .NET Core on Linux throws a "Broken Pipe" exception (https://github.com/madelson/MedallionShell/issues/46).
+    /// 
+    /// This class wraps the underlying <see cref="Stream"/> to provide consistent behavior across platforms.
     /// </summary>
-    internal sealed class MonoStandardIOWrapperStream : Stream
+    internal sealed class CompatibilityStandardInputWrapperStream : Stream
     {
         private readonly Stream stream;
 
-        public MonoStandardIOWrapperStream(Stream stream)
+        public CompatibilityStandardInputWrapperStream(Stream stream)
         {
             this.stream = stream;
         }
@@ -33,9 +35,23 @@ namespace Medallion.Shell.Streams
             set => this.stream.Position = value;
         }
 
-        public override void Flush() => this.stream.Flush();
+        public override bool CanTimeout => this.stream.CanTimeout;
+        public override int ReadTimeout { get => this.stream.ReadTimeout; set => this.stream.ReadTimeout = value; }
+        public override int WriteTimeout { get => this.stream.WriteTimeout; set => this.stream.WriteTimeout = value; }
 
-        public override Task FlushAsync(CancellationToken cancellationToken) => this.stream.FlushAsync(cancellationToken);
+        public override void Flush()
+        {
+            // from my testing, try-catching on Flush() appears necessary with .NET core on Linux, but not on Mono
+            try { this.stream.Flush(); }
+            catch (IOException) { }
+        }
+
+        public async override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            // from my testing, try-catching on Flush() appears necessary with .NET core on Linux, but not on Mono
+            try { await this.stream.FlushAsync(cancellationToken).ConfigureAwait(false); }
+            catch (IOException) { }
+        }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
@@ -74,6 +90,15 @@ namespace Medallion.Shell.Streams
 
             try { await this.stream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false); }
             catch (IOException) { }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.stream.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }

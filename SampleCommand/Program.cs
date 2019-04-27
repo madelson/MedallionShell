@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace SampleCommand
 {
-    class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             Log("started: " + string.Join(", ", args.Select(a => "'" + a + "'")));
 
@@ -21,10 +21,12 @@ namespace SampleCommand
             {
                 case "echo":
                     var isPerChar = args.Contains("--per-char");
-                    var isUtf8 = args.Contains("--utf8");
-                    if (isUtf8)
+                    var encoding = args.Contains("--utf8") ? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
+                        : args.Contains("--utf162") ? new UnicodeEncoding(bigEndian: false, byteOrderMark: false)
+                        : default(Encoding);
+                    if (encoding != null)
                     {
-                        Console.InputEncoding = Console.OutputEncoding = Encoding.UTF8;
+                        Console.InputEncoding = Console.OutputEncoding = encoding;
                     }
 
                     if (isPerChar)
@@ -106,7 +108,7 @@ namespace SampleCommand
                     }
                     break;
                 case "echoLinesToBothStreams":
-                    async Task echoLines(TextWriter output)
+                    async Task EchoLinesAsync(TextWriter output)
                     {
                         while (true)
                         {
@@ -120,7 +122,7 @@ namespace SampleCommand
                             await output.WriteLineAsync(lineToEcho);
                         }
                     }
-                    Task.WaitAll(Task.Run(() => echoLines(Console.Error)), Task.Run(() => echoLines(Console.Out)));
+                    Task.WaitAll(Task.Run(() => EchoLinesAsync(Console.Error)), Task.Run(() => EchoLinesAsync(Console.Out)));
                     break;
                 case nameof(PlatformCompatibilityTests):
                     var method = typeof(PlatformCompatibilityTests).GetMethod(args[1]);

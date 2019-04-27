@@ -74,7 +74,7 @@ namespace Medallion.Shell
             // we only set up timeout and cancellation AFTER starting the process. This prevents a race
             // condition where we immediately try to kill the process before having started it and then proceed to start it.
             // While we could avoid starting at all in such cases, that would leave the command in a weird state (no PID, no streams, etc)
-            var processTask = CreateProcessTask(this.process, processMonitoringTask, throwOnError, timeout, cancellationToken);
+            var processTask = ProcessHelper.CreateProcessTask(this.process, processMonitoringTask, throwOnError, timeout, cancellationToken);
             this.task = this.CreateCombinedTask(processTask, ioTasks);
         }
 
@@ -107,7 +107,7 @@ namespace Medallion.Shell
                 this.ThrowIfDisposed();
                 Throw<InvalidOperationException>.If(
                     this.disposeOnExit,
-                    "Process can only be accessed when the command is not set to dispose on exit. This is to prevent non-deterministic code which may access the process before or after it exits"
+                    ProcessHelper.ProcessNotAccessibleWithDisposeOnExitEnabled
                 );
                 return this.process;
             }
@@ -180,7 +180,7 @@ namespace Medallion.Shell
         {
             this.ThrowIfDisposed();
 
-            TryKillProcess(this.process);
+            ProcessHelper.TryKillProcess(this.process);
         }
 
         /// <summary>
@@ -197,115 +197,6 @@ namespace Medallion.Shell
             process.Exited += (o, e) => taskBuilder.TrySetResult(false);
 
             return taskBuilder.Task;
-        }
-
-        private static readonly object CompletedSentinel = new object(),
-            CanceledSentinel = new object();
-
-        /// <summary>
-        /// Creates a task which will either return the exit code for the <paramref name="process"/>, throw
-        /// <see cref="ErrorExitCodeException"/>, throw <see cref="TimeoutException"/> or be canceled. When
-        /// the returned <see cref="Task"/> completes, the <paramref name="process"/> is guaranteed to have
-        /// exited
-        /// </summary>
-        private static Task<int> CreateProcessTask(
-            Process process,
-            Task processMonitoringTask,
-            bool throwOnError,
-            TimeSpan timeout,
-            CancellationToken cancellationToken)
-        {
-            // the implementation here is somewhat tricky. We want to guarantee that the process has exited when the resulting
-            // task returns. That means that we can't trigger task completion on timeout or cancellation. At the same time, we
-            // want the task result to match the exit condition. The approach is to use a TCS for the returned task that gets completed
-            // in a continuation on the monitoring task. We can't use the continuation itself as the result because it won't be canceled
-            // even from throwing an OCE. To determine the result of the TCS, we set off a "race" between timeout, cancellation, and
-            // processExit to set a resultObject, which is done thread-safely using Interlocked. When timeout or cancellation win, they
-            // also kill the process to propagate the continuation execution
-
-            var taskBuilder = new TaskCompletionSource<int>();
-            var disposables = new List<IDisposable>();
-            object resultObject = null;
-
-            if (cancellationToken.CanBeCanceled)
-            {
-                disposables.Add(cancellationToken.Register(() =>
-                {
-                    if (Interlocked.CompareExchange(ref resultObject, CanceledSentinel, null) == null)
-                    {
-                        TryKillProcess(process); // if cancellation wins the race, kill the process
-                    }
-                }));
-            }
-
-            if (timeout != Timeout.InfiniteTimeSpan)
-            {
-                var timeoutSource = new CancellationTokenSource(timeout);
-                disposables.Add(timeoutSource.Token.Register(() =>
-                {
-                    var timeoutException = new TimeoutException("Process killed after exceeding timeout of " + timeout);
-                    if (Interlocked.CompareExchange(ref resultObject, timeoutException, null) == null)
-                    {
-                        TryKillProcess(process); // if timeout wins the race, kill the process
-                    }
-                }));
-                disposables.Add(timeoutSource);
-            }
-
-            processMonitoringTask.ContinueWith(
-                _ =>
-                {
-                    var resultObjectValue = Interlocked.CompareExchange(ref resultObject, CompletedSentinel, null);
-                    if (resultObjectValue == null) // process completed naturally
-                    {
-                        // try-catch because in theory any process property access could fail if someone
-                        // disposes out from under us
-                        try
-                        {
-                            var exitCode = process.SafeGetExitCode();
-                            if (throwOnError && exitCode != 0)
-                            {
-                                taskBuilder.SetException(new ErrorExitCodeException(process));
-                            }
-                            else
-                            {
-                                taskBuilder.SetResult(exitCode);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            taskBuilder.SetException(ex);
-                        }
-                    }
-                    else if (resultObjectValue == CanceledSentinel)
-                    {
-                        taskBuilder.SetCanceled();
-                    }
-                    else
-                    {
-                        taskBuilder.SetException((Exception)resultObjectValue);
-                    }
-
-                    // perform cleanup
-                    disposables.ForEach(d => d.Dispose());
-                },
-                TaskContinuationOptions.ExecuteSynchronously
-            );
-
-            return taskBuilder.Task;
-        }
-
-        private static void TryKillProcess(Process process)
-        {
-            try
-            {
-                // the try-catch is because Kill() will throw if the process is disposed
-                process.Kill();
-            }
-            catch (Exception ex)
-            {
-                Log.WriteLine("Exception killing process: " + ex);
-            }
         }
 
         protected override void DisposeInternal()

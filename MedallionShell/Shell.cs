@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -14,19 +15,15 @@ namespace Medallion.Shell
     /// </summary>
     public sealed class Shell
     {
-        private readonly Action<Options> configuration;
-
-        private Shell()
-        {
-        }
+        internal Action<Options> Configuration { get; }
 
         /// <summary>
         /// Creates a shell whose commands will receive the given configuration options
         /// </summary>
         public Shell(Action<Options> options)
         {
-            Throw.IfNull(options, "configuration");
-            this.configuration = options;
+            Throw.IfNull(options, nameof(options));
+            this.Configuration = options;
         }
 
         #region ---- Instance API ----
@@ -58,7 +55,7 @@ namespace Medallion.Shell
             }
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 
-            var command = new ProcessCommand(
+            Command command = new ProcessCommand(
                 processStartInfo,
                 throwOnError: finalOptions.ThrowExceptionOnError,
                 disposeOnExit: finalOptions.DisposeProcessOnExit,
@@ -66,9 +63,73 @@ namespace Medallion.Shell
                 cancellationToken: finalOptions.ProcessCancellationToken,
                 standardInputEncoding: finalOptions.ProcessStreamEncoding
             );
-            finalOptions.CommandInitializers.ForEach(a => a(command));
-
+            foreach (var initializer in finalOptions.CommandInitializers)
+            {
+                command = initializer(command);
+                if (command == null) { throw new InvalidOperationException($"{nameof(Command)} initializer passed to {nameof(Options)}.{nameof(Options.Command)} must not return null!"); }
+            }
+            
             return command;
+        }
+
+        /// <summary>
+        /// Tries to attach to an already running process, given its <paramref name="processId"/>,
+        /// giving <paramref name="attachedCommand" /> representing the process and returning
+        /// true if this succeeded, otherwise false.
+        /// </summary>
+        public bool TryAttachToProcess(int processId, out Command attachedCommand)
+        {
+            return this.TryAttachToProcess(processId, options: null, attachedCommand: out attachedCommand);
+        }
+
+        /// <summary>
+        /// Tries to attach to an already running process, given its <paramref name="processId"/>
+        /// and <paramref name="options"/>,  giving <paramref name="attachedCommand" /> representing
+        /// the process and returning true if this succeeded, otherwise false.
+        /// </summary>
+        public bool TryAttachToProcess(int processId, Action<Shell.Options> options, out Command attachedCommand)
+        {
+            var finalOptions = this.GetOptions(options);
+            if (finalOptions.ProcessStreamEncoding != null || finalOptions.StartInfoInitializers.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    "Setting encoding or using StartInfo initializers is not available when attaching to an already running process.");
+            }
+
+            attachedCommand = null;
+            Process process = null;
+            try
+            {
+                process = Process.GetProcessById(processId);
+
+                // Since simply getting (Safe)Handle from the process enables us to read
+                // the exit code later, and handle itself is disposed when the whole class
+                // is disposed, we do not need its value. Hence the bogus call to GetType().
+#if NET45
+                process.Handle.GetType();
+#else
+                process.SafeHandle.GetType();
+#endif
+            }
+            catch (Exception e) when (IsIgnorableAttachingException(e))
+            {
+                process?.Dispose();
+                return false;
+            }
+            catch (Exception e) when (e is Win32Exception || e is NotSupportedException)
+            {
+                throw new InvalidOperationException(
+                    "Could not attach to the process from reasons other than it had already exited. See inner exception for details.",
+                    e);
+            }
+
+            attachedCommand = new AttachedCommand(
+                process,
+                finalOptions.ThrowExceptionOnError,
+                finalOptions.ProcessTimeout,
+                finalOptions.ProcessCancellationToken,
+                finalOptions.DisposeProcessOnExit);
+            return true;
         }
 
         /// <summary>
@@ -83,31 +144,24 @@ namespace Medallion.Shell
         #endregion
 
         #region ---- Static API ----
-        private static readonly Shell DefaultShell = new Shell();
         /// <summary>
         /// A <see cref="Shell"/> that uses default options
         /// </summary>
-        public static Shell Default { get { return DefaultShell; } }
+        public static Shell Default { get; } = new Shell(_ => { });
         #endregion
 
         private Options GetOptions(Action<Options> additionalConfiguration)
         {
             var builder = new Options();
-            if (this.configuration != null)
-            {
-                this.configuration(builder);
-            }
-            if (additionalConfiguration != null)
-            {
-                additionalConfiguration(builder);
-            }
+            this.Configuration.Invoke(builder);
+            additionalConfiguration?.Invoke(builder);
             return builder;
         }
 
         #region ---- Options ----
         /// <summary>
         /// Provides a builder interface for configuring the options for creating and executing
-        /// a <see cref="Command"/>
+        /// a <see cref="Medallion.Shell.Command"/>
         /// </summary>
         public sealed class Options
         {
@@ -117,7 +171,7 @@ namespace Medallion.Shell
             }
 
             internal List<Action<ProcessStartInfo>> StartInfoInitializers { get; private set; }
-            internal List<Action<Command>> CommandInitializers { get; private set; }
+            internal List<Func<Command, Command>> CommandInitializers { get; private set; }
             internal CommandLineSyntax CommandLineSyntax { get; private set; }
             internal bool ThrowExceptionOnError { get; private set; }
             internal bool DisposeProcessOnExit { get; private set; }
@@ -132,8 +186,8 @@ namespace Medallion.Shell
             public Options RestoreDefaults()
             {
                 this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
-                this.CommandInitializers = new List<Action<Command>>();
-                this.CommandLineSyntax = new WindowsCommandLineSyntax();
+                this.CommandInitializers = new List<Func<Command, Command>>();
+                this.CommandLineSyntax = PlatformCompatibilityHelper.GetDefaultCommandLineSyntax();
                 this.ThrowExceptionOnError = false;
                 this.DisposeProcessOnExit = true;
                 this.ProcessTimeout = System.Threading.Timeout.InfiniteTimeSpan;
@@ -148,26 +202,42 @@ namespace Medallion.Shell
             /// </summary>
             public Options StartInfo(Action<ProcessStartInfo> initializer)
             {
-                Throw.IfNull(initializer, "initializer");
+                Throw.IfNull(initializer, nameof(initializer));
 
                 this.StartInfoInitializers.Add(initializer);
                 return this;
             }
 
             /// <summary>
-            /// Specifies a function which can modify the <see cref="Command"/>. Multiple such functions
+            /// Specifies a function which can modify the <see cref="Medallion.Shell.Command"/>. Multiple such functions
             /// can be specified this way
             /// </summary>
             public Options Command(Action<Command> initializer)
             {
-                Throw.IfNull(initializer, "initializer");
+                Throw.IfNull(initializer, nameof(initializer));
+
+                this.Command(c => 
+                {
+                    initializer(c);
+                    return c;
+                });
+                return this;
+            }
+
+            /// <summary>
+            /// Specifies a function which can project the <see cref="Medallion.Shell.Command"/> to a new <see cref="Medallion.Shell.Command"/>.
+            /// Intended to be used with <see cref="Medallion.Shell.Command"/>-producing "pipe" functions like <see cref="Medallion.Shell.Command.RedirectTo(ICollection{char})"/>
+            /// </summary>
+            public Options Command(Func<Command, Command> initializer)
+            {
+                Throw.IfNull(initializer, nameof(initializer));
 
                 this.CommandInitializers.Add(initializer);
                 return this;
             }
 
             /// <summary>
-            /// Sets the initial working directory of the <see cref="Command"/> (defaults to the current working directory)
+            /// Sets the initial working directory of the <see cref="Medallion.Shell.Command"/> (defaults to the current working directory)
             /// </summary>.
             public Options WorkingDirectory(string path)
             {
@@ -176,7 +246,7 @@ namespace Medallion.Shell
 
 #if !NETSTANDARD1_3
             /// <summary>
-            /// Adds or overwrites an environment variable to be passed to the <see cref="Command"/>
+            /// Adds or overwrites an environment variable to be passed to the <see cref="Medallion.Shell.Command"/>
             /// </summary>
             public Options EnvironmentVariable(string name, string value)
             {
@@ -186,7 +256,7 @@ namespace Medallion.Shell
             }
 
             /// <summary>
-            /// Adds or overwrites a set of environmental variables to be passed to the <see cref="Command"/>
+            /// Adds or overwrites a set of environmental variables to be passed to the <see cref="Medallion.Shell.Command"/>
             /// </summary>
             public Options EnvironmentVariables(IEnumerable<KeyValuePair<string, string>> environmentVariables)
             {
@@ -198,7 +268,7 @@ namespace Medallion.Shell
 #endif
 
             /// <summary>
-            /// If specified, a non-zero exit code will cause the <see cref="Command"/>'s <see cref="Task"/> to fail
+            /// If specified, a non-zero exit code will cause the <see cref="Medallion.Shell.Command"/>'s <see cref="Task"/> to fail
             /// with <see cref="ErrorExitCodeException"/>. Defaults to false
             /// </summary>
             public Options ThrowOnError(bool value = true)
@@ -209,7 +279,7 @@ namespace Medallion.Shell
 
             /// <summary>
             /// If specified, the underlying <see cref="Process"/> object for the command will be disposed when the process exits.
-            /// This means that there is no need to dispose of a <see cref="Command"/>.
+            /// This means that there is no need to dispose of a <see cref="Medallion.Shell.Command"/>.
             ///
             /// This also means that <see cref="Medallion.Shell.Command.Process"/> cannot be reliably accessed,
             /// since it may exit at any time.
@@ -223,9 +293,10 @@ namespace Medallion.Shell
             }
 
             /// <summary>
-            /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to an instance of
-            /// <see cref="WindowsCommandLineSyntax"/>
+            /// Specifies the <see cref="CommandLineSyntax"/> to use for escaping arguments. Defaults to
+            /// an appropriate value for the current platform
             /// </summary>
+            [Obsolete("The default should work across platforms")]
             public Options Syntax(CommandLineSyntax syntax)
             {
                 Throw.IfNull(syntax, "syntax");
@@ -275,5 +346,11 @@ namespace Medallion.Shell
             #endregion
         }
         #endregion
+
+        private static bool IsIgnorableAttachingException(Exception exception)
+        {
+            return exception is ArgumentException // process has already exited or ID is invalid
+                || exception is InvalidOperationException; // process exited after its creation but before taking its handle
+        }
     }
 }

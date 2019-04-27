@@ -19,7 +19,7 @@ Here are some of the things the library takes care of for you:
 * Properly escaping process arguments (a common source of security vulnerabilities)
 * Being able to recover from hangs through timeout, `CancellationToken`, and safe kill support
 * Clean integration with async/await and `Task`
-* Cross-platform support (e. g. workarounds for Mono oddities [#6](https://github.com/madelson/MedallionShell/issues/6) and [#22](https://github.com/madelson/MedallionShell/issues/22))
+* Cross-platform support (e. g. signals and workarounds for Mono oddities [#6](https://github.com/madelson/MedallionShell/issues/6), [#22](https://github.com/madelson/MedallionShell/issues/22), [#43](https://github.com/madelson/MedallionShell/issues/43), and [#44](https://github.com/madelson/MedallionShell/issues/44))
 
 ## API Overview
 
@@ -42,6 +42,8 @@ if (!result.Success)
 }
 ```
 The `Command.Task` property means that you can easily compose the `Command`'s execution with other `Task`-based async operations. You can terminate a `Command` by invoking its `Kill()` method.
+
+Most APIs create a `Command` instance by starting a new process. However, you can also create a `Command` from an existing process via the `Command.TryAttachToProcess` API.
 
 ### Standard IO
 
@@ -68,6 +70,10 @@ await Command.Run("ProcssingStep1.exe") < new FileInfo("input.txt")
 	| Command.Run("processingStep2.exe") > new FileInfo("output.text");
 ```
 
+### Stopping a Command
+
+You can immediately terminate a command with the `Kill()` API. You can also use the `TrySignalAsync` API to send other types of signals which can allow for graceful shutdown if the target process handles them. `CommandSignal.ControlC` works across platforms, while other signals are OS-specific.
+
 ### Command Options
 
 When constructing a `Command`, you can specify various options to provide additional configuration:
@@ -87,8 +93,7 @@ The supported options are:
 |**DisposeOnExit**|If true, the underlying `Process` object will be disposed when the process exits, removing the need to call `Command.Dispose()`|`true`|
 |**EnvironmentVariable(s)**|Specifies environment variable overrides for the process|`Environment.GetEnvironmentVariables()`|
 |**Encoding**|Specifies an `Encoding` to be used on all standard IO streams|`Console.OutputEncoding`/`Console.InputEncoding`: note that what this is varies by platform!|
-|**Syntax**|Specifies how command arguments should be encoded|`new WindowsCommandLineSyntax()`|
-|**Command**|Specifies arbitrary additional configuration of the `Command` object after it is created (generally only useful with `Shell`s (described below)) | |
+|**Command**|Specifies arbitrary additional configuration of the `Command` object after it is created (generally only useful with `Shell`s, which are described below) | |
 
 ### Shells
 It is frequently the case that within the context of a single application all the `Command`s you invoke will want the same or very similar options. To simplify this, you can package up a set of options in a `Shell` object for convenient re-use:
@@ -105,7 +110,18 @@ Contributions are welcome! Please report any issues you encounter or ideas for e
 
 **To build the code**, you will need VisualStudio 2017 or higher (community edition is fine) [download](https://www.visualstudio.com/vs/community/). Running all tests will require that you have installed Mono (for the Mono compat tests only).
 
+Windows: [![Build status](https://ci.appveyor.com/api/projects/status/9idbmymiatbd8ncx/branch/master?svg=true)](https://ci.appveyor.com/project/madelson/medallionshell/branch/master) 
+Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch=master)](https://travis-ci.com/madelson/MedallionShell)
+
 ## Release Notes
+- 1.6.0
+	- Adds `Command.TryAttachToProcess` API for creating a `Command` attached to an already-running process ([#30](https://github.com/madelson/MedallionShell/issues/30)). Thanks [konrad-kruczynski](konrad-kruczynski) for coming up with the idea and implementing!	
+	- Adds `Command.TrySignal` API which provides cross-platform support for the CTRL+C (SIGINT) signal as well as support for OS-specific signals ([#35](https://github.com/madelson/MedallionShell/issues/35))
+	- Properly escape command line arguments when running under Mono on Unix. With this change, the default behavior should work across all platforms ([#44](https://github.com/madelson/MedallionShell/issues/44))
+	- Make `StandardInput.Dispose()` work properlty when running under Mono on Unix ([#43](https://github.com/madelson/MedallionShell/issues/43))
+	- Add .NET Standard 2.0 and .NET 4.6 build targets so that users of more modern frameworks can take advantage of more modern APIs. The .NET Standard 1.3 and .NET 4.5 targets will likely be retired in the event of a 2.0 release.
+	- Allow for setting piping and redirection via a `Shell` option with the new `Command(Func<Command, Command>)` option ([#39](https://github.com/madelson/MedallionShell/issues/39))
+	- Add CI testing for Mono and .NET Core on Linux
 - 1.5.1 Improves Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting and testing the fix!
 - 1.5.0
 	- Command overrides `ToString()` to simplify debugging ([#19](https://github.com/madelson/MedallionShell/issues/19)). Thanks [Stephanvs](https://github.com/Stephanvs)!

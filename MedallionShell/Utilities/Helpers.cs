@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Text;
@@ -14,6 +15,15 @@ namespace Medallion.Shell
         public static T As<T>(this T @this)
         {
             return @this;
+        }
+
+        public static Assembly GetMedallionShellAssembly()
+        {
+#if NETSTANDARD1_3
+            return typeof(Helpers).GetTypeInfo().Assembly;
+#else
+            return Assembly.GetExecutingAssembly();
+#endif
         }
     }
 

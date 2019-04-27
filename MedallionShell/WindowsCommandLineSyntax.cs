@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,32 +9,20 @@ using System.Threading.Tasks;
 namespace Medallion.Shell
 {
     /// <summary>
-    /// Provides <see cref="CommandLineSyntax"/> functionality for windows
+    /// Provides <see cref="CommandLineSyntax"/> functionality for windows.
+    /// 
+    /// Note that while this class uses windows parsing rules, .NET Core actually follows the same rules when parsing
+    /// <see cref="ProcessStartInfo.Arguments"/> into argv for unix-like systems. Therefore, this class is actually
+    /// cross-platform compatible. The one exception is Mono running on Unix, which uses a different escaping scheme.
     /// </summary>
     public sealed class WindowsCommandLineSyntax : CommandLineSyntax
     {
         /// <summary>
         /// Provides <see cref="CommandLineSyntax"/> functionality for windows
         /// </summary>
-        public override string CreateArgumentString(IEnumerable<string> arguments)
-        {
-            Throw.IfNull(arguments, nameof(arguments));
+        public override string CreateArgumentString(IEnumerable<string> arguments) => CreateArgumentString(arguments, AppendArgument);
 
-            var builder = new StringBuilder();
-            var isFirstArgument = true;
-            foreach (var argument in arguments)
-            {
-                Throw.If(argument == null, nameof(arguments) + ": must not contain null");
-
-                if (isFirstArgument) { isFirstArgument = false; }
-                else { builder.Append(' '); }
-                AddArgument(argument, builder);
-            }
-
-            return builder.ToString();
-        }
-
-        private static void AddArgument(string argument, StringBuilder builder)
+        private static void AppendArgument(string argument, StringBuilder builder)
         {
             // based on the logic from http://stackoverflow.com/questions/5510343/escape-command-line-arguments-in-c-sharp.
             // The method given there doesn't minimize the use of quotation. For that, I drew from

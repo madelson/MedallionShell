@@ -1,8 +1,16 @@
 language: csharp
 solution: MedallionShell.sln
+mono: latest
+# recommended here: https://travis-ci.community/t/c-builds-are-failing-net-core-installation-error/3063
+dist: xenial
+dotnet: 2.2.1
 install:
   - nuget restore MedallionShell.sln
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
 script:
+# on linux, it seems like msbuild goes parallel such that if we don't build ProcessSignaler first, we won't have the net45 binary
+# to pack into the non-net45 builds
+  - msbuild /p:Configuration=Release MedallionShell.ProcessSignaler/MedallionShell.ProcessSignaler.csproj
   - msbuild /p:Configuration=Release MedallionShell.sln
-  - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/MyProject.Tests.dll
+  - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net46/MedallionShell.Tests.dll
+  - dotnet test --no-build -f netcoreapp2.2 -c Release

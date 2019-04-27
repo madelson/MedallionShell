@@ -1,19 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard1.3;net45</TargetFrameworks>
+    <TargetFrameworks>netstandard1.3;netstandard2.0;net45;net46</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
-    <Version>1.5.1</Version>
-    <AssemblyVersion>1.5.1.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.6.0</Version>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
     <Authors>Michael Adelson</Authors>
     <Description>A lightweight library that simplifies working with processes in .NET</Description>
     <Copyright>Copyright © 2017 Michael Adelson</Copyright>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageLicenseUrl>https://raw.githubusercontent.com/madelson/MedallionShell/master/License.tx</PackageLicenseUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>process async shell stdin stdout stderr pipe redirect</PackageTags>
     <PackageProjectUrl>https://github.com/madelson/MedallionShell</PackageProjectUrl>
     <RepositoryUrl />
@@ -21,33 +20,49 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <TreatSpecificWarningsAsErrors />
-    <WarningLevel>4</WarningLevel>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
-    <Optimize>True</Optimize>
+    <WarningLevel>4</WarningLevel>    
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <DocumentationFile>bin\Debug\MedallionShell.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard1.3|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <NoWarn />
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net45'">
-    
-  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <TreatSpecificWarningsAsErrors />
+    <Optimize>True</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
-	  <PackageReference Include="System.Diagnostics.Process" version="4.1.0" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3' Or '$(TargetFramework)' == 'netstandard2.0'">
+	  <PackageReference Include="System.Diagnostics.Process" version="4.3.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
+    <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="microsoft.dotnet.analyzers.compatibility" Version="0.2.12-alpha">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.1-rc.94">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <!-- Pulls in ProcessSignaler as a reference for build dependency purposes so we can pack it's exe as an embedded resource -->
+  <ItemGroup>
+    <!-- based on https://blogs.msdn.microsoft.com/kirillosenkov/2015/04/04/how-to-have-a-project-reference-without-referencing-the-actual-binary/ -->
+    <ProjectReference Include="..\MedallionShell.ProcessSignaler\MedallionShell.ProcessSignaler.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+
+    <EmbeddedResource Include="..\MedallionShell.ProcessSignaler\bin\$(Configuration)\net45\MedallionShell.ProcessSignaler.exe">
+      <LogicalName>MedallionShell.ProcessSignaler.exe</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>
