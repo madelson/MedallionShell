@@ -572,6 +572,21 @@ namespace Medallion.Shell.Tests
             writer.ToString().ShouldEqual("abc123");
         }
 
+        [Test]
+        public void TestProcessKeepsWritingAfterOutputIsClosed()
+        {
+            var command = TestShell.Run(SampleCommand, new[] { "pipe" }, options: o => o.ThrowOnError());
+            command.StandardOutput.Dispose();
+            for (var i = 0; i < 100; ++i)
+            {
+                command.StandardInput.WriteLine(new string('a', i));
+            }
+            command.Task.IsCompleted.ShouldEqual(false);
+
+            command.StandardInput.Dispose();
+            command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
+        }
+
         private IEnumerable<string> ErrorLines()
         {
             yield return "1";
