@@ -26,8 +26,8 @@ namespace Medallion.Shell.Signals
                 && NativeMethods.SetConsoleCtrlHandler(null, true)
                 // send the signal
                 && NativeMethods.GenerateConsoleCtrlEvent(ctrlType, NativeMethods.AllProcessesWithCurrentConsoleGroup)
-                ? 0
-                : Marshal.GetLastWin32Error();
+                    ? 0
+                    : Marshal.GetLastWin32Error();
         }
     }
 }

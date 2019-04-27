@@ -13,7 +13,7 @@ namespace Medallion.Shell
     /// 
     /// Note that while this class uses windows parsing rules, .NET Core actually follows the same rules when parsing
     /// <see cref="ProcessStartInfo.Arguments"/> into argv for unix-like systems. Therefore, this class is actually
-    /// cross-platform compatible
+    /// cross-platform compatible. The one exception is Mono running on Unix, which uses a different escaping scheme.
     /// </summary>
     public sealed class WindowsCommandLineSyntax : CommandLineSyntax
     {

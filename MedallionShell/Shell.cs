@@ -349,9 +349,8 @@ namespace Medallion.Shell
 
         private static bool IsIgnorableAttachingException(Exception exception)
         {
-            return
-                exception is ArgumentException || // process has already exited or ID is invalid
-                exception is InvalidOperationException; // process exited after its creation but before taking its handle
+            return exception is ArgumentException // process has already exited or ID is invalid
+                || exception is InvalidOperationException; // process exited after its creation but before taking its handle
         }
     }
 }
