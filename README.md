@@ -118,7 +118,7 @@ Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch
 	- Adds `Command.TryAttachToProcess` API for creating a `Command` attached to an already-running process ([#30](https://github.com/madelson/MedallionShell/issues/30)). Thanks [konrad-kruczynski](konrad-kruczynski) for coming up with the idea and implementing!	
 	- Adds `Command.TrySignal` API which provides cross-platform support for the CTRL+C (SIGINT) signal as well as support for OS-specific signals ([#35](https://github.com/madelson/MedallionShell/issues/35))
 	- Properly escape command line arguments when running under Mono on Unix. With this change, the default behavior should work across all platforms ([#44](https://github.com/madelson/MedallionShell/issues/44))
-	- Make `StandardInput.Dispose()` work properlty when running under Mono on Unix ([#43](https://github.com/madelson/MedallionShell/issues/43))
+	- Make `StandardInput.Dispose()` work properly when running under Mono on Unix ([#43](https://github.com/madelson/MedallionShell/issues/43))
 	- Add .NET Standard 2.0 and .NET 4.6 build targets so that users of more modern frameworks can take advantage of more modern APIs. The .NET Standard 1.3 and .NET 4.5 targets will likely be retired in the event of a 2.0 release.
 	- Allow for setting piping and redirection via a `Shell` option with the new `Command(Func<Command, Command>)` option ([#39](https://github.com/madelson/MedallionShell/issues/39))
 	- Add CI testing for Mono and .NET Core on Linux
