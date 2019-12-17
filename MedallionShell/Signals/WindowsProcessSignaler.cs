@@ -112,11 +112,9 @@ namespace Medallion.Shell.Signals
 
         private static async Task<TemporaryExeFile> DeploySignalerExeAsync()
         {
-            var tempDirectoryName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDirectoryName);
-            const string SignalerExeName = "MedallionShell.ProcessSignaler.exe";
-            var exePath = Path.Combine(tempDirectoryName, SignalerExeName);
-            using (var resourceStream = Helpers.GetMedallionShellAssembly().GetManifestResourceStream(SignalerExeName))
+            const string SignalerExeNameWithoutExtension = "MedallionShell.ProcessSignaler";
+            var exePath = Path.Combine(Path.GetTempPath(), $"{SignalerExeNameWithoutExtension}_{Guid.NewGuid():N}.exe");
+            using (var resourceStream = Helpers.GetMedallionShellAssembly().GetManifestResourceStream(SignalerExeNameWithoutExtension + ".exe"))
             using (var fileStream = new FileStream(exePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, Constants.ByteBufferSize, useAsync: true))
             {
                 await resourceStream.CopyToAsync(fileStream).ConfigureAwait(false);
@@ -142,7 +140,6 @@ namespace Medallion.Shell.Signals
                 if (toDelete != null)
                 {
                     File.Delete(toDelete);
-                    Directory.Delete(System.IO.Path.GetDirectoryName(toDelete));
                 }
             }
         }

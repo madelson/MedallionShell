@@ -6,8 +6,8 @@
 
   <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
-    <Version>1.6.0</Version>
-    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <Version>1.6.1-alpha01</Version>
+    <AssemblyVersion>1.6.1.0</AssemblyVersion>
     <FileVersion>1.6.0.0</FileVersion>
     <Authors>Michael Adelson</Authors>
     <Description>A lightweight, cross-platform library that simplifies working with processes in .NET</Description>
@@ -38,7 +38,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3' Or '$(TargetFramework)' == 'netstandard2.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
 	  <PackageReference Include="System.Diagnostics.Process" version="4.3.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
