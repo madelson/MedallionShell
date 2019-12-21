@@ -575,7 +575,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestProcessKeepsWritingAfterOutputIsClosed()
         {
-            var command = TestShell.Run(SampleCommand, new[] { "pipe" }, options: o => o.ThrowOnError());
+            var command = TestShell.Run(SampleCommand, new[] { "pipe" }/*, options: o => o.ThrowOnError()*/);
             command.StandardOutput.Dispose();
             for (var i = 0; i < 100; ++i)
             {
@@ -585,6 +585,8 @@ namespace Medallion.Shell.Tests
 
             command.StandardInput.Dispose();
             command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
+            Console.WriteLine($"Result: {command.Result.ExitCode}, STDERR: {command.Result.StandardError}");
+            Assert.IsTrue(command.Result.Success);
         }
 
         private IEnumerable<string> ErrorLines()
