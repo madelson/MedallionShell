@@ -6,16 +6,15 @@
 
   <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
-    <Version>1.6.1-alpha01</Version>
+    <Version>1.6.1</Version>
     <AssemblyVersion>1.6.1.0</AssemblyVersion>
-    <FileVersion>1.6.0.0</FileVersion>
+    <FileVersion>1.6.1.0</FileVersion>
     <Authors>Michael Adelson</Authors>
     <Description>A lightweight, cross-platform library that simplifies working with processes in .NET</Description>
     <Copyright>Copyright © 2017 Michael Adelson</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>process async shell stdin stdout stderr pipe redirect signal kill ctrlc controlc</PackageTags>
     <PackageProjectUrl>https://github.com/madelson/MedallionShell</PackageProjectUrl>
-    <RepositoryUrl />
     <PackageReleaseNotes>See https://github.com/madelson/MedallionShell#release-notes</PackageReleaseNotes>
   </PropertyGroup>
 
