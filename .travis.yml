@@ -3,7 +3,7 @@ solution: MedallionShell.sln
 mono: latest
 # recommended here: https://travis-ci.community/t/c-builds-are-failing-net-core-installation-error/3063
 dist: xenial
-dotnet: 2.2.1
+dotnet: 3.1.0
 install:
   - nuget restore MedallionShell.sln
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
