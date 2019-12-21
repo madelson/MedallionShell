@@ -13,4 +13,4 @@ script:
   - msbuild /p:Configuration=Release MedallionShell.ProcessSignaler/MedallionShell.ProcessSignaler.csproj
   - msbuild /p:Configuration=Release MedallionShell.sln
   - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net46/MedallionShell.Tests.dll
-  - dotnet test --no-build -f netcoreapp2.2 -c Release
+  - dotnet test --no-build -f netcoreapp3.1 -c Release
