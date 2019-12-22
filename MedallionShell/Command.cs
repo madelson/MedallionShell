@@ -136,7 +136,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true), ">", stream);
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true), StandardIOStream.Out, stream);
         }
 
         /// <summary>
@@ -148,7 +148,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(stream, leaveStreamOpen: true), "2>", stream);
+            return new IOCommand(this, this.StandardError.PipeToAsync(stream, leaveStreamOpen: true), StandardIOStream.Error, stream);
         }
 
         /// <summary>
@@ -160,7 +160,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true), "<", stream);
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true), StandardIOStream.In, stream);
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(file), ">", file);
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(file), StandardIOStream.Out, file);
         }
 
         /// <summary>
@@ -184,7 +184,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(file), "2>", file);
+            return new IOCommand(this, this.StandardError.PipeToAsync(file), StandardIOStream.Error, file);
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(file), "<", file);
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(file), StandardIOStream.In, file);
         }
 
         /// <summary>
@@ -208,7 +208,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(lines), ">", lines.GetType());
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(lines), StandardIOStream.Out, lines.GetType());
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(lines), "2>", lines.GetType());
+            return new IOCommand(this, this.StandardError.PipeToAsync(lines), StandardIOStream.Error, lines.GetType());
         }
 
         /// <summary>
@@ -232,7 +232,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(lines), "<", lines.GetType());
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(lines), StandardIOStream.In, lines.GetType());
         }
 
         /// <summary>
@@ -244,7 +244,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(chars), ">", chars.GetType());
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(chars), StandardIOStream.Out, chars.GetType());
         }
 
         /// <summary>
@@ -256,7 +256,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(chars), "2>", chars.GetType());
+            return new IOCommand(this, this.StandardError.PipeToAsync(chars), StandardIOStream.Error, chars.GetType());
         }
 
         /// <summary>
@@ -268,7 +268,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(chars), "<", chars.GetType());
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(chars), StandardIOStream.In, chars.GetType());
         }
 
         /// <summary>
@@ -280,7 +280,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(writer, nameof(writer));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(writer, leaveWriterOpen: true), ">", writer);
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(writer, leaveWriterOpen: true), StandardIOStream.Out, writer);
         }
 
         /// <summary>
@@ -292,7 +292,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(writer, nameof(writer));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(writer, leaveWriterOpen: true), "2>", writer);
+            return new IOCommand(this, this.StandardError.PipeToAsync(writer, leaveWriterOpen: true), StandardIOStream.Error, writer);
         }
 
         /// <summary>
@@ -304,7 +304,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(reader, nameof(reader));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true), "<", reader);
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true), StandardIOStream.In, reader);
         }
 
         /// <summary>

@@ -6,26 +6,46 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell
 {
-    internal sealed class IoCommand : Command
+    internal sealed class IOCommand : Command
     {
         private readonly Command command;
         private readonly Task<CommandResult> task;
+        private readonly StandardIOStream standardIOStream;
         // for toString
-        private readonly string @operator;
         private readonly object sourceOrSink;
 
-        public IoCommand(Command command, Task ioTask, string @operator, object sourceOrSink)
+        public IOCommand(Command command, Task ioTask, StandardIOStream standardIOStream, object sourceOrSink)
         {
             this.command = command;
             this.task = this.CreateTask(ioTask);
-            this.@operator = @operator;
+            this.standardIOStream = standardIOStream;
             this.sourceOrSink = sourceOrSink;
         }
 
         private async Task<CommandResult> CreateTask(Task ioTask)
         {
             await ioTask.ConfigureAwait(false);
-            return await this.command.Task.ConfigureAwait(false);
+            var innerResult = await this.command.Task.ConfigureAwait(false);
+
+            // We wrap the inner command's result so that we can apply our stream availability error
+            // checking (the Ignore() calls). However, we use the inner result's string values since
+            // accessing those consumes the stream and we want both this result and the inner result
+            // to have the value.
+            return new CommandResult(
+                innerResult.ExitCode,
+                standardOutput: () =>
+                {
+                    Ignore(this.StandardOutput);
+                    return innerResult.StandardOutput;
+                },
+                standardError: () =>
+                {
+                    Ignore(this.StandardError);
+                    return innerResult.StandardError;
+                }
+            );
+
+            void Ignore(object ignored) { }
         }
 
         public override System.Diagnostics.Process Process
@@ -41,20 +61,17 @@ namespace Medallion.Shell
         public override int ProcessId => this.command.ProcessId;
         public override IReadOnlyList<int> ProcessIds => this.command.ProcessIds;
 
-        public override Streams.ProcessStreamWriter StandardInput
-        {
-            get { return this.command.StandardInput; }
-        }
+        public override Streams.ProcessStreamWriter StandardInput => this.standardIOStream != StandardIOStream.In
+            ? this.command.StandardInput
+            : throw new InvalidOperationException($"{nameof(this.StandardInput)} is unavailable because it is already being piped from {this.sourceOrSink}");
 
-        public override Streams.ProcessStreamReader StandardOutput
-        {
-            get { return this.command.StandardOutput; }
-        }
+        public override Streams.ProcessStreamReader StandardOutput => this.standardIOStream != StandardIOStream.Out
+            ? this.command.StandardOutput
+            : throw new InvalidOperationException($"{nameof(this.StandardOutput)} is unavailable because it is already being piped to {this.sourceOrSink}");
 
-        public override Streams.ProcessStreamReader StandardError
-        {
-            get { return this.command.StandardError; }
-        }
+        public override Streams.ProcessStreamReader StandardError => this.standardIOStream != StandardIOStream.Error
+            ? this.command.StandardError
+            : throw new InvalidOperationException($"{nameof(this.StandardError)} is unavailable because it is already being piped to {this.sourceOrSink}");
 
         public override Task<CommandResult> Task
         {
@@ -66,11 +83,26 @@ namespace Medallion.Shell
             this.command.Kill();
         }
 
-        public override string ToString() => $"{this.command} {this.@operator} {this.sourceOrSink}";
+        public override string ToString() => $"{this.command} {ToString(this.standardIOStream)} {this.sourceOrSink}";
 
         protected override void DisposeInternal()
         {
             this.command.As<IDisposable>().Dispose();
         }
+
+        private static string ToString(StandardIOStream standardIOStream) => standardIOStream switch
+        {
+            StandardIOStream.In => "<",
+            StandardIOStream.Out => ">",
+            StandardIOStream.Error => "2>",
+            _ => throw new InvalidOperationException("should never get here")
+        };
+    }
+
+    internal enum StandardIOStream
+    {
+        In,
+        Out,
+        Error,
     }
 }
