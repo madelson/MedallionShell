@@ -30,7 +30,7 @@ namespace Medallion.Shell.Streams
         private byte[] buffer = Empty;
         private int start, count;
         private bool writerClosed, readerClosed;
-        private SemaphoreSlim spaceAvailableSignal;
+        private SemaphoreSlim? spaceAvailableSignal;
         private Task<int> readTask = CompletedZeroTask;
         private Task writeTask = CompletedZeroTask;
 
@@ -190,7 +190,7 @@ namespace Medallion.Shell.Streams
                 }
 
                 // acquire the semaphore
-                var acquired = await this.spaceAvailableSignal.WaitAsync(timeoutToUse, cancellationTokenToUse).ConfigureAwait(false);
+                var acquired = await this.spaceAvailableSignal!.WaitAsync(timeoutToUse, cancellationTokenToUse).ConfigureAwait(false);
                 if (!acquired)
                 {
                     throw new TimeoutException("Timed out writing to the pipe");
@@ -447,13 +447,10 @@ namespace Medallion.Shell.Streams
         #region ---- Dispose ----
         private void CleanupNoLock()
         {
-            this.buffer = null;
-            this.readTask = null;
+            this.buffer = Empty;
+            this.writeTask = this.readTask = CompletedZeroTask;
             this.bytesAvailableSignal.Dispose();
-            if (this.spaceAvailableSignal != null)
-            {
-                this.spaceAvailableSignal.Dispose();
-            }
+            this.spaceAvailableSignal?.Dispose();
         }
         #endregion
 
@@ -549,9 +546,9 @@ namespace Medallion.Shell.Streams
 
             public override void EndWrite(IAsyncResult asyncResult)
             {
-                Throw.IfNull(asyncResult, "asyncResult");
-                var writeResult = asyncResult as AsyncWriteResult;
-                Throw.If(writeResult == null || writeResult.Stream != this, "asyncResult: must be created by this stream's BeginWrite method");
+                Throw.IfNull(asyncResult, nameof(asyncResult));
+                var writeResult = asyncResult as AsyncWriteResult 
+                    ?? throw new ArgumentException("must be created by this stream's BeginWrite method", nameof(asyncResult));
                 writeResult.WriteTask.Wait();
             }
 #endif
@@ -647,10 +644,8 @@ namespace Medallion.Shell.Streams
                 }
             }
 
-            private static NotSupportedException WriteOnly([CallerMemberName] string memberName = null)
-            {
+            private static NotSupportedException WriteOnly([CallerMemberName] string memberName = "") =>
                 throw new NotSupportedException(memberName + ": the stream is write only");
-            }
         }
         #endregion
 
@@ -735,10 +730,9 @@ namespace Medallion.Shell.Streams
 #if !NETSTANDARD1_3
             public override int EndRead(IAsyncResult asyncResult)
             {
-                Throw.IfNull(asyncResult, "asyncResult");
-                var readResult = asyncResult as AsyncReadResult;
-                Throw.If(readResult == null || readResult.Stream != this, "asyncResult: must be created by this stream's BeginRead method");
-
+                Throw.IfNull(asyncResult, nameof(asyncResult));
+                var readResult = asyncResult as AsyncReadResult
+                    ?? throw new ArgumentException("must be created by this stream's BeginRead method", nameof(asyncResult));
                 return readResult.ReadTask.Result;
             }
 
@@ -841,10 +835,8 @@ namespace Medallion.Shell.Streams
                 set { throw ReadOnly(); }
             }
 
-            private static NotSupportedException ReadOnly([CallerMemberName] string memberName = null)
-            {
+            private static NotSupportedException ReadOnly([CallerMemberName] string memberName = "") =>
                 throw new NotSupportedException(memberName + ": the stream is read only");
-            }
         }
         #endregion
     }

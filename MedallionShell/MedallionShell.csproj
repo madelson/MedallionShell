@@ -19,7 +19,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <WarningLevel>4</WarningLevel>    
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>Latest</LangVersion>
+    <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>

@@ -28,7 +28,7 @@ namespace Medallion.Shell
             var isFirstArgument = true;
             foreach (var argument in arguments)
             {
-                Throw.If(argument == null, nameof(arguments) + ": must not contain null");
+                if (argument == null) { throw new ArgumentException("must not contain null", nameof(arguments)); }
 
                 if (isFirstArgument) { isFirstArgument = false; }
                 else { builder.Append(' '); }

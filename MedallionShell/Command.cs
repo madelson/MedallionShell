@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -382,13 +383,12 @@ namespace Medallion.Shell
         /// </summary>
         public static Command operator >(Command command, IEnumerable<string> lines)
         {
-            Throw.IfNull(command, "command");
-            Throw.IfNull(lines, "lines");
+            Throw.IfNull(command, nameof(command));
+            Throw.IfNull(lines, nameof(lines));
 
-            var linesCollection = lines as ICollection<string>;
-            Throw.If(linesCollection == null, "lines: must implement ICollection<string> in order to recieve output");
-
-            return command.RedirectTo(linesCollection);
+            return lines is ICollection<string> linesCollection
+                ? command.RedirectTo(linesCollection)
+                : throw new ArgumentException("must implement ICollection<string> in order to recieve output", nameof(lines));
         }
 
         /// <summary>
@@ -410,13 +410,12 @@ namespace Medallion.Shell
         /// </summary>
         public static Command operator >(Command command, IEnumerable<char> chars)
         {
-            Throw.IfNull(command, "command");
-            Throw.IfNull(chars, "chars");
+            Throw.IfNull(command, nameof(command));
+            Throw.IfNull(chars, nameof(chars));
 
-            var charCollection = chars as ICollection<char>;
-            Throw<ArgumentException>.If(charCollection == null, "chars: must implement ICollection<char> in order to receive output");
-
-            return command.RedirectTo(charCollection);
+            return chars is ICollection<char> charCollection
+                ? command.RedirectTo(charCollection)
+                : throw new ArgumentException("must implement ICollection<char> in order to receive output", nameof(chars));
         }
 
         /// <summary>
@@ -436,26 +435,20 @@ namespace Medallion.Shell
         /// <summary>
         /// A convenience method for calling <see cref="Shell.Run(string, IEnumerable{object}, Action{Shell.Options})"/> on <see cref="Shell.Default"/>
         /// </summary>
-        public static Command Run(string executable, IEnumerable<object> arguments = null, Action<Shell.Options> options = null)
-        {
-            return Shell.Default.Run(executable, arguments, options);
-        }
+        public static Command Run(string executable, IEnumerable<object>? arguments = null, Action<Shell.Options>? options = null) =>
+            Shell.Default.Run(executable, arguments, options);
 
         /// <summary>
         /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, Action{Shell.Options}, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
         /// </summary>
-        public static bool TryAttachToProcess(int processId, Action<Shell.Options> options, out Command attachedCommand)
-        {
-            return Shell.Default.TryAttachToProcess(processId, options, out attachedCommand);
-        }
+        public static bool TryAttachToProcess(int processId, Action<Shell.Options> options, [NotNullWhen(returnValue: true)] out Command? attachedCommand) =>
+            Shell.Default.TryAttachToProcess(processId, options, out attachedCommand);
 
         /// <summary>
         /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
         /// </summary>
-        public static bool TryAttachToProcess(int processId, out Command attachedCommand)
-        {
-            return Shell.Default.TryAttachToProcess(processId, out attachedCommand);
-        }
+        public static bool TryAttachToProcess(int processId, [NotNullWhen(returnValue: true)] out Command? attachedCommand) =>
+            Shell.Default.TryAttachToProcess(processId, out attachedCommand);
 
         /// <summary>
         /// A convenience method for calling <see cref="Shell.Run(string, object[])"/> on <see cref="Shell.Default"/>

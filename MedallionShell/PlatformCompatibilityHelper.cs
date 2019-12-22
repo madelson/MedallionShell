@@ -11,7 +11,7 @@ namespace Medallion.Shell
     internal static class PlatformCompatibilityHelper
     {
         // see http://www.mono-project.com/docs/faq/technical/
-        private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
+        public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
 
         public static bool IsWindows
         {
@@ -78,7 +78,7 @@ namespace Medallion.Shell
         ///
         /// If https://github.com/mono/mono/issues/8478 is ever addressed, we wouldn't need this any more.
         /// </summary>
-        public static bool SafeStart(this Process process, out StreamWriter standardInput, out StreamReader standardOutput, out StreamReader standardError)
+        public static bool SafeStart(this Process process, out StreamWriter? standardInput, out StreamReader? standardOutput, out StreamReader? standardError)
         {
             var redirectStandardInput = process.StartInfo.RedirectStandardInput;
             var redirectStandardOutput = process.StartInfo.RedirectStandardOutput;

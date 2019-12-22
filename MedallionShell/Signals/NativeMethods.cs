@@ -26,7 +26,7 @@ namespace Medallion.Shell.Signals
         public static extern uint GetConsoleProcessList(uint[] lpdwProcessList, uint dwProcessCount);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate handlerRoutine, bool add);
+        public static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate? handlerRoutine, bool add);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GenerateConsoleCtrlEvent(CtrlType dwCtrlEvent, uint dwProcessGroupId);

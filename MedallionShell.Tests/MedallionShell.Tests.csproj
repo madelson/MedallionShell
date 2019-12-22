@@ -3,10 +3,11 @@
   <PropertyGroup>
     <TargetFrameworks>net46;netcoreapp2.2</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <LangVersion>7.2</LangVersion>
-	<GenerateDocumentationFile>True</GenerateDocumentationFile>
-	<CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
-	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <LangVersion>Latest</LangVersion>
+    <Nullable>enable</Nullable>
+	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
+	  <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
+	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
 

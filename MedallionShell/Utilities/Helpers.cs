@@ -81,10 +81,8 @@ namespace Medallion.Shell
             }
         }
 
-        public static NotSupportedException NotSupported([CallerMemberName] string memberName = null)
-        {
+        public static NotSupportedException NotSupported([CallerMemberName] string memberName = "") =>
             throw new NotSupportedException(memberName);
-        }
     }
 
     internal static class Throw<TException>

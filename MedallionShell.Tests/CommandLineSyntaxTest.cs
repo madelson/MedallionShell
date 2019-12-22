@@ -15,8 +15,8 @@ namespace Medallion.Shell.Tests
         public void TestArgumentValidation([Values] bool isWindowsSyntax)
         {
             var syntax = isWindowsSyntax ? new WindowsCommandLineSyntax() : new MonoUnixCommandLineSyntax().As<CommandLineSyntax>();
-            Assert.Throws<ArgumentNullException>(() => syntax.CreateArgumentString(null));
-            Assert.Throws<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null, "b" }));
+            Assert.Throws<ArgumentNullException>(() => syntax.CreateArgumentString(null!));
+            Assert.Throws<ArgumentException>(() => syntax.CreateArgumentString(new[] { "a", null!, "b" }));
         }
         
         [TestCase(" ")]

@@ -38,7 +38,7 @@ namespace Medallion.Shell.Streams
             // the overhead of flushing on each write call
 
             var buffer = new byte[Constants.ByteBufferSize];
-            Task flushTask = null;
+            Task? flushTask = null;
             try
             {
                 while (true)
@@ -83,7 +83,7 @@ namespace Medallion.Shell.Streams
             }
         }
 
-        public static async Task PipeAsync(this IDisposable @this, Func<Task> pipeTaskFactory, bool leaveOpen, Action extraDisposeAction = null)
+        public static async Task PipeAsync(this IDisposable @this, Func<Task> pipeTaskFactory, bool leaveOpen, Action? extraDisposeAction = null)
         {
             try
             {

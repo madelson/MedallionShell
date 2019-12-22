@@ -584,7 +584,7 @@ namespace Medallion.Shell.Tests
 
             // workaround for https://github.com/mono/mono/issues/18279; so far
             // I've encountered this only on Mono Linux
-            if (Type.GetType("Mono.Runtime") != null
+            if (PlatformCompatibilityHelper.IsMono
                 && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 command.StandardInput.Dispose();
@@ -599,7 +599,7 @@ namespace Medallion.Shell.Tests
 
                 command.StandardInput.Dispose();
                 command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
-                command.Result.Success.ShouldEqual(Type.GetType("Mono.Runtime") == null);
+                command.Result.Success.ShouldEqual(true);
             }
         }
 

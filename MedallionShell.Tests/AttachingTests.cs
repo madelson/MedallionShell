@@ -24,7 +24,7 @@ namespace Medallion.Shell.Tests
             var processCommand = TestShell.Run(SampleCommand, new[] { "sleep", "100" });
             Command.TryAttachToProcess(processCommand.ProcessId, out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
-            var commandResult = attachedCommand.Task;
+            var commandResult = attachedCommand!.Task;
             commandResult.IsCompleted.ShouldEqual(false, "Task has finished too early.");
             Thread.Sleep(300);
             commandResult.IsCompleted.ShouldEqual(true, "Task has not finished on time.");
@@ -36,7 +36,7 @@ namespace Medallion.Shell.Tests
             var processCommand = TestShell.Run(SampleCommand, new[] { "exit", "16" });
             Command.TryAttachToProcess(processCommand.ProcessId, out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
-            var task = attachedCommand.Task;
+            var task = attachedCommand!.Task;
             task.Wait(1000).ShouldEqual(true, "Task has not finished on time.");
             task.Result.ExitCode.ShouldEqual(16, "Exit code was not correct.");
         }
@@ -61,7 +61,7 @@ namespace Medallion.Shell.Tests
                     out var attachedCommand)
                 .ShouldEqual(true, "Attaching to process failed.");
             
-            attachedCommand.Kill();
+            attachedCommand!.Kill();
             
             attachedCommand.Task.Wait(TimeSpan.FromSeconds(1))
                 .ShouldEqual(true, "The process is still alive after Kill() has finished.");
@@ -81,7 +81,7 @@ namespace Medallion.Shell.Tests
                 .ShouldEqual(true, "attaching failed");
             using (attachedCommand)
             {
-                attachedCommand.Process.WaitForExit(1000).ShouldEqual(true, "The process wasn't killed.");
+                attachedCommand!.Process.WaitForExit(1000).ShouldEqual(true, "The process wasn't killed.");
             }
         }
 
@@ -94,10 +94,11 @@ namespace Medallion.Shell.Tests
             Command.TryAttachToProcess(
                 processId,
                 options => options.Timeout(TimeSpan.FromMilliseconds(150)),
-                out var attachedCommand);
+                out var attachedCommand)
+                .ShouldEqual(true);
 
             // the timeout is counted from the moment we attached to the process so it shouldn't throw at this moment
-            attachedCommand.Task.Wait(100); 
+            attachedCommand!.Task.Wait(100); 
 
             // but should eventually throw
             var exception = Assert.Throws<AggregateException>(
