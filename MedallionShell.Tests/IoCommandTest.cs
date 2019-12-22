@@ -51,7 +51,7 @@ namespace MedallionShell.Tests
             Assert.Throws<ObjectDisposedException>(() => command.Result.StandardError.GetHashCode());
 
             Assert.IsEmpty(output);
-            ioCommand.Result.StandardOutput.ShouldEqual(command.Result.StandardOutput).ShouldEqual("a\r\n");
+            ioCommand.Result.StandardOutput.ShouldEqual(command.Result.StandardOutput).ShouldEqual($"a{Environment.NewLine}");
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace MedallionShell.Tests
 
             Assert.DoesNotThrow(() => command.StandardInput.GetHashCode());
 
-            ioCommand.Result.StandardOutput.ShouldEqual(command.Result.StandardOutput).ShouldEqual("a\r\n");
+            ioCommand.Result.StandardOutput.ShouldEqual(command.Result.StandardOutput).ShouldEqual($"a{Environment.NewLine}");
             ioCommand.Result.StandardError.ShouldEqual(command.Result.StandardError).ShouldEqual(string.Empty);
         }
     }
