@@ -61,7 +61,7 @@ command.StandardOutput.PipeToAsync(outputLines); // pipe output text to a collec
 You can also express piping directly on the `Command` object. This returns a new `Command` instance which represents both the underlying process execution and the IO piping operation, providing one thing you can await to know when everything has completed. You can even use this feature to chain together commands (like the `|` operator on the command line).
 ```C#
 await Command.Run("processingStep1.exe")
-	.PipeFromAsync(new FileInfo("input.txt"))
+	.RedirectFrom(new FileInfo("input.txt"))
 	.PipeTo(Command.Run("processingStep2.exe"))
 	.RedirectTo(new FileInfo("output.txt"));
 	
