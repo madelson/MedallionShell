@@ -108,7 +108,7 @@ var command = MyShell.Run("foo.exe", new[] { "arg1", ... }, options => /* can st
 ## Contributing
 Contributions are welcome! Please report any issues you encounter or ideas for enhancements. If you would like to contribute code, I ask that you file an issue first so that we can work out the details before you start coding and avoid wasted effort on your part.
 
-**To build the code**, you will need VisualStudio 2017 or higher (community edition is fine) [download](https://www.visualstudio.com/vs/community/). Running all tests will require that you have installed Mono (for the Mono compat tests only).
+**To build the code**, you will need VisualStudio 2019 or higher (community edition is fine) [download](https://www.visualstudio.com/vs/community/). Running all tests will require that you have installed Mono (for the Mono compat tests only).
 
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/9idbmymiatbd8ncx/branch/master?svg=true)](https://ci.appveyor.com/project/madelson/medallionshell/branch/master) 
 Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch=master)](https://travis-ci.com/madelson/MedallionShell)
