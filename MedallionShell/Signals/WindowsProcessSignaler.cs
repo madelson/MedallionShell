@@ -31,10 +31,15 @@ namespace Medallion.Shell.Signals
                 return await SendSignalFromCurrentProcess(processId, signal).ConfigureAwait(false);
             }
 
-            using (var file = await DeploySignalerExeAsync().ConfigureAwait(false))
+            var exeFile = await DeploySignalerExeAsync().ConfigureAwait(false);
+            try
             {
-                var command = Command.Run(file.Path, new object[] { processId, (int)signal });
+                var command = Command.Run(exeFile, new object[] { processId, (int)signal });
                 return (await command.Task.ConfigureAwait(false)).Success;
+            }
+            finally
+            {
+                File.Delete(exeFile);
             }
         }
 
@@ -110,41 +115,17 @@ namespace Medallion.Shell.Signals
             }
         }
 
-        private static async Task<TemporaryExeFile> DeploySignalerExeAsync()
+        private static async Task<string> DeploySignalerExeAsync()
         {
-            var tempDirectoryName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDirectoryName);
-            const string SignalerExeName = "MedallionShell.ProcessSignaler.exe";
-            var exePath = Path.Combine(tempDirectoryName, SignalerExeName);
-            using (var resourceStream = Helpers.GetMedallionShellAssembly().GetManifestResourceStream(SignalerExeName))
+            const string SignalerExeNameWithoutExtension = "MedallionShell.ProcessSignaler";
+            var exePath = Path.Combine(Path.GetTempPath(), $"{SignalerExeNameWithoutExtension}_{Guid.NewGuid():N}.exe");
+            using (var resourceStream = Helpers.GetMedallionShellAssembly().GetManifestResourceStream(SignalerExeNameWithoutExtension + ".exe"))
             using (var fileStream = new FileStream(exePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, Constants.ByteBufferSize, useAsync: true))
             {
                 await resourceStream.CopyToAsync(fileStream).ConfigureAwait(false);
             }
-            
-            return new TemporaryExeFile(exePath);
-        }
 
-        private class TemporaryExeFile : IDisposable
-        {
-            private string _path;
-
-            public TemporaryExeFile(string path)
-            {
-                this._path = path;
-            }
-
-            public string Path => this._path;
-
-            public void Dispose()
-            {
-                var toDelete = Interlocked.Exchange(ref this._path, null);
-                if (toDelete != null)
-                {
-                    File.Delete(toDelete);
-                    Directory.Delete(System.IO.Path.GetDirectoryName(toDelete));
-                }
-            }
+            return exePath;
         }
     }
 }

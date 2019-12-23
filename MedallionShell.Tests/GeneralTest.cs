@@ -575,16 +575,32 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestProcessKeepsWritingAfterOutputIsClosed()
         {
-            var command = TestShell.Run(SampleCommand, new[] { "pipe" }, options: o => o.ThrowOnError());
+            var command = TestShell.Run(SampleCommand, new[] { "pipe" });
             command.StandardOutput.Dispose();
             for (var i = 0; i < 100; ++i)
             {
                 command.StandardInput.WriteLine(new string('a', i));
             }
-            command.Task.IsCompleted.ShouldEqual(false);
 
-            command.StandardInput.Dispose();
-            command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
+            // workaround for https://github.com/mono/mono/issues/18279; so far
+            // I've encountered this only on Mono Linux
+            if (PlatformCompatibilityHelper.IsMono
+                && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                command.StandardInput.Dispose();
+                command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
+                command.Result.ExitCode.ShouldEqual(1);
+                // SampleCommand fails because it's attempt to write to Console.Out fails hard
+                Assert.That(command.Result.StandardError, Does.Contain("System.IO.IOException: Write fault"));
+            }
+            else
+            {
+                command.Task.IsCompleted.ShouldEqual(false);
+
+                command.StandardInput.Dispose();
+                command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
+                command.Result.Success.ShouldEqual(true);
+            }
         }
 
         private IEnumerable<string> ErrorLines()

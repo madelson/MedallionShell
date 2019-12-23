@@ -34,19 +34,13 @@ namespace Medallion.Shell
             get { return this.second.Process; }
         }
 
-        private IReadOnlyList<Process> processes;
-        public override IReadOnlyList<Process> Processes
-        {
-            get { return this.processes ?? (this.processes = this.first.Processes.Concat(this.second.Processes).ToList().AsReadOnly()); }
-        }
+        private IReadOnlyList<Process>? processes;
+        public override IReadOnlyList<Process> Processes => this.processes ??= this.first.Processes.Concat(this.second.Processes).ToList().AsReadOnly();
 
         public override int ProcessId => this.second.ProcessId;
 
-        private IReadOnlyList<int> processIds;
-        public override IReadOnlyList<int> ProcessIds
-        {
-            get { return this.processIds ?? (this.processIds = this.first.ProcessIds.Concat(this.second.ProcessIds).ToList().AsReadOnly()); }
-        }
+        private IReadOnlyList<int>? processIds;
+        public override IReadOnlyList<int> ProcessIds => this.processIds ??= this.first.ProcessIds.Concat(this.second.ProcessIds).ToList().AsReadOnly();
 
         public override Task<CommandResult> Task
         {

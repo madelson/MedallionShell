@@ -6,21 +6,22 @@
 
   <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
-    <Version>1.6.0</Version>
-    <AssemblyVersion>1.6.0.0</AssemblyVersion>
-    <FileVersion>1.6.0.0</FileVersion>
+    <Version>1.6.1</Version>
+    <AssemblyVersion>1.6.1.0</AssemblyVersion>
+    <FileVersion>1.6.1.0</FileVersion>
     <Authors>Michael Adelson</Authors>
     <Description>A lightweight, cross-platform library that simplifies working with processes in .NET</Description>
     <Copyright>Copyright © 2017 Michael Adelson</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>process async shell stdin stdout stderr pipe redirect signal kill ctrlc controlc</PackageTags>
     <PackageProjectUrl>https://github.com/madelson/MedallionShell</PackageProjectUrl>
-    <RepositoryUrl />
     <PackageReleaseNotes>See https://github.com/madelson/MedallionShell#release-notes</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup>
-    <WarningLevel>4</WarningLevel>    
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>Latest</LangVersion>
+    <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -38,7 +39,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3' Or '$(TargetFramework)' == 'netstandard2.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
 	  <PackageReference Include="System.Diagnostics.Process" version="4.3.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net46'">

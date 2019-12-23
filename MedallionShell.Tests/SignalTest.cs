@@ -46,7 +46,7 @@ namespace MedallionShell.Tests
         public async Task HandlesEdgeCases()
         {
             var command = TestShell.Run(SampleCommand, "sleep", "10000");
-            Assert.Throws<ArgumentNullException>(() => command.TrySignalAsync(null).GetType());
+            Assert.Throws<ArgumentNullException>(() => command.TrySignalAsync(null!).GetType());
 
             command.Kill();
             await command.Task;
@@ -99,7 +99,7 @@ namespace MedallionShell.Tests
 
                 try
                 {
-                    (await thisCommand.TrySignalAsync(CommandSignal.FromSystemValue(signal))).ShouldEqual(true);
+                    (await thisCommand!.TrySignalAsync(CommandSignal.FromSystemValue(signal))).ShouldEqual(true);
                     manualResetEvent.Wait(TimeSpan.FromSeconds(5)).ShouldEqual(true);
                 }
                 finally

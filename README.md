@@ -114,6 +114,11 @@ Windows: [![Build status](https://ci.appveyor.com/api/projects/status/9idbmymiat
 Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch=master)](https://travis-ci.com/madelson/MedallionShell)
 
 ## Release Notes
+- 1.6.1 
+	- Fixes transient error in signaling on Windows machines with slow disks ([#61](https://github.com/madelson/MedallionShell/issues/61))
+	- Reduces dependency footprint for .NET Standard 2.0 ([#56](https://github.com/madelson/MedallionShell/issues/56))
+	- Improves error messaging when trying to access the standard IO streams of Commands when those streams have been piped elsewhere ([#59](https://github.com/madelson/MedallionShell/issues/59), [#41](https://github.com/madelson/MedallionShell/issues/41))
+	- Adds C#8 nullable reference type annotations
 - 1.6.0
 	- Adds `Command.TryAttachToProcess` API for creating a `Command` attached to an already-running process ([#30](https://github.com/madelson/MedallionShell/issues/30)). Thanks [konrad-kruczynski](konrad-kruczynski) for coming up with the idea and implementing!	
 	- Adds `Command.TrySignal` API which provides cross-platform support for the CTRL+C (SIGINT) signal as well as support for OS-specific signals ([#35](https://github.com/madelson/MedallionShell/issues/35))

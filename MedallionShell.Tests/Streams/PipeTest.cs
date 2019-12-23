@@ -260,7 +260,7 @@ namespace Medallion.Shell.Tests.Streams
             asyncWrite.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
             asyncRead.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
             asyncRead.Result.ShouldNotEqual(null);
-            asyncRead.Result.Length.ShouldEqual(longText.Length);
+            asyncRead.Result!.Length.ShouldEqual(longText.Length);
             asyncRead.Result.ShouldEqual(longText);
         }
 
@@ -364,7 +364,7 @@ namespace Medallion.Shell.Tests.Streams
             return new StreamWriter(@this.InputStream) { AutoFlush = true }.WriteAsync(text);
         }
 
-        public static async Task<string> ReadTextAsync(this Pipe @this, int count, CancellationToken token = default(CancellationToken))
+        public static async Task<string?> ReadTextAsync(this Pipe @this, int count, CancellationToken token = default(CancellationToken))
         {
             var bytes = new byte[count];
             var bytesRead = 0;

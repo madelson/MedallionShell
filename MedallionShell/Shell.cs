@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -31,7 +32,7 @@ namespace Medallion.Shell
         /// Executes the given <paramref name="executable"/> with the given <paramref name="arguments"/> and
         /// <paramref name="options"/>
         /// </summary>
-        public Command Run(string executable, IEnumerable<object> arguments = null, Action<Options> options = null)
+        public Command Run(string executable, IEnumerable<object>? arguments = null, Action<Options>? options = null)
         {
             Throw.If(string.IsNullOrEmpty(executable), "executable is required");
 
@@ -77,17 +78,15 @@ namespace Medallion.Shell
         /// giving <paramref name="attachedCommand" /> representing the process and returning
         /// true if this succeeded, otherwise false.
         /// </summary>
-        public bool TryAttachToProcess(int processId, out Command attachedCommand)
-        {
-            return this.TryAttachToProcess(processId, options: null, attachedCommand: out attachedCommand);
-        }
+        public bool TryAttachToProcess(int processId, [NotNullWhen(returnValue: true)] out Command? attachedCommand) =>
+            this.TryAttachToProcess(processId, options: null, attachedCommand: out attachedCommand);
 
         /// <summary>
         /// Tries to attach to an already running process, given its <paramref name="processId"/>
         /// and <paramref name="options"/>,  giving <paramref name="attachedCommand" /> representing
         /// the process and returning true if this succeeded, otherwise false.
         /// </summary>
-        public bool TryAttachToProcess(int processId, Action<Shell.Options> options, out Command attachedCommand)
+        public bool TryAttachToProcess(int processId, Action<Shell.Options>? options, [NotNullWhen(returnValue: true)] out Command? attachedCommand)
         {
             var finalOptions = this.GetOptions(options);
             if (finalOptions.ProcessStreamEncoding != null || finalOptions.StartInfoInitializers.Count != 0)
@@ -97,7 +96,7 @@ namespace Medallion.Shell
             }
 
             attachedCommand = null;
-            Process process = null;
+            Process? process = null;
             try
             {
                 process = Process.GetProcessById(processId);
@@ -150,7 +149,7 @@ namespace Medallion.Shell
         public static Shell Default { get; } = new Shell(_ => { });
         #endregion
 
-        private Options GetOptions(Action<Options> additionalConfiguration)
+        private Options GetOptions(Action<Options>? additionalConfiguration)
         {
             var builder = new Options();
             this.Configuration.Invoke(builder);
@@ -170,13 +169,13 @@ namespace Medallion.Shell
                 this.RestoreDefaults();
             }
 
-            internal List<Action<ProcessStartInfo>> StartInfoInitializers { get; private set; }
-            internal List<Func<Command, Command>> CommandInitializers { get; private set; }
-            internal CommandLineSyntax CommandLineSyntax { get; private set; }
+            internal List<Action<ProcessStartInfo>> StartInfoInitializers { get; private set; } = default!; // assigned in RestoreDefaults
+            internal List<Func<Command, Command>> CommandInitializers { get; private set; } = default!; // assigned in RestoreDefaults
+            internal CommandLineSyntax CommandLineSyntax { get; private set; } = default!; // assigned in RestoreDefaults
             internal bool ThrowExceptionOnError { get; private set; }
             internal bool DisposeProcessOnExit { get; private set; }
             internal TimeSpan ProcessTimeout { get; private set; }
-            internal Encoding ProcessStreamEncoding { get; private set; }
+            internal Encoding? ProcessStreamEncoding { get; private set; }
             internal CancellationToken ProcessCancellationToken { get; private set; }
 
             #region ---- Builder methods ----

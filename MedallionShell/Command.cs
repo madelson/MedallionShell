@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -135,7 +136,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true), ">", stream);
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(stream, leaveStreamOpen: true), StandardIOStream.Out, stream);
         }
 
         /// <summary>
@@ -147,7 +148,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(stream, leaveStreamOpen: true), "2>", stream);
+            return new IOCommand(this, this.StandardError.PipeToAsync(stream, leaveStreamOpen: true), StandardIOStream.Error, stream);
         }
 
         /// <summary>
@@ -159,7 +160,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(stream, nameof(stream));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true), "<", stream);
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(stream, leaveStreamOpen: true), StandardIOStream.In, stream);
         }
 
         /// <summary>
@@ -171,7 +172,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(file), ">", file);
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(file), StandardIOStream.Out, file);
         }
 
         /// <summary>
@@ -183,7 +184,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(file), "2>", file);
+            return new IOCommand(this, this.StandardError.PipeToAsync(file), StandardIOStream.Error, file);
         }
 
         /// <summary>
@@ -195,7 +196,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(file, nameof(file));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(file), "<", file);
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(file), StandardIOStream.In, file);
         }
 
         /// <summary>
@@ -207,7 +208,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(lines), ">", lines.GetType());
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(lines), StandardIOStream.Out, lines.GetType());
         }
 
         /// <summary>
@@ -219,7 +220,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(lines), "2>", lines.GetType());
+            return new IOCommand(this, this.StandardError.PipeToAsync(lines), StandardIOStream.Error, lines.GetType());
         }
 
         /// <summary>
@@ -231,7 +232,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(lines, nameof(lines));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(lines), "<", lines.GetType());
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(lines), StandardIOStream.In, lines.GetType());
         }
 
         /// <summary>
@@ -243,7 +244,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(chars), ">", chars.GetType());
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(chars), StandardIOStream.Out, chars.GetType());
         }
 
         /// <summary>
@@ -255,7 +256,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(chars), "2>", chars.GetType());
+            return new IOCommand(this, this.StandardError.PipeToAsync(chars), StandardIOStream.Error, chars.GetType());
         }
 
         /// <summary>
@@ -267,7 +268,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(chars, nameof(chars));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(chars), "<", chars.GetType());
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(chars), StandardIOStream.In, chars.GetType());
         }
 
         /// <summary>
@@ -279,7 +280,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(writer, nameof(writer));
 
-            return new IoCommand(this, this.StandardOutput.PipeToAsync(writer, leaveWriterOpen: true), ">", writer);
+            return new IOCommand(this, this.StandardOutput.PipeToAsync(writer, leaveWriterOpen: true), StandardIOStream.Out, writer);
         }
 
         /// <summary>
@@ -291,7 +292,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(writer, nameof(writer));
 
-            return new IoCommand(this, this.StandardError.PipeToAsync(writer, leaveWriterOpen: true), "2>", writer);
+            return new IOCommand(this, this.StandardError.PipeToAsync(writer, leaveWriterOpen: true), StandardIOStream.Error, writer);
         }
 
         /// <summary>
@@ -303,7 +304,7 @@ namespace Medallion.Shell
         {
             Throw.IfNull(reader, nameof(reader));
 
-            return new IoCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true), "<", reader);
+            return new IOCommand(this, this.StandardInput.PipeFromAsync(reader, leaveReaderOpen: true), StandardIOStream.In, reader);
         }
 
         /// <summary>
@@ -382,13 +383,12 @@ namespace Medallion.Shell
         /// </summary>
         public static Command operator >(Command command, IEnumerable<string> lines)
         {
-            Throw.IfNull(command, "command");
-            Throw.IfNull(lines, "lines");
+            Throw.IfNull(command, nameof(command));
+            Throw.IfNull(lines, nameof(lines));
 
-            var linesCollection = lines as ICollection<string>;
-            Throw.If(linesCollection == null, "lines: must implement ICollection<string> in order to recieve output");
-
-            return command.RedirectTo(linesCollection);
+            return lines is ICollection<string> linesCollection
+                ? command.RedirectTo(linesCollection)
+                : throw new ArgumentException("must implement ICollection<string> in order to recieve output", nameof(lines));
         }
 
         /// <summary>
@@ -410,13 +410,12 @@ namespace Medallion.Shell
         /// </summary>
         public static Command operator >(Command command, IEnumerable<char> chars)
         {
-            Throw.IfNull(command, "command");
-            Throw.IfNull(chars, "chars");
+            Throw.IfNull(command, nameof(command));
+            Throw.IfNull(chars, nameof(chars));
 
-            var charCollection = chars as ICollection<char>;
-            Throw<ArgumentException>.If(charCollection == null, "chars: must implement ICollection<char> in order to receive output");
-
-            return command.RedirectTo(charCollection);
+            return chars is ICollection<char> charCollection
+                ? command.RedirectTo(charCollection)
+                : throw new ArgumentException("must implement ICollection<char> in order to receive output", nameof(chars));
         }
 
         /// <summary>
@@ -436,26 +435,20 @@ namespace Medallion.Shell
         /// <summary>
         /// A convenience method for calling <see cref="Shell.Run(string, IEnumerable{object}, Action{Shell.Options})"/> on <see cref="Shell.Default"/>
         /// </summary>
-        public static Command Run(string executable, IEnumerable<object> arguments = null, Action<Shell.Options> options = null)
-        {
-            return Shell.Default.Run(executable, arguments, options);
-        }
+        public static Command Run(string executable, IEnumerable<object>? arguments = null, Action<Shell.Options>? options = null) =>
+            Shell.Default.Run(executable, arguments, options);
 
         /// <summary>
         /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, Action{Shell.Options}, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
         /// </summary>
-        public static bool TryAttachToProcess(int processId, Action<Shell.Options> options, out Command attachedCommand)
-        {
-            return Shell.Default.TryAttachToProcess(processId, options, out attachedCommand);
-        }
+        public static bool TryAttachToProcess(int processId, Action<Shell.Options> options, [NotNullWhen(returnValue: true)] out Command? attachedCommand) =>
+            Shell.Default.TryAttachToProcess(processId, options, out attachedCommand);
 
         /// <summary>
         /// A convenience method for calling <see cref="Shell.TryAttachToProcess(int, out Medallion.Shell.Command)"/> on <see cref="Shell.Default"/>
         /// </summary>
-        public static bool TryAttachToProcess(int processId, out Command attachedCommand)
-        {
-            return Shell.Default.TryAttachToProcess(processId, out attachedCommand);
-        }
+        public static bool TryAttachToProcess(int processId, [NotNullWhen(returnValue: true)] out Command? attachedCommand) =>
+            Shell.Default.TryAttachToProcess(processId, out attachedCommand);
 
         /// <summary>
         /// A convenience method for calling <see cref="Shell.Run(string, object[])"/> on <see cref="Shell.Default"/>

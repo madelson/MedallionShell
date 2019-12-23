@@ -27,7 +27,7 @@ namespace Medallion.Shell
             bool disposeOnExit,
             TimeSpan timeout,
             CancellationToken cancellationToken,
-            Encoding standardInputEncoding)
+            Encoding? standardInputEncoding)
         {
             this.disposeOnExit = disposeOnExit;
             this.fileName = startInfo.FileName;
@@ -39,17 +39,17 @@ namespace Medallion.Shell
             this.process.SafeStart(out var processStandardInput, out var processStandardOutput, out var processStandardError);
 
             var ioTasks = new List<Task>(capacity: 2);
-            if (startInfo.RedirectStandardOutput)
+            if (processStandardOutput != null)
             {
                 this.standardOutputReader = new InternalProcessStreamReader(processStandardOutput);
                 ioTasks.Add(this.standardOutputReader.Task);
             }
-            if (startInfo.RedirectStandardError)
+            if (processStandardError != null)
             {
                 this.standardErrorReader = new InternalProcessStreamReader(processStandardError);
                 ioTasks.Add(this.standardErrorReader.Task);
             }
-            if (startInfo.RedirectStandardInput)
+            if (processStandardInput != null)
             {
                 // unfortunately, changing the encoding can't be done via ProcessStartInfo so we have to do it manually here.
                 // See https://github.com/dotnet/corefx/issues/20497
@@ -113,11 +113,8 @@ namespace Medallion.Shell
             }
         }
 
-        private IReadOnlyList<Process> processes;
-        public override IReadOnlyList<Process> Processes
-        {
-            get { return this.processes ?? (this.processes = new ReadOnlyCollection<Process>(new[] { this.Process })); }
-        }
+        private IReadOnlyList<Process>? processes;
+        public override IReadOnlyList<Process> Processes => this.processes ??= new ReadOnlyCollection<Process>(new[] { this.Process });
 
         private readonly object processIdOrExceptionDispatchInfo;
         public override int ProcessId
@@ -135,41 +132,17 @@ namespace Medallion.Shell
             }
         }
 
-        private IReadOnlyList<int> processIds;
-        public override IReadOnlyList<int> ProcessIds
-        {
-            get { return this.processIds ?? (this.processIds = new ReadOnlyCollection<int>(new[] { this.ProcessId })); }
-        }
+        private IReadOnlyList<int>? processIds;
+        public override IReadOnlyList<int> ProcessIds => this.processIds ??= new ReadOnlyCollection<int>(new[] { this.ProcessId });
 
-        private readonly ProcessStreamWriter standardInput;
-        public override ProcessStreamWriter StandardInput
-        {
-            get
-            {
-                Throw<InvalidOperationException>.If(this.standardInput == null, "Standard input is not redirected");
-                return this.standardInput;
-            }
-        }
+        private readonly ProcessStreamWriter? standardInput;
+        public override ProcessStreamWriter StandardInput => this.standardInput ?? throw new InvalidOperationException("Standard input is not redirected");
 
-        private readonly InternalProcessStreamReader standardOutputReader;
-        public override ProcessStreamReader StandardOutput
-        {
-            get
-            {
-                Throw<InvalidOperationException>.If(this.standardOutputReader == null, "Standard output is not redirected");
-                return this.standardOutputReader;
-            }
-        }
+        private readonly InternalProcessStreamReader? standardOutputReader;
+        public override ProcessStreamReader StandardOutput => this.standardOutputReader ?? throw new InvalidOperationException("Standard output is not redirected");
 
-        private readonly InternalProcessStreamReader standardErrorReader;
-        public override Streams.ProcessStreamReader StandardError
-        {
-            get
-            {
-                Throw<InvalidOperationException>.If(this.standardErrorReader == null, "Standard error is not redirected");
-                return this.standardErrorReader;
-            }
-        }
+        private readonly InternalProcessStreamReader? standardErrorReader;
+        public override Streams.ProcessStreamReader StandardError => this.standardErrorReader ?? throw new InvalidOperationException("Standard error is not redirected");
 
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
