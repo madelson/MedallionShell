@@ -10,7 +10,7 @@
 	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>MedallionShell.Tests.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>..\snk\MedallionShell.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

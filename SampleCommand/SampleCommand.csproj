@@ -11,7 +11,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>SampleCommand.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>..\snk\MedallionShell.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   
   <ItemGroup>
