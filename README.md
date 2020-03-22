@@ -3,8 +3,7 @@ MedallionShell
 
 MedallionShell vastly simplifies working with processes in .NET. 
 
-[Download the NuGet package](https://www.nuget.org/packages/medallionshell) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.svg?style=flat)](https://www.nuget.org/packages/MedallionShell/) ([Release notes](#release-notes))
-There is also a [strong-named release](https://www.nuget.org/packages/medallionshell.strongname) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.StrongName.svg?style=flat)](https://www.nuget.org/packages/MedallionShell.StrongName/)
+[Download the NuGet package](https://www.nuget.org/packages/medallionshell) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.svg?style=flat)](https://www.nuget.org/packages/MedallionShell/) ([Release notes](#release-notes)). There is also a [strong-named release](https://www.nuget.org/packages/medallionshell.strongname) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.StrongName.svg?style=flat)](https://www.nuget.org/packages/MedallionShell.StrongName/)
 
 With MedallionShell, running a process is as simple as:
 ```C#
