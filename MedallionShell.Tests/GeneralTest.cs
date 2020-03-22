@@ -354,10 +354,16 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestVersioning()
         {
-            var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version.ToString();
-            var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute));
+            var medallionShellAssembly = typeof(Command).GetTypeInfo().Assembly;
+            Assert.IsNotEmpty(medallionShellAssembly.GetName().GetPublicKeyToken(), "should be strong-named");
+            
+            var assemblyVersion = medallionShellAssembly.GetName().Version;
+            var fileVersion = (AssemblyFileVersionAttribute)medallionShellAssembly.GetCustomAttribute(typeof(AssemblyFileVersionAttribute));
+            var informationalVersion = (AssemblyInformationalVersionAttribute)medallionShellAssembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute));
             Assert.IsNotNull(informationalVersion);
-            version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
+            
+            fileVersion.Version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
+            assemblyVersion.ShouldEqual(new Version(Version.Parse(fileVersion.Version).Major, 0, 0, 0));
         }
 
         [Test]
