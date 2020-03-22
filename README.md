@@ -108,6 +108,8 @@ var command = MyShell.Run("foo.exe", new[] { "arg1", ... }, options => /* can st
 ### Strong naming
 MedallionShell 1.x is not strong-named. In 1.x, a parallel strong-named package [MedallionShell.StrongName](https://www.nuget.org/packages/medallionshell.strongname) is maintained alongside with identical contents.
 
+This package is published from the [strong-name](https://github.com/madelson/MedallionShell/tree/strong-name) branch.
+
 ## Contributing
 Contributions are welcome! Please report any issues you encounter or ideas for enhancements. If you would like to contribute code, I ask that you file an issue first so that we can work out the details before you start coding and avoid wasted effort on your part.
 
