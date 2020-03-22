@@ -10,7 +10,7 @@
     <FileVersion>1.6.1.0</FileVersion>
     <!-- per https://codingforsmarties.wordpress.com/2016/01/21/how-to-version-assemblies-destined-for-nuget/, since we're strong-named -->
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <PackageId>Medallion.Shell.StrongName</PackageId>
+    <PackageId>MedallionShell.StrongName</PackageId>
     <Authors>Michael Adelson</Authors>
     <Description>Strong-named release of MedallionShell 1.x. MedallionShell is a lightweight, cross-platform library that simplifies working with processes in .NET</Description>
     <Copyright>Copyright © 2017 Michael Adelson</Copyright>
