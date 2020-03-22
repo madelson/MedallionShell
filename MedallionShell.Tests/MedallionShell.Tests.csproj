@@ -9,6 +9,8 @@
 	  <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
 	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\snk\MedallionShell.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
