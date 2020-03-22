@@ -3,7 +3,7 @@ MedallionShell
 
 MedallionShell vastly simplifies working with processes in .NET. 
 
-[Download the NuGet package](https://www.nuget.org/packages/medallionshell) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.svg?style=flat)](https://www.nuget.org/packages/MedallionShell/) ([Release notes](#release-notes))
+[Download the NuGet package](https://www.nuget.org/packages/medallionshell) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.svg?style=flat)](https://www.nuget.org/packages/MedallionShell/) ([Release notes](#release-notes)). There is also a [strong-named release](https://www.nuget.org/packages/medallionshell.strongname) [![NuGet Status](http://img.shields.io/nuget/v/MedallionShell.StrongName.svg?style=flat)](https://www.nuget.org/packages/MedallionShell.StrongName/)
 
 With MedallionShell, running a process is as simple as:
 ```C#
@@ -105,6 +105,11 @@ private static readonly Shell MyShell = new Shell(options => options.ThrowOnErro
 var command = MyShell.Run("foo.exe", new[] { "arg1", ... }, options => /* can still override/specify further options */);
 ```
 
+### Strong naming
+MedallionShell 1.x is not strong-named. In 1.x, a parallel strong-named package [MedallionShell.StrongName](https://www.nuget.org/packages/medallionshell.strongname) is maintained alongside with identical contents.
+
+This package is published from the [strong-name](https://github.com/madelson/MedallionShell/tree/strong-name) branch.
+
 ## Contributing
 Contributions are welcome! Please report any issues you encounter or ideas for enhancements. If you would like to contribute code, I ask that you file an issue first so that we can work out the details before you start coding and avoid wasted effort on your part.
 
@@ -115,6 +120,7 @@ Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch
 
 ## Release Notes
 - 1.6.1 
+	- Strong-named release [MedallionShell.StrongName](https://www.nuget.org/packages/medallionshell.strongname) ([#65](https://github.com/madelson/MedallionShell/issues/65)). Thanks [ldennington](https://github.com/ldennington)!
 	- Fixes transient error in signaling on Windows machines with slow disks ([#61](https://github.com/madelson/MedallionShell/issues/61))
 	- Reduces dependency footprint for .NET Standard 2.0 ([#56](https://github.com/madelson/MedallionShell/issues/56))
 	- Improves error messaging when trying to access the standard IO streams of Commands when those streams have been piped elsewhere ([#59](https://github.com/madelson/MedallionShell/issues/59), [#41](https://github.com/madelson/MedallionShell/issues/41))
