@@ -69,43 +69,41 @@ namespace Medallion.Shell.Signals
             await SignalFromCurrentProcessLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                using (var waitForSignalSemaphore = new SemaphoreSlim(initialCount: 0, maxCount: 1))
+                using var waitForSignalSemaphore = new SemaphoreSlim(initialCount: 0, maxCount: 1);
+                NativeMethods.ConsoleCtrlDelegate handler = receivedSignal =>
                 {
-                    NativeMethods.ConsoleCtrlDelegate handler = receivedSignal =>
+                    if (receivedSignal == signal)
                     {
-                        if (receivedSignal == signal)
-                        {
-                            waitForSignalSemaphore.Release();
-                            // if we're signaling another process on the same console, we return true
-                            // to prevent the signal from bubbling. If we're signaling ourselves, we
-                            // allow it to bubble since presumably that's what the caller wanted
-                            return processId != ProcessHelper.CurrentProcessId;
-                        }
+                        waitForSignalSemaphore.Release();
+                        // if we're signaling another process on the same console, we return true
+                        // to prevent the signal from bubbling. If we're signaling ourselves, we
+                        // allow it to bubble since presumably that's what the caller wanted
+                        return processId != ProcessHelper.CurrentProcessId;
+                    }
+                    return false;
+                };
+                if (!NativeMethods.SetConsoleCtrlHandler(handler, add: true))
+                {
+                    Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
+                }
+                try
+                {
+                    if (!NativeMethods.GenerateConsoleCtrlEvent(signal, NativeMethods.AllProcessesWithCurrentConsoleGroup))
+                    {
                         return false;
-                    };
-                    if (!NativeMethods.SetConsoleCtrlHandler(handler, add: true))
+                    }
+
+                    // Wait until the signal has reached our handler and been handled to know that it is safe to
+                    // remove the handler.
+                    // Timeout here just to ensure we don't hang forever if something weird happens (e. g. someone
+                    // else registers a handler concurrently with us).
+                    return await waitForSignalSemaphore.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (!NativeMethods.SetConsoleCtrlHandler(handler, add: false))
                     {
                         Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
-                    }
-                    try
-                    {
-                        if (!NativeMethods.GenerateConsoleCtrlEvent(signal, NativeMethods.AllProcessesWithCurrentConsoleGroup))
-                        {
-                            return false;
-                        }
-                        
-                        // Wait until the signal has reached our handler and been handled to know that it is safe to
-                        // remove the handler.
-                        // Timeout here just to ensure we don't hang forever if something weird happens (e. g. someone
-                        // else registers a handler concurrently with us).
-                        return await waitForSignalSemaphore.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        if (!NativeMethods.SetConsoleCtrlHandler(handler, add: false))
-                        {
-                            Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
-                        }
                     }
                 }
             }

@@ -124,23 +124,21 @@ namespace Medallion.Shell.Streams
                     : () => Task.Run(async () =>
                     {
                         var buffer = new char[Constants.CharBufferSize];
-                        using (var enumerator = chars.GetEnumerator())
+                        using var enumerator = chars.GetEnumerator();
+                        while (true)
                         {
-                            while (true)
+                            var i = 0;
+                            while (i < buffer.Length && enumerator.MoveNext())
                             {
-                                var i = 0;
-                                while (i < buffer.Length && enumerator.MoveNext())
-                                {
-                                    buffer[i++] = enumerator.Current;
-                                }
-                                if (i > 0)
-                                {
-                                    await this.WriteAsync(buffer, 0, count: i).ConfigureAwait(false);
-                                }
-                                else
-                                {
-                                    break;
-                                }
+                                buffer[i++] = enumerator.Current;
+                            }
+                            if (i > 0)
+                            {
+                                await this.WriteAsync(buffer, 0, count: i).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                break;
                             }
                         }
                     }),
