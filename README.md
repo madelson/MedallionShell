@@ -119,6 +119,8 @@ Windows: [![Build status](https://ci.appveyor.com/api/projects/status/9idbmymiat
 Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch=master)](https://travis-ci.com/madelson/MedallionShell)
 
 ## Release Notes
+- 1.6.2
+	- Add net471 build as workaround for [#75](https://github.com/madelson/MedallionShell/issues/75)
 - 1.6.1 
 	- Strong-named release [MedallionShell.StrongName](https://www.nuget.org/packages/medallionshell.strongname) ([#65](https://github.com/madelson/MedallionShell/issues/65)). Thanks [ldennington](https://github.com/ldennington)!
 	- Fixes transient error in signaling on Windows machines with slow disks ([#61](https://github.com/madelson/MedallionShell/issues/61))
