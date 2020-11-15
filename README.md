@@ -120,7 +120,7 @@ Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch
 
 ## Release Notes
 - 1.6.2
-	- Add net471 build as workaround for [#75](https://github.com/madelson/MedallionShell/issues/75)
+	- Add net471 build as workaround for [#75](https://github.com/madelson/MedallionShell/issues/75). Thanks [Cloudmersive](https://github.com/Cloudmersive) for reporting the issue and testing the fix!
 - 1.6.1 
 	- Strong-named release [MedallionShell.StrongName](https://www.nuget.org/packages/medallionshell.strongname) ([#65](https://github.com/madelson/MedallionShell/issues/65)). Thanks [ldennington](https://github.com/ldennington)!
 	- Fixes transient error in signaling on Windows machines with slow disks ([#61](https://github.com/madelson/MedallionShell/issues/61))
@@ -135,7 +135,7 @@ Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch
 	- Add .NET Standard 2.0 and .NET 4.6 build targets so that users of more modern frameworks can take advantage of more modern APIs. The .NET Standard 1.3 and .NET 4.5 targets will likely be retired in the event of a 2.0 release.
 	- Allow for setting piping and redirection via a `Shell` option with the new `Command(Func<Command, Command>)` option ([#39](https://github.com/madelson/MedallionShell/issues/39))
 	- Add CI testing for Mono and .NET Core on Linux
-- 1.5.1 Improves Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting and testing the fix!
+- 1.5.1 Improves Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting the issue and testing the fix!
 - 1.5.0
 	- Command overrides `ToString()` to simplify debugging ([#19](https://github.com/madelson/MedallionShell/issues/19)). Thanks [Stephanvs](https://github.com/Stephanvs)!
 	- WindowsCommandLineSyntax no longer quotes arguments that don't require it
