@@ -13,6 +13,7 @@ using NUnit.Framework;
 namespace Medallion.Shell.Tests
 {
     using System.Collections;
+    using System.Text.RegularExpressions;
     using static UnitTestHelpers;
 
     public class GeneralTest
@@ -145,45 +146,39 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestCancellationAlreadyCanceled()
         {
-            using (var alreadyCanceled = new CancellationTokenSource(millisecondsDelay: 0))
-            {
-                var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(alreadyCanceled.Token));
-                Assert.Throws<TaskCanceledException>(() => command.Wait());
-                Assert.Throws<TaskCanceledException>(() => command.Result.ToString());
-                command.Task.Status.ShouldEqual(TaskStatus.Canceled);
-                Assert.DoesNotThrow(() => command.ProcessId.ToString(), "still executes a command and gets a process ID");
-            }
+            using var alreadyCanceled = new CancellationTokenSource(millisecondsDelay: 0);
+            var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(alreadyCanceled.Token));
+            Assert.Throws<TaskCanceledException>(() => command.Wait());
+            Assert.Throws<TaskCanceledException>(() => command.Result.ToString());
+            command.Task.Status.ShouldEqual(TaskStatus.Canceled);
+            Assert.DoesNotThrow(() => command.ProcessId.ToString(), "still executes a command and gets a process ID");
         }
 
         [Test]
         public void TestCancellationNotCanceled()
         {
-            using (var notCanceled = new CancellationTokenSource())
-            {
-                var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(notCanceled.Token));
-                command.Task.Wait(50).ShouldEqual(false);
-                command.Kill();
-                command.Task.Wait(1000).ShouldEqual(true);
-                command.Result.Success.ShouldEqual(false);
-            }
+            using var notCanceled = new CancellationTokenSource();
+            var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(notCanceled.Token));
+            command.Task.Wait(50).ShouldEqual(false);
+            command.Kill();
+            command.Task.Wait(1000).ShouldEqual(true);
+            command.Result.Success.ShouldEqual(false);
         }
 
         [Test]
         public void TestCancellationCanceledPartway()
         {
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                var results = new SyncCollection();
-                var command = TestShell.Run(SampleCommand, new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
-                command.StandardInput.WriteLine("hello");
-                var timeout = Task.Delay(TimeSpan.FromSeconds(10));
-                while (results.Count == 0 && !timeout.IsCompleted) { }
-                results.Count.ShouldEqual(1);
-                cancellationTokenSource.Cancel();
-                var aggregateException = Assert.Throws<AggregateException>(() => command.Task.Wait(1000));
-                Assert.IsInstanceOf<TaskCanceledException>(aggregateException.GetBaseException());
-                CollectionAssert.AreEqual(results, new[] { "hello" });
-            }
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var results = new SyncCollection();
+            var command = TestShell.Run(SampleCommand, new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+            command.StandardInput.WriteLine("hello");
+            var timeout = Task.Delay(TimeSpan.FromSeconds(10));
+            while (results.Count == 0 && !timeout.IsCompleted) { }
+            results.Count.ShouldEqual(1);
+            cancellationTokenSource.Cancel();
+            var aggregateException = Assert.Throws<AggregateException>(() => command.Task.Wait(1000));
+            Assert.IsInstanceOf<TaskCanceledException>(aggregateException.GetBaseException());
+            CollectionAssert.AreEqual(results, new[] { "hello" });
         }
 
         private class SyncCollection : ICollection<string>
@@ -207,16 +202,14 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestCancellationCanceledAfterCompletion()
         {
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                var results = new List<string>();
-                var command = TestShell.Run(SampleCommand, new object[] { "echo" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
-                command.StandardInput.WriteLine("hello");
-                command.StandardInput.Close();
-                command.Task.Wait(1000).ShouldEqual(true);
-                cancellationTokenSource.Cancel();
-                command.Result.Success.ShouldEqual(true);
-            }
+            using var cancellationTokenSource = new CancellationTokenSource();
+            var results = new List<string>();
+            var command = TestShell.Run(SampleCommand, new object[] { "echo" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+            command.StandardInput.WriteLine("hello");
+            command.StandardInput.Close();
+            command.Task.Wait(1000).ShouldEqual(true);
+            cancellationTokenSource.Cancel();
+            command.Result.Success.ShouldEqual(true);
         }
 
         [Test]
@@ -361,9 +354,6 @@ namespace Medallion.Shell.Tests
             var fileVersion = (AssemblyFileVersionAttribute)medallionShellAssembly.GetCustomAttribute(typeof(AssemblyFileVersionAttribute));
             var informationalVersion = (AssemblyInformationalVersionAttribute)medallionShellAssembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute));
             Assert.IsNotNull(informationalVersion);
-            
-            fileVersion.Version.ShouldEqual(informationalVersion.InformationalVersion + ".0");
-            assemblyVersion.ShouldEqual(new Version(Version.Parse(fileVersion.Version).Major, 0, 0, 0));
         }
 
         [Test]
@@ -501,12 +491,10 @@ namespace Medallion.Shell.Tests
 
 #if !NETCOREAPP2_2
                     // https://stackoverflow.com/questions/2633628/can-i-get-command-line-arguments-of-other-processes-from-net-c
-                    string GetCommandLine(int processId)
+                    static string GetCommandLine(int processId)
                     {
-                        using (var searcher = new System.Management.ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId))
-                        {
-                            return searcher.Get().Cast<System.Management.ManagementBaseObject>().Single()["CommandLine"].ToString();
-                        }
+                        using var searcher = new System.Management.ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId);
+                        return searcher.Get().Cast<System.Management.ManagementBaseObject>().Single()["CommandLine"].ToString();
                     }
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {

@@ -364,7 +364,7 @@ namespace Medallion.Shell.Tests.Streams
             return new StreamWriter(@this.InputStream) { AutoFlush = true }.WriteAsync(text);
         }
 
-        public static async Task<string?> ReadTextAsync(this Pipe @this, int count, CancellationToken token = default(CancellationToken))
+        public static async Task<string?> ReadTextAsync(this Pipe @this, int count, CancellationToken token = default)
         {
             var bytes = new byte[count];
             var bytesRead = 0;

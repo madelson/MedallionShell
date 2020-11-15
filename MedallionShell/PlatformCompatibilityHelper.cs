@@ -13,30 +13,7 @@ namespace Medallion.Shell
         // see http://www.mono-project.com/docs/faq/technical/
         public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
 
-        public static bool IsWindows
-        {
-            get
-            {
-#if !NET45
-                return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-#else
-                if (!IsMono) { return true; }
-#pragma warning disable DE0007, DE0009
-                switch (Environment.OSVersion.Platform)
-                {
-                    case PlatformID.Win32S:
-                    case PlatformID.Win32Windows:
-                    case PlatformID.Win32NT:
-                    case PlatformID.WinCE:
-                    case PlatformID.Xbox:
-                        return true;
-                    default:
-                        return false;
-                }
-#pragma warning restore DE0007, DE0009
-#endif
-            }
-        }
+        public static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
         public static CommandLineSyntax GetDefaultCommandLineSyntax()
         {
