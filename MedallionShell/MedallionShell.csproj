@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard1.3;netstandard2.0;net45;net46</TargetFrameworks>
+    <TargetFrameworks>netstandard1.3;netstandard2.0;net45;net46;net471</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
     <RootNamespace>Medallion.Shell</RootNamespace>
-    <Version>1.6.1</Version>
-    <AssemblyVersion>1.6.1.0</AssemblyVersion>
-    <FileVersion>1.6.1.0</FileVersion>
+    <Version>1.6.2</Version>
+    <AssemblyVersion>1.6.2.0</AssemblyVersion>
+    <FileVersion>1.6.2.0</FileVersion>
     <Authors>Michael Adelson</Authors>
     <Description>A lightweight, cross-platform library that simplifies working with processes in .NET</Description>
     <Copyright>Copyright © 2017 Michael Adelson</Copyright>
@@ -42,7 +42,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
 	  <PackageReference Include="System.Diagnostics.Process" version="4.3.0" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net46' or '$(TargetFramework)' == 'net45'">
     <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
   </ItemGroup>
 
