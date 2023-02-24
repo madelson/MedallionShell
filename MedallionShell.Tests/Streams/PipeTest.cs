@@ -10,7 +10,7 @@ using NUnit.Framework;
 
 namespace Medallion.Shell.Tests.Streams
 {
-    using static UnitTestHelpers;
+    using static Medallion.Shell.Tests.UnitTestHelpers;
 
     public class PipeTest
     {
@@ -77,7 +77,7 @@ namespace Medallion.Shell.Tests.Streams
             var asyncWrite = pipe.InputStream.WriteAsync(new byte[1], 0, 1);
             asyncWrite.ContinueWith(_ => { }).Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(true);
             asyncWrite.IsFaulted.ShouldEqual(true);
-            Assert.IsInstanceOf<TimeoutException>(asyncWrite.Exception.InnerException);
+            Assert.IsInstanceOf<TimeoutException>(asyncWrite.Exception!.InnerException);
         }
 
         [Test]

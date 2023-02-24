@@ -95,7 +95,7 @@ namespace Medallion.Shell
             StandardIOStream.In => "<",
             StandardIOStream.Out => ">",
             StandardIOStream.Error => "2>",
-            _ => throw new InvalidOperationException("should never get here")
+            _ => throw new InvalidOperationException("should never get here"),
         };
     }
 

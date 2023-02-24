@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using SampleCommand;
 
-#if !NETCOREAPP2_2
+#if NETFRAMEWORK
 // don't allow things to hang when running on a CI server
 [assembly: Timeout(60000)]
 #endif

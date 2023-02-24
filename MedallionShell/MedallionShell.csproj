@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard1.3;netstandard2.0;net45;net46;net471</TargetFrameworks>
+    <TargetFrameworks>net6.0;netstandard1.3;netstandard2.0;net45;net46;net471</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -50,8 +50,11 @@
     <PackageReference Include="microsoft.dotnet.analyzers.compatibility" Version="0.2.12-alpha">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.1-rc.94">
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.435">
       <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Nullable" Version="1.3.1">
+      <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
 

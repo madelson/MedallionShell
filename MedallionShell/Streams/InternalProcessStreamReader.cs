@@ -110,12 +110,12 @@ namespace Medallion.Shell.Streams
             return this.reader.ReadBlockAsync(buffer, index, count);
         }
 
-        public override string ReadLine()
+        public override string? ReadLine()
         {
             return this.reader.ReadLine();
         }
 
-        public override Task<string> ReadLineAsync()
+        public override Task<string?> ReadLineAsync()
         {
             return this.reader.ReadLineAsync();
         }

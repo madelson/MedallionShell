@@ -295,7 +295,7 @@ namespace Medallion.Shell.Streams
                 this.writeTask = this.writeTask.ContinueWith(
                     (t, state) =>
                     {
-                        var @this = (Pipe)state;
+                        var @this = (Pipe)state!;
                         lock (@this.@lock)
                         {
                             @this.InternalCloseWriteSideNoLock();
@@ -420,7 +420,7 @@ namespace Medallion.Shell.Streams
                 this.readTask = this.readTask.ContinueWith(
                     (t, state) =>
                     {
-                        var @this = (Pipe)state;
+                        var @this = (Pipe)state!;
                         lock (@this.@lock)
                         {
                             @this.InternalCloseReadSideNoLock();
@@ -471,12 +471,12 @@ namespace Medallion.Shell.Streams
             public PipeInputStream(Pipe pipe) { this.pipe = pipe; }
 
 #if !NETSTANDARD1_3
-            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 throw WriteOnly();
             }
 
-            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 // according to the docs, the callback is optional
                 var writeTask = this.WriteAsync(buffer, offset, count, CancellationToken.None);
@@ -491,9 +491,9 @@ namespace Medallion.Shell.Streams
 
             private sealed class AsyncWriteResult : IAsyncResult
             {
-                private readonly object state;
+                private readonly object? state;
                 
-                public AsyncWriteResult(object state, Task writeTask, PipeInputStream stream)
+                public AsyncWriteResult(object? state, Task writeTask, PipeInputStream stream)
                 {
                     this.state = state;
                     this.WriteTask = writeTask;
@@ -504,7 +504,7 @@ namespace Medallion.Shell.Streams
 
                 public Stream Stream { get; }
 
-                object IAsyncResult.AsyncState => this.state;
+                object? IAsyncResult.AsyncState => this.state;
 
                 WaitHandle IAsyncResult.AsyncWaitHandle => this.WriteTask.As<IAsyncResult>().AsyncWaitHandle;
 
@@ -657,7 +657,7 @@ namespace Medallion.Shell.Streams
             public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
 
 #if !NETSTANDARD1_3
-            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 // according to the docs, the callback is optional
                 var readTask = this.ReadAsync(buffer, offset, count, CancellationToken.None);
@@ -672,9 +672,9 @@ namespace Medallion.Shell.Streams
 
             private sealed class AsyncReadResult : IAsyncResult
             {
-                private readonly object state;
+                private readonly object? state;
                 
-                public AsyncReadResult(object state, Task<int> readTask, PipeOutputStream stream)
+                public AsyncReadResult(object? state, Task<int> readTask, PipeOutputStream stream)
                 {
                     this.state = state;
                     this.ReadTask = readTask;
@@ -685,7 +685,7 @@ namespace Medallion.Shell.Streams
 
                 public Stream Stream { get; }
 
-                object IAsyncResult.AsyncState => this.state;
+                object? IAsyncResult.AsyncState => this.state;
 
                 WaitHandle IAsyncResult.AsyncWaitHandle => this.ReadTask.As<IAsyncResult>().AsyncWaitHandle;
 
@@ -695,7 +695,7 @@ namespace Medallion.Shell.Streams
             }
 
 #if !NETSTANDARD1_3
-            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 throw ReadOnly();
             }
@@ -771,7 +771,7 @@ namespace Medallion.Shell.Streams
                     // unwrap aggregate if we can
                     if (ex.InnerExceptions.Count == 1)
                     {
-                        ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                        ExceptionDispatchInfo.Capture(ex.InnerException!).Throw();
                     }
 
                     throw;

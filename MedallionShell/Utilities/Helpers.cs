@@ -113,7 +113,7 @@ namespace Medallion.Shell
 
         private static TException Create(string message)
         {
-            return (TException)Activator.CreateInstance(typeof(TException), message);
+            return (TException)Activator.CreateInstance(typeof(TException), message)!;
         }
     }
 }

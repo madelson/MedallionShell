@@ -41,7 +41,10 @@ namespace Medallion.Shell
             var processStartInfo = new ProcessStartInfo
             {
                 Arguments = arguments != null
-                    ? finalOptions.CommandLineSyntax.CreateArgumentString(arguments.Select(arg => Convert.ToString(arg, CultureInfo.InvariantCulture)))
+                    ? finalOptions.CommandLineSyntax.CreateArgumentString(arguments.Select(
+                        arg => Convert.ToString(arg, CultureInfo.InvariantCulture) 
+                            ?? throw new ArgumentException("must not contain null", nameof(arguments))
+                    ))
                     : string.Empty,
                 CreateNoWindow = true,
                 FileName = executable,

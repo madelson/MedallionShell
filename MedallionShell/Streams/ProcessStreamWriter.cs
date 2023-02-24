@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -194,6 +195,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
+        [AllowNull]
         public override string NewLine { get { return this.writer.NewLine; } set { this.writer.NewLine = value; } }
 
         /// <summary>
@@ -215,7 +217,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(char[] buffer)
+        public override void Write(char[]? buffer)
         {
             this.writer.Write(buffer);
         }
@@ -271,7 +273,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(object value)
+        public override void Write(object? value)
         {
             this.writer.Write(value);
         }
@@ -279,7 +281,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, object arg0)
+        public override void Write(string format, object? arg0)
         {
             this.writer.Write(format, arg0);
         }
@@ -287,7 +289,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, object arg0, object arg1)
+        public override void Write(string format, object? arg0, object? arg1)
         {
             this.writer.Write(format, arg0, arg1);
         }
@@ -295,7 +297,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, object arg0, object arg1, object arg2)
+        public override void Write(string format, object? arg0, object? arg1, object? arg2)
         {
             this.writer.Write(format, arg0, arg1, arg2);
         }
@@ -303,7 +305,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, params object[] arg)
+        public override void Write(string format, params object?[] arg)
         {
             this.writer.Write(format, arg);
         }
@@ -311,7 +313,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string value)
+        public override void Write(string? value)
         {
             this.writer.Write(value);
         }
@@ -351,7 +353,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteAsync(string value)
+        public override Task WriteAsync(string? value)
         {
             return this.writer.WriteAsync(value);
         }
@@ -383,7 +385,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(char[] buffer)
+        public override void WriteLine(char[]? buffer)
         {
             this.writer.WriteLine(buffer);
         }
@@ -439,7 +441,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(object value)
+        public override void WriteLine(object? value)
         {
             this.writer.WriteLine(value);
         }
@@ -447,7 +449,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, object arg0)
+        public override void WriteLine(string format, object? arg0)
         {
             this.writer.WriteLine(format, arg0);
         }
@@ -455,7 +457,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, object arg0, object arg1)
+        public override void WriteLine(string format, object? arg0, object? arg1)
         {
             this.writer.WriteLine(format, arg0, arg1);
         }
@@ -463,7 +465,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, object arg0, object arg1, object arg2)
+        public override void WriteLine(string format, object? arg0, object? arg1, object? arg2)
         {
             this.writer.WriteLine(format, arg0, arg1, arg2);
         }
@@ -471,7 +473,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, params object[] arg)
+        public override void WriteLine(string format, params object?[] arg)
         {
             this.writer.WriteLine(format, arg);
         }
@@ -479,7 +481,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string value)
+        public override void WriteLine(string? value)
         {
             this.writer.WriteLine(value);
         }
@@ -527,7 +529,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteLineAsync(string value)
+        public override Task WriteLineAsync(string? value)
         {
             return this.writer.WriteLineAsync(value);
         }

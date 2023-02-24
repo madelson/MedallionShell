@@ -56,7 +56,7 @@ namespace Medallion.Shell.Streams
 
             private IEnumerator<string> GetEnumeratorInternal()
             {
-                string line;
+                string? line;
                 while ((line = this.reader.ReadLine()) != null)
                 {
                     yield return line;
@@ -118,7 +118,7 @@ namespace Medallion.Shell.Streams
             return this.PipeAsync(
                 async () =>
                 {
-                    string line;
+                    string? line;
                     while ((line = await this.ReadLineAsync().ConfigureAwait(false)) != null)
                     {
                         lines.Add(line);

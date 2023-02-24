@@ -112,7 +112,7 @@ namespace Medallion.Shell.Tests
 
             var shell = MakeTestShell(o => o.ThrowOnError());
             var ex = Assert.Throws<AggregateException>(() => shell.Run(SampleCommand, "exit", -1).Task.Wait());
-            ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
+            ex!.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
                 .ShouldEqual(true);
 
             shell.Run(SampleCommand, "exit", 0).Task.Wait();
@@ -123,7 +123,7 @@ namespace Medallion.Shell.Tests
         {
             var command = TestShell.Run(SampleCommand, new object[] { "exit", 1 }, o => o.ThrowOnError().Timeout(TimeSpan.FromDays(1)));
             var ex = Assert.Throws<AggregateException>(() => command.Task.Wait());
-            ex.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
+            ex!.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
                 .ShouldEqual(true);
         }
 
@@ -132,7 +132,7 @@ namespace Medallion.Shell.Tests
         {
             var willTimeout = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.FromMilliseconds(200)));
             var ex = Assert.Throws<AggregateException>(() => willTimeout.Task.Wait());
-            Assert.IsInstanceOf<TimeoutException>(ex.InnerException);
+            Assert.IsInstanceOf<TimeoutException>(ex!.InnerException);
         }
 
         [Test]
@@ -140,7 +140,7 @@ namespace Medallion.Shell.Tests
         {
             var willTimeout = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.Zero));
             var ex = Assert.Throws<AggregateException>(() => willTimeout.Task.Wait());
-            Assert.IsInstanceOf<TimeoutException>(ex.InnerException);
+            Assert.IsInstanceOf<TimeoutException>(ex!.InnerException);
         }
 
         [Test]
@@ -177,7 +177,7 @@ namespace Medallion.Shell.Tests
             results.Count.ShouldEqual(1);
             cancellationTokenSource.Cancel();
             var aggregateException = Assert.Throws<AggregateException>(() => command.Task.Wait(1000));
-            Assert.IsInstanceOf<TaskCanceledException>(aggregateException.GetBaseException());
+            Assert.IsInstanceOf<TaskCanceledException>(aggregateException!.GetBaseException());
             CollectionAssert.AreEqual(results, new[] { "hello" });
         }
 
@@ -281,7 +281,7 @@ namespace Medallion.Shell.Tests
                         command.StandardOutput.Discard();
                     }
 
-                    task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
+                    task.Wait(TimeSpan.FromSeconds(30)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
                     if (state == 1)
                     {
                         command.StandardInput.Dispose();
@@ -347,8 +347,8 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestVersioning()
         {
-            var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version.ToString();
-            var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute));
+            var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version!.ToString();
+            var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute))!;
             Assert.IsNotNull(informationalVersion);
             version.ShouldEqual(Regex.Replace(informationalVersion.InformationalVersion, "-.*$", string.Empty) + ".0");
         }
@@ -469,11 +469,11 @@ namespace Medallion.Shell.Tests
                     if (disposeOnExit)
                     {
                         // invalid due to DisposeOnExit()
-                        Assert.Throws<InvalidOperationException>(() => command1.Process.ToString())
+                        Assert.Throws<InvalidOperationException>(() => command1.Process.ToString())!
                             .Message.ShouldContain("dispose on exit");
-                        Assert.Throws<InvalidOperationException>(() => command2.Processes.Count())
+                        Assert.Throws<InvalidOperationException>(() => command2.Processes.Count())!
                             .Message.ShouldContain("dispose on exit");
-                        Assert.Throws<InvalidOperationException>(() => pipeCommand.Processes.Count())
+                        Assert.Throws<InvalidOperationException>(() => pipeCommand.Processes.Count())!
                             .Message.ShouldContain("dispose on exit");
                     }
                     else
@@ -486,12 +486,12 @@ namespace Medallion.Shell.Tests
                         pipeCommand.Processes.SequenceEqual(new[] { command1.Process, command2.Process }).ShouldEqual(true);
                     }
 
-#if !NETCOREAPP2_2
+#if NETFRAMEWORK
                     // https://stackoverflow.com/questions/2633628/can-i-get-command-line-arguments-of-other-processes-from-net-c
                     static string GetCommandLine(int processId)
                     {
                         using var searcher = new System.Management.ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId);
-                        return searcher.Get().Cast<System.Management.ManagementBaseObject>().Single()["CommandLine"].ToString();
+                        return searcher.Get().Cast<System.Management.ManagementBaseObject>().Single()["CommandLine"].ToString()!;
                     }
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
@@ -499,6 +499,7 @@ namespace Medallion.Shell.Tests
                         GetCommandLine(command2.ProcessId).ShouldContain("--id2");
                     }
 #endif
+
                     command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
                     command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
                     pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
@@ -519,7 +520,7 @@ namespace Medallion.Shell.Tests
         public void TestToString()
         {
             var sampleCommandString =
-#if NETCOREAPP2_2
+#if NETCOREAPP
                 $@"{DotNetPath} {SampleCommand}";
 #else
                 SampleCommand;
