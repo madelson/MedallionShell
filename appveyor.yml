@@ -23,5 +23,5 @@ for:
           image: "Ubuntu"
     test_script:
       - dotnet test MedallionShell.sln -c Release -f net6.0 --no-build
-      - nuget install NUnit.Console -Version 3.16.3 -OutputDirectory testrunner
+      - nuget install NUnit.Console -Version 3.16.3 -OutputDirectory testrunner -Source https://api.nuget.org/v3/index.json
       - mono ./testrunner/NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net462/MedallionShell.Tests.dll
