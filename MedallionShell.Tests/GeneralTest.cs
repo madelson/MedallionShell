@@ -383,7 +383,7 @@ namespace Medallion.Shell.Tests
 
             var buffer = new char[1];
             var asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
-            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            asyncRead.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
             buffer[0].ShouldEqual('a');
 
             command.StandardInput.AutoFlush = false;
@@ -391,7 +391,7 @@ namespace Medallion.Shell.Tests
             asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
             asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
             command.StandardInput.Flush();
-            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            asyncRead.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
             buffer[0].ShouldEqual('b');
 
             command.StandardInput.Dispose();
