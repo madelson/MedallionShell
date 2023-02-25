@@ -641,7 +641,14 @@ namespace Medallion.Shell.Tests
                 .GetValue(command.StandardInput);
 #if NETCOREAPP
             command.Process.StandardInput.Encoding.ShouldEqual(command.StandardInput.Encoding);
-            Assert.AreSame(command.Process.StandardInput, innerWriter);
+            if (command.Process.StandardInput.BaseStream is CompatibilityStandardInputWrapperStream)
+            {
+                Assert.AreNotSame(command.Process.StandardInput, innerWriter);
+            }
+            else
+            {
+                Assert.AreSame(command.Process.StandardInput, innerWriter);
+            }
 #else
             command.Process.StandardInput.Encoding.ShouldNotEqual(command.StandardInput.Encoding);
             Assert.AreNotSame(command.Process.StandardInput, innerWriter);
