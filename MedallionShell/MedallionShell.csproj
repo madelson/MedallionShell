@@ -22,6 +22,11 @@
     <WarningLevel>4</WarningLevel>
     <LangVersion>Latest</LangVersion>
     <Nullable>enable</Nullable>
+    <!-- see https://github.com/dotnet/sdk/issues/2679 -->
+    <DebugType>embedded</DebugType>
+    <!-- see https://mitchelsellers.com/blog/article/net-5-deterministic-builds-source-linking -->
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -56,6 +61,12 @@
     <PackageReference Include="Nullable" Version="1.3.1">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="All" Condition="$(Configuration) == 'Release'" />
+    <AdditionalFiles Include="PublicAPI/$(TargetFramework)/PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI/$(TargetFramework)/PublicAPI.Unshipped.txt" />
   </ItemGroup>
 
   <!-- Pulls in ProcessSignaler as a reference for build dependency purposes so we can pack it's exe as an embedded resource -->
