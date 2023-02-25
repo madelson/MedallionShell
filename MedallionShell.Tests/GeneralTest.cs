@@ -252,43 +252,53 @@ namespace Medallion.Shell.Tests
         public void TestStopBufferingAndDiscard()
         {
             var command = TestShell.Run(SampleCommand, "pipe");
-            command.StandardOutput.StopBuffering();
-            var line = new string('a', 100);
-            var state = 0;
-            var linesWritten = 0;
-            while (state < 2)
+            try
             {
-                Log.WriteLine("Write to unbuffered command");
-                var task = command.StandardInput.WriteLineAsync(line);
-                if (!task.Wait(TimeSpan.FromSeconds(1)))
+                command.StandardOutput.StopBuffering();
+                var line = new string('a', 100);
+                var state = 0;
+                var linesWritten = 0;
+                while (state < 2)
                 {
-                    if (state == 0)
+                    Log.WriteLine("Write to unbuffered command");
+                    var task = command.StandardInput.WriteLineAsync(line);
+                    if (!task.Wait(TimeSpan.FromSeconds(1)))
                     {
-                        Log.WriteLine("Buffer full: read");
-                        // for whatever reason, on Unix I need to read a few lines to get things flowing again
-                        var linesToRead = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 1 : Math.Max((int)(.1 * linesWritten), 1);
-                        for (var i = 0; i < linesToRead; ++i)
+                        if (state == 0)
                         {
-                            var outLine = command.StandardOutput.ReadLine();
-                            outLine.ShouldEqual(line);
+                            Log.WriteLine("Buffer full: read");
+                            // for whatever reason, sometimes (especially on Unix) I need to read a few lines to get things flowing again
+                            var linesToRead = Math.Max((int)(.1 * linesWritten), 1);
+                            for (var i = 0; i < linesToRead; ++i)
+                            {
+                                var outLine = command.StandardOutput.ReadLine();
+                                outLine.ShouldEqual(line);
+                            }
+                            // after this, we may need to write more content than we read to re-block since the reader
+                            // buffers internally
                         }
-                        // after this, we may need to write more content than we read to re-block since the reader
-                        // buffers internally
-                    }
-                    else
-                    {
-                        Log.WriteLine("Buffer full: discard content");
-                        command.StandardOutput.Discard();
-                    }
+                        else
+                        {
+                            Log.WriteLine("Buffer full: discard content");
+                            command.StandardOutput.Discard();
+                        }
 
-                    task.Wait(TimeSpan.FromSeconds(30)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
-                    if (state == 1)
-                    {
-                        command.StandardInput.Dispose();
+                        task.Wait(TimeSpan.FromSeconds(1)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
+                        if (state == 1)
+                        {
+                            command.StandardInput.Dispose();
+                        }
+                        state++;
                     }
-                    state++;
+                    ++linesWritten;
                 }
-                ++linesWritten;
+            }
+            finally
+            {
+                if (!command.Task.Wait(TimeSpan.FromSeconds(1)))
+                {
+                    command.Kill();
+                }
             }
         }
 
