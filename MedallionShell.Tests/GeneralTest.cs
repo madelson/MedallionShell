@@ -360,7 +360,7 @@ namespace Medallion.Shell.Tests
             var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version!.ToString();
             var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute))!;
             Assert.IsNotNull(informationalVersion);
-            version.ShouldEqual(Regex.Replace(informationalVersion.InformationalVersion, "-.*$", string.Empty) + ".0");
+            version.ShouldEqual(Regex.Replace(informationalVersion.InformationalVersion, "[-+].*$", string.Empty) + ".0");
         }
 
         [Test]
