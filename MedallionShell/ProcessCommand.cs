@@ -31,7 +31,7 @@ namespace Medallion.Shell
         {
             this.disposeOnExit = disposeOnExit;
             this.fileName = startInfo.FileName;
-            this.arguments = startInfo.Arguments;
+            this.arguments = GetArgumentsString(startInfo);
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
             var processMonitoringTask = CreateProcessMonitoringTask(this.process);
@@ -78,6 +78,18 @@ namespace Medallion.Shell
             this.task = this.CreateCombinedTask(processTask, ioTasks);
         }
 
+        private static string GetArgumentsString(ProcessStartInfo startInfo)
+        {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+            if (startInfo.ArgumentList.Count > 0)
+            {
+                return PlatformCompatibilityHelper.DefaultCommandLineSyntax.CreateArgumentString(startInfo.ArgumentList);
+            }
+#endif
+
+            return startInfo.Arguments;
+        }
+
         private async Task<CommandResult> CreateCombinedTask(Task<int> processTask, IReadOnlyList<Task> ioTasks)
         {
             int exitCode;
@@ -100,7 +112,7 @@ namespace Medallion.Shell
         }
 
         private readonly Process process;
-        public override System.Diagnostics.Process Process
+        public override Process Process
         {
             get
             {
@@ -147,7 +159,8 @@ namespace Medallion.Shell
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
 
-        public override string ToString() => this.fileName + " " + this.arguments;
+        public override string ToString() => 
+            this.arguments.Length == 0 ? this.fileName : this.fileName + " " + this.arguments;
 
         public override void Kill()
         {

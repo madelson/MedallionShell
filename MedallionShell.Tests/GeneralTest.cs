@@ -488,9 +488,14 @@ namespace Medallion.Shell.Tests
                     }
                     else
                     {
+#if NETCOREAPP
+                        Assert.That(command1.Process.StartInfo.ArgumentList, Does.Contain("--id1"));
+                        Assert.That(command2.Process.StartInfo.ArgumentList, Does.Contain("--id2"));
+#else
                         command1.Process.StartInfo.Arguments.ShouldContain("--id1");
-                        command1.Processes.SequenceEqual(new[] { command1.Process });
                         command2.Process.StartInfo.Arguments.ShouldContain("--id2");
+#endif
+                        command1.Processes.SequenceEqual(new[] { command1.Process });
                         command2.Processes.SequenceEqual(new[] { command2.Process }).ShouldEqual(true);
                         pipeCommand.Process.ShouldEqual(command2.Process);
                         pipeCommand.Processes.SequenceEqual(new[] { command1.Process, command2.Process }).ShouldEqual(true);
@@ -557,6 +562,10 @@ namespace Medallion.Shell.Tests
             var command6 = command5.RedirectTo(new StringWriter());
             command6.Wait();
             command6.ToString().ShouldEqual($"{command5} > {new StringWriter()}");
+
+            var command7 = TestShell.Run(SampleCommand);
+            command7.Wait();
+            command7.ToString().ShouldEqual(sampleCommandString);
         }
 
         [Test]
@@ -603,6 +612,22 @@ namespace Medallion.Shell.Tests
                 command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
                 command.Result.Success.ShouldEqual(true);
             }
+        }
+
+        [Test]
+        [Obsolete("Tests obsolete code")]
+        public async Task TestCustomCommandLineSyntaxIsUsed()
+        {
+            using var command = TestShell.Run(
+                SampleCommand,
+                new object[] { "exit", 0 },
+                options: o => o.Syntax((CommandLineSyntax)Activator.CreateInstance(PlatformCompatibilityHelper.DefaultCommandLineSyntax.GetType())!)
+                    .DisposeOnExit(false)
+            );
+
+            Assert.That(command.Process.StartInfo.Arguments, Does.EndWith("exit 0"));
+
+            await command.Task;
         }
 
         private IEnumerable<string> ErrorLines()

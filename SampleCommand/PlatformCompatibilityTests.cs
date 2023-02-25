@@ -36,7 +36,14 @@ namespace SampleCommand
                 // on .net core, you can't run .net exes directly so instead we invoke them through dotnet
                 if (si.FileName == SampleCommandPath)
                 {
-                    si.Arguments = !string.IsNullOrEmpty(si.Arguments) ? $"{si.FileName} {si.Arguments}" : si.FileName;
+                    if (!string.IsNullOrEmpty(si.Arguments))
+                    {
+                        si.Arguments = $"{si.FileName} {si.Arguments}";
+                    }
+                    else
+                    {
+                        si.ArgumentList.Insert(0, si.FileName);
+                    }
                     si.FileName = DotNetPath;
                 }
             }));

@@ -15,14 +15,10 @@ namespace Medallion.Shell
 
         public static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-        public static CommandLineSyntax GetDefaultCommandLineSyntax()
-        {
-            if (IsMono && !IsWindows)
-            {
-                return new MonoUnixCommandLineSyntax();
-            }
-            return new WindowsCommandLineSyntax();
-        }
+        public static readonly CommandLineSyntax DefaultCommandLineSyntax =
+            IsMono && !IsWindows
+                ? new MonoUnixCommandLineSyntax()
+                : new WindowsCommandLineSyntax();
 
         public static Stream WrapStandardInputStreamIfNeeded(Stream stream)
         {
