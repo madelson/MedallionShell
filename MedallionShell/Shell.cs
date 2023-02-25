@@ -53,6 +53,9 @@ namespace Medallion.Shell
             if (finalOptions.ProcessStreamEncoding != null)
             {
                 processStartInfo.StandardOutputEncoding = processStartInfo.StandardErrorEncoding = finalOptions.ProcessStreamEncoding;
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+                processStartInfo.StandardInputEncoding = finalOptions.ProcessStreamEncoding;
+#endif
             }
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 

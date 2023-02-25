@@ -1,19 +1,19 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
-    using System.Collections;
-    using System.Text.RegularExpressions;
+    using Medallion.Shell.Streams;
     using static UnitTestHelpers;
 
     public class GeneralTest
@@ -626,6 +626,26 @@ namespace Medallion.Shell.Tests
             );
 
             Assert.That(command.Process.StartInfo.Arguments, Does.EndWith("exit 0"));
+
+            await command.Task;
+        }
+
+        [Test]
+        public async Task TestDefaultProcessStreamIsUsedWithCustomInputEncodingOnNewerFrameworks()
+        {
+            using var command = TestShell.Run(SampleCommand, new[] { "exit", "0" }, options: o => o.Encoding(Encoding.UTF32).DisposeOnExit(false));
+
+            command.StandardInput.Encoding.ShouldEqual(Encoding.UTF32);
+
+            var innerWriter = typeof(ProcessStreamWriter).GetField("writer", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .GetValue(command.StandardInput);
+#if NETCOREAPP
+            Assert.AreSame(command.Process.StandardInput, innerWriter);
+            command.Process.StandardInput.Encoding.ShouldEqual(command.StandardInput.Encoding);
+#else
+            Assert.AreNotSame(command.Process.StandardInput, innerWriter);
+            command.Process.StandardInput.Encoding.ShouldNotEqual(command.StandardInput.Encoding);
+#endif
 
             await command.Task;
         }
