@@ -640,11 +640,11 @@ namespace Medallion.Shell.Tests
             var innerWriter = typeof(ProcessStreamWriter).GetField("writer", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .GetValue(command.StandardInput);
 #if NETCOREAPP
-            Assert.AreSame(command.Process.StandardInput, innerWriter);
             command.Process.StandardInput.Encoding.ShouldEqual(command.StandardInput.Encoding);
+            Assert.AreSame(command.Process.StandardInput, innerWriter);
 #else
-            Assert.AreNotSame(command.Process.StandardInput, innerWriter);
             command.Process.StandardInput.Encoding.ShouldNotEqual(command.StandardInput.Encoding);
+            Assert.AreNotSame(command.Process.StandardInput, innerWriter);
 #endif
 
             await command.Task;
