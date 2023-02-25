@@ -82,7 +82,7 @@ namespace Medallion.Shell.Streams
 
             try { this.stream.Write(buffer, offset, count); }
             catch (IOException) { }
-        }
+        }        
 
         public async override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
@@ -91,6 +91,24 @@ namespace Medallion.Shell.Streams
             try { await this.stream.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false); }
             catch (IOException) { }
         }
+
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            // see comment in Write()
+
+            try { this.stream.Write(buffer); }
+            catch (IOException) { }
+        }
+
+        public async override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+        {
+            // see comment in Write()
+
+            try { await this.stream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false); }
+            catch (IOException) { }
+        }
+#endif
 
         protected override void Dispose(bool disposing)
         {
