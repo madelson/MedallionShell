@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
@@ -533,6 +534,28 @@ namespace Medallion.Shell.Streams
         {
             return this.writer.WriteLineAsync(value);
         }
+
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+        /// <summary>
+        /// Forwards to the implementation in the <see cref="StreamWriter"/> class
+        /// </summary>
+        public override void Write(ReadOnlySpan<char> buffer) => this.writer.Write(buffer);
+
+        /// <summary>
+        /// Forwards to the implementation in the <see cref="StreamWriter"/> class
+        /// </summary>
+        public override void WriteLine(ReadOnlySpan<char> buffer) => this.writer.WriteLine(buffer);
+
+        /// <summary>
+        /// Forwards to the implementation in the <see cref="StreamWriter"/> class
+        /// </summary>
+        public override Task WriteAsync(ReadOnlyMemory<char> buffer, CancellationToken cancellationToken = default) => this.writer.WriteAsync(buffer);
+
+        /// <summary>
+        /// Forwards to the implementation in the <see cref="StreamWriter"/> class
+        /// </summary>
+        public override Task WriteLineAsync(ReadOnlyMemory<char> buffer, CancellationToken cancellationToken = default) => this.writer.WriteLineAsync(buffer, cancellationToken);
+#endif
         #endregion
     }
 }

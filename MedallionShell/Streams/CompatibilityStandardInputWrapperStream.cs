@@ -93,6 +93,11 @@ namespace Medallion.Shell.Streams
         }
 
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+        public override int Read(Span<byte> buffer) => this.stream.Read(buffer);
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken) => 
+            this.stream.ReadAsync(buffer, cancellationToken);
+
         public override void Write(ReadOnlySpan<byte> buffer)
         {
             // see comment in Write()

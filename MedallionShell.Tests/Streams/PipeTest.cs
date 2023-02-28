@@ -264,6 +264,22 @@ namespace Medallion.Shell.Tests.Streams
             asyncRead.Result.ShouldEqual(longText);
         }
 
+#if NETCOREAPP
+        [Test]
+        public async Task TestBasicReadAndWriteSpans()
+        {
+            Pipe pipe = new();
+            pipe.InputStream.Write(new byte[] { 1, 2, 3, 4 }.AsSpan());
+            await pipe.InputStream.WriteAsync(new byte[] { 5, 6, 7, 8, 9 }.AsMemory());
+
+            var buffer = new byte[5];
+            (await pipe.OutputStream.ReadAsync(buffer.AsMemory())).ShouldEqual(5);
+            CollectionAssert.AreEqual(new[] { 1, 2, 3, 4, 5 }, buffer);
+            pipe.OutputStream.Read(buffer.AsSpan()).ShouldEqual(4);
+            CollectionAssert.AreEqual(new[] { 6, 7, 8, 9, 5 }, buffer);
+        }
+#endif
+
         private static List<Pipe> CreatePipeChain(int length)
         {
             var pipes = Enumerable.Range(0, length).Select(_ => new Pipe())

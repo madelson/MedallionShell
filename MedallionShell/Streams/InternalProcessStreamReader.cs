@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
@@ -23,7 +24,7 @@ namespace Medallion.Shell.Streams
             this.processStream = processStreamReader.BaseStream;
             this.pipe = new Pipe();
             this.reader = new StreamReader(this.pipe.OutputStream, processStreamReader.CurrentEncoding);
-            this.Task = Task.Run(() => this.BufferLoop());
+            this.Task = Task.Run(this.BufferLoop);
         }
 
         public Task Task { get; }
@@ -129,6 +130,16 @@ namespace Medallion.Shell.Streams
         {
             return this.reader.ReadToEndAsync();
         }
+
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+        public override int Read(Span<char> buffer) => this.reader.Read(buffer);
+
+        public override int ReadBlock(Span<char> buffer) => this.reader.ReadBlock(buffer);
+
+        public override ValueTask<int> ReadAsync(Memory<char> buffer, CancellationToken cancellationToken = default) => this.reader.ReadAsync(buffer);
+
+        public override ValueTask<int> ReadBlockAsync(Memory<char> buffer, CancellationToken cancellationToken = default) => this.reader.ReadBlockAsync(buffer, cancellationToken);
+#endif
 
         protected override void Dispose(bool disposing)
         {
