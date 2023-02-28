@@ -828,7 +828,7 @@ namespace Medallion.Shell.Streams
             public override int ReadByte()
             {
                 byte b = 0;
-                int result = Read(MemoryMarshal.CreateSpan(ref b, length: 1));
+                int result = this.Read(MemoryMarshal.CreateSpan(ref b, length: 1));
                 return result != 0 ? b : -1;
             }
 

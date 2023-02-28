@@ -103,11 +103,13 @@ override Medallion.Shell.Streams.ProcessStreamWriter.Write(string! format, objec
 override Medallion.Shell.Streams.ProcessStreamWriter.Write(string! format, object? arg0, object? arg1, object? arg2) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.Write(string! format, params object?[]! arg) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.Write(string? value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(System.ReadOnlySpan<char> buffer) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.Write(uint value) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.Write(ulong value) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(char value) -> System.Threading.Tasks.Task!
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(char[]! buffer, int index, int count) -> System.Threading.Tasks.Task!
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(string? value) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(System.ReadOnlyMemory<char> buffer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine() -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(bool value) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(char value) -> void
@@ -124,12 +126,14 @@ override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string! format, o
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string! format, object? arg0, object? arg1, object? arg2) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string! format, params object?[]! arg) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string? value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(System.ReadOnlySpan<char> buffer) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(uint value) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(ulong value) -> void
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync() -> System.Threading.Tasks.Task!
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(char value) -> System.Threading.Tasks.Task!
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(char[]! buffer, int index, int count) -> System.Threading.Tasks.Task!
 override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(string? value) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(System.ReadOnlyMemory<char> buffer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 override Medallion.Shell.WindowsCommandLineSyntax.CreateArgumentString(System.Collections.Generic.IEnumerable<string!>! arguments) -> string!
 static Medallion.Shell.Command.operator <(Medallion.Shell.Command! command, System.Collections.Generic.IEnumerable<char>! chars) -> Medallion.Shell.Command!
 static Medallion.Shell.Command.operator <(Medallion.Shell.Command! command, System.Collections.Generic.IEnumerable<string!>! lines) -> Medallion.Shell.Command!
