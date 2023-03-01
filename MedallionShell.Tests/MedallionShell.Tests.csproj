@@ -10,6 +10,7 @@
 	  <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
 	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
+    <RootNamespace>Medallion.Shell.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

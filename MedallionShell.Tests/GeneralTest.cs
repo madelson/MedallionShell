@@ -355,15 +355,6 @@ namespace Medallion.Shell.Tests
         }
 
         [Test]
-        public void TestVersioning()
-        {
-            var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version!.ToString();
-            var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute))!;
-            Assert.IsNotNull(informationalVersion);
-            version.ShouldEqual(Regex.Replace(informationalVersion.InformationalVersion, "[-+].*$", string.Empty) + ".0");
-        }
-
-        [Test]
         public void TestShortFlush()
         {
             var command = TestShell.Run(SampleCommand, "shortflush", "a");

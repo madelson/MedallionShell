@@ -6,7 +6,7 @@ using System.Reflection;
 using Medallion.Shell;
 using NUnit.Framework;
 
-namespace MedallionShell.Tests.Streams;
+namespace Medallion.Shell.Tests.Streams;
 
 internal class StreamImplementationTest
 {
