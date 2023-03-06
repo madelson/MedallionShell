@@ -1,31 +1,15 @@
-﻿using System;
+﻿#if !NETCOREAPP2_1_OR_GREATER && !NETSTANDARD2_1
+#pragma warning disable SA1649 // File name should match first type name
+
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
-namespace Medallion.Shell;
+namespace System;
 
-internal static class Shims
+internal static class MemoryExtensions
 {
-    public static T[] EmptyArray<T>() =>
-#if !NET45
-        Array.Empty<T>();
-#else
-        Empty<T>.Array;
-
-    private static class Empty<T>
-    {
-        public static readonly T[] Array = new T[0];
-    }
-#endif
-
-#if !NETCOREAPP2_1_OR_GREATER && !NETSTANDARD2_1
     public static Span<T> AsSpan<T>(this T[] array, int start, int length) => new(new(array, start, length));
-#endif
 }
 
-#pragma warning disable SA1306 // Field names should begin with lower-case letter
-
-#if !NETCOREAPP2_1_OR_GREATER && !NETSTANDARD2_1
 internal readonly struct Memory<T>
 {
     public readonly T[] Array;

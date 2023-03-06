@@ -17,10 +17,15 @@ namespace Medallion.Shell.Streams
     {
         private readonly StreamWriter writer;
 
-        internal ProcessStreamWriter(StreamWriter writer)
+        internal ProcessStreamWriter(StreamWriter writer, Encoding encoding)
         {
-            Throw.IfNull(writer, "writer");
-            this.writer = writer;
+            var stream = ProcessStreamWrapper.WrapIfNeeded(writer.BaseStream, isReadStream: false);
+
+            this.writer = stream == writer.BaseStream && Equals(writer.Encoding, encoding)
+                ? writer
+                // Unfortunately, changing the encoding on older frameworks can't be done via ProcessStartInfo so
+                // we have to do it manually here. See https://github.com/dotnet/corefx/issues/20497
+                : new(stream, encoding);
             this.AutoFlush = true; // set the default
         }
 
@@ -28,7 +33,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Provides access to the underlying <see cref="Stream"/>. Equivalent to <see cref="StreamWriter.BaseStream"/>
         /// </summary>
-        public Stream BaseStream { get { return this.writer.BaseStream; } }
+        public Stream BaseStream => this.writer.BaseStream;
 
         /// <summary>
         /// Determines whether writes are automatically flushed to the underlying <see cref="Stream"/> after each write.
@@ -36,8 +41,8 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public bool AutoFlush
         {
-            get { return this.writer.AutoFlush; }
-            set { this.writer.AutoFlush = value; }
+            get => this.writer.AutoFlush;
+            set => this.writer.AutoFlush = value;
         }
 
         /// <summary>
@@ -45,11 +50,13 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeFromAsync(Stream stream, bool leaveWriterOpen = false, bool leaveStreamOpen = false)
         {
-            Throw.IfNull(stream, "stream");
+            Throw.IfNull(stream, nameof(stream));
 
             return this.PipeAsync(
                 async () =>
                 {
+                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(stream, this.BaseStream);
+
                     // flush any content buffered in the writer, since we'll be using the raw stream
                     await this.writer.FlushAsync().ConfigureAwait(false);
                     if (this.AutoFlush)
@@ -65,7 +72,7 @@ namespace Medallion.Shell.Streams
                     }
                 },
                 leaveOpen: leaveWriterOpen,
-                extraDisposeAction: leaveStreamOpen ? default(Action) : () => stream.Dispose()
+                extraDisposeAction: leaveStreamOpen ? null : stream.Dispose
             );
         }
 
@@ -74,12 +81,14 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeFromAsync(IEnumerable<string> lines, bool leaveWriterOpen = false)
         {
-            Throw.IfNull(lines, "lines");
+            Throw.IfNull(lines, nameof(lines));
 
             return this.PipeAsync(
                 // wrap in Task.Run since GetEnumerator() or MoveNext() might block
                 () => Task.Run(async () =>
                 {
+                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
+
                     foreach (var line in lines)
                     {
                         await this.WriteLineAsync(line).ConfigureAwait(false);
@@ -94,7 +103,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeFromAsync(TextReader reader, bool leaveWriterOpen = false, bool leaveReaderOpen = false)
         {
-            Throw.IfNull(reader, "reader");
+            Throw.IfNull(reader, nameof(reader));
 
             return reader.CopyToAsync(this.writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
         }
@@ -104,7 +113,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeFromAsync(FileInfo file, bool leaveWriterOpen = false)
         {
-            Throw.IfNull(file, "file");
+            Throw.IfNull(file, nameof(file));
 
             var stream = file.OpenRead();
             return this.PipeFromAsync(stream, leaveWriterOpen: leaveWriterOpen, leaveStreamOpen: false);
@@ -115,16 +124,17 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeFromAsync(IEnumerable<char> chars, bool leaveWriterOpen = false)
         {
-            Throw.IfNull(chars, "chars");
+            Throw.IfNull(chars, nameof(chars));
 
-            var @string = chars as string;
             return this.PipeAsync(
-                @string != null
+                chars is string @string
                     // special-case string since we can use the built-in WriteAsync
                     ? new Func<Task>(() => this.WriteAsync(@string))
                     // when enumerating, layer on a Task.Run since GetEnumerator() or MoveNext() might block
                     : () => Task.Run(async () =>
                     {
+                        using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
+
                         var buffer = new char[Constants.CharBufferSize];
                         using var enumerator = chars.GetEnumerator();
                         while (true)
@@ -155,385 +165,244 @@ namespace Medallion.Shell.Streams
         /// </summary>
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                this.writer.Dispose();
-            }
+            if (disposing) { this.writer.Dispose(); }
         }
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Encoding Encoding
-        {
-            get { return this.writer.Encoding; }
-        }
+        public override Encoding Encoding => this.writer.Encoding;
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Flush()
-        {
-            this.writer.Flush();
-        }
+        public override void Flush() => this.writer.Flush();
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task FlushAsync()
-        {
-            return this.writer.FlushAsync();
-        }
+        public override Task FlushAsync() => this.writer.FlushAsync();
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override IFormatProvider FormatProvider
-        {
-            get { return this.writer.FormatProvider; }
-        }
+        public override IFormatProvider FormatProvider => this.writer.FormatProvider;
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
         [AllowNull]
-        public override string NewLine { get { return this.writer.NewLine; } set { this.writer.NewLine = value; } }
+        public override string NewLine { get => this.writer.NewLine; set => this.writer.NewLine = value; }
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(bool value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(bool value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(char value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(char value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(char[]? buffer)
-        {
-            this.writer.Write(buffer);
-        }
+        public override void Write(char[]? buffer) => this.writer.Write(buffer);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(char[] buffer, int index, int count)
-        {
-            this.writer.Write(buffer, index, count);
-        }
+        public override void Write(char[] buffer, int index, int count) => this.writer.Write(buffer, index, count);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(decimal value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(decimal value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(double value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(double value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(float value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(float value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(int value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(int value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(long value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(long value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(object? value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(object? value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, object? arg0)
-        {
-            this.writer.Write(format, arg0);
-        }
+        public override void Write(string format, object? arg0) => this.writer.Write(format, arg0);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, object? arg0, object? arg1)
-        {
-            this.writer.Write(format, arg0, arg1);
-        }
+        public override void Write(string format, object? arg0, object? arg1) => this.writer.Write(format, arg0, arg1);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, object? arg0, object? arg1, object? arg2)
-        {
-            this.writer.Write(format, arg0, arg1, arg2);
-        }
+        public override void Write(string format, object? arg0, object? arg1, object? arg2) => this.writer.Write(format, arg0, arg1, arg2);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string format, params object?[] arg)
-        {
-            this.writer.Write(format, arg);
-        }
+        public override void Write(string format, params object?[] arg) => this.writer.Write(format, arg);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(string? value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(string? value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(uint value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(uint value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void Write(ulong value)
-        {
-            this.writer.Write(value);
-        }
+        public override void Write(ulong value) => this.writer.Write(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteAsync(char value)
-        {
-            return this.writer.WriteAsync(value);
-        }
+        public override Task WriteAsync(char value) => this.writer.WriteAsync(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteAsync(char[] buffer, int index, int count)
-        {
-            return this.writer.WriteAsync(buffer, index, count);
-        }
+        public override Task WriteAsync(char[] buffer, int index, int count) => this.writer.WriteAsync(buffer, index, count);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteAsync(string? value)
-        {
-            return this.writer.WriteAsync(value);
-        }
+        public override Task WriteAsync(string? value) => this.writer.WriteAsync(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine()
-        {
-            this.writer.WriteLine();
-        }
+        public override void WriteLine() => this.writer.WriteLine();
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(bool value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(bool value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(char value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(char value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(char[]? buffer)
-        {
-            this.writer.WriteLine(buffer);
-        }
+        public override void WriteLine(char[]? buffer) => this.writer.WriteLine(buffer);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(char[] buffer, int index, int count)
-        {
-            this.writer.WriteLine(buffer, index, count);
-        }
+        public override void WriteLine(char[] buffer, int index, int count) => this.writer.WriteLine(buffer, index, count);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(decimal value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(decimal value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(double value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(double value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(float value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(float value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(int value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(int value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(long value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(long value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(object? value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(object? value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, object? arg0)
-        {
-            this.writer.WriteLine(format, arg0);
-        }
+        public override void WriteLine(string format, object? arg0) => this.writer.WriteLine(format, arg0);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, object? arg0, object? arg1)
-        {
-            this.writer.WriteLine(format, arg0, arg1);
-        }
+        public override void WriteLine(string format, object? arg0, object? arg1) => this.writer.WriteLine(format, arg0, arg1);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, object? arg0, object? arg1, object? arg2)
-        {
-            this.writer.WriteLine(format, arg0, arg1, arg2);
-        }
+        public override void WriteLine(string format, object? arg0, object? arg1, object? arg2) => this.writer.WriteLine(format, arg0, arg1, arg2);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string format, params object?[] arg)
-        {
-            this.writer.WriteLine(format, arg);
-        }
+        public override void WriteLine(string format, params object?[] arg) => this.writer.WriteLine(format, arg);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(string? value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(string? value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(uint value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(uint value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override void WriteLine(ulong value)
-        {
-            this.writer.WriteLine(value);
-        }
+        public override void WriteLine(ulong value) => this.writer.WriteLine(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteLineAsync()
-        {
-            return this.writer.WriteLineAsync();
-        }
+        public override Task WriteLineAsync() => this.writer.WriteLineAsync();
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteLineAsync(char value)
-        {
-            return this.writer.WriteLineAsync(value);
-        }
+        public override Task WriteLineAsync(char value) => this.writer.WriteLineAsync(value);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteLineAsync(char[] buffer, int index, int count)
-        {
-            return this.writer.WriteLineAsync(buffer, index, count);
-        }
+        public override Task WriteLineAsync(char[] buffer, int index, int count) => this.writer.WriteLineAsync(buffer, index, count);
 
         /// <summary>
         /// Forwards to the implementation in the <see cref="StreamWriter"/> class
         /// </summary>
-        public override Task WriteLineAsync(string? value)
-        {
-            return this.writer.WriteLineAsync(value);
-        }
+        public override Task WriteLineAsync(string? value) => this.writer.WriteLineAsync(value);
 
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
         /// <summary>

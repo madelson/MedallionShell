@@ -21,10 +21,10 @@ namespace Medallion.Shell.Streams
 
         public InternalProcessStreamReader(StreamReader processStreamReader)
         {
-            this.processStream = processStreamReader.BaseStream;
+            this.processStream = ProcessStreamWrapper.WrapIfNeeded(processStreamReader.BaseStream, isReadStream: true);
             this.pipe = new Pipe();
             this.reader = new StreamReader(this.pipe.OutputStream, processStreamReader.CurrentEncoding);
-            this.Task = Task.Run(this.BufferLoop);
+            this.Task = this.BufferLoop();
         }
 
         public Task Task { get; }
@@ -33,25 +33,21 @@ namespace Medallion.Shell.Streams
         {
             try
             {
+                using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.processStream);
+
                 var buffer = new byte[Constants.ByteBufferSize];
                 int bytesRead;
                 while (
                     !this.discardContents
-                    && (bytesRead = await this.processStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0
-                )
+                        && (bytesRead = await this.processStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
                 {
                     await this.pipe.InputStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
                 }
             }
             finally
             {
-#if NETSTANDARD1_3
                 this.processStream.Dispose();
                 this.pipe.InputStream.Dispose();
-#else
-                this.processStream.Close();
-                this.pipe.InputStream.Close();
-#endif
             }
         }
 

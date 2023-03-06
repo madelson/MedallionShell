@@ -51,15 +51,7 @@ namespace Medallion.Shell
             }
             if (processStandardInput != null)
             {
-                // Unfortunately, changing the encoding on older frameworks can't be done via ProcessStartInfo so
-                // we have to do it manually here. See https://github.com/dotnet/corefx/issues/20497
-
-                var wrappedStream = PlatformCompatibilityHelper.WrapStandardInputStreamIfNeeded(processStandardInput.BaseStream);
-                var standardInputEncodingToUse = standardInputEncoding ?? processStandardInput.Encoding;
-                var streamWriter = wrappedStream == processStandardInput.BaseStream && Equals(standardInputEncodingToUse, processStandardInput.Encoding)
-                    ? processStandardInput
-                    : new StreamWriter(wrappedStream, standardInputEncodingToUse);
-                this.standardInput = new ProcessStreamWriter(streamWriter);
+                this.standardInput = new ProcessStreamWriter(processStandardInput, standardInputEncoding ?? processStandardInput.Encoding);
             }
 
             // according to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.process.id?view=netcore-1.1#System_Diagnostics_Process_Id,

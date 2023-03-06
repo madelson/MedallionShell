@@ -97,7 +97,7 @@ namespace Medallion.Shell.Streams
             // always respect cancellation, even in the sync flow
             if (cancellationToken.IsCancellationRequested)
             {
-                return CreateCanceledTask();
+                return Shims.CanceledTask<bool>(cancellationToken);
             }
 
             if (count == 0)
@@ -332,7 +332,7 @@ namespace Medallion.Shell.Streams
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                return CreateCanceledTask();
+                return Shims.CanceledTask<int>(cancellationToken);
             }
 
             // if we didn't want to read anything, return immediately
@@ -490,15 +490,6 @@ namespace Medallion.Shell.Streams
 
             this.buffer = Shims.EmptyArray<byte>();
             this.writeTask = this.readTask = CompletedZeroTask;
-        }
-        #endregion
-
-        #region ---- Cancellation ----
-        private static Task<int> CreateCanceledTask()
-        {
-            var taskCompletionSource = new TaskCompletionSource<int>();
-            taskCompletionSource.SetCanceled();
-            return taskCompletionSource.Task;
         }
         #endregion
 

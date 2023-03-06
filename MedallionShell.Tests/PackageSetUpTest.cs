@@ -36,7 +36,7 @@ internal class PackageSetUpTest
         Assert.IsNotEmpty(codeFiles);
 
         var awaitRegex = new Regex(@"//.*|(?<await>\bawait\s)");
-        var configureAwaitRegex = new Regex(@"\.ConfigureAwait\(false\)|\.TryAwait\(\)");
+        var configureAwaitRegex = new Regex(@"\.ConfigureAwait\(false\)");
         foreach (var codeFile in codeFiles)
         {
             var code = File.ReadAllText(codeFile);

@@ -29,10 +29,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Enumerates each remaining line of output. The enumerable cannot be re-used
         /// </summary>
-        public IEnumerable<string> GetLines()
-        {
-            return new LinesEnumerable(this);
-        }
+        public IEnumerable<string> GetLines() => new LinesEnumerable(this);
 
         private class LinesEnumerable : IEnumerable<string>
         {
@@ -88,12 +85,17 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeToAsync(Stream stream, bool leaveReaderOpen = false, bool leaveStreamOpen = false)
         {
-            Throw.IfNull(stream, "stream");
+            Throw.IfNull(stream, nameof(stream));
 
             return this.PipeAsync(
-                () => this.BaseStream.CopyToAsync(stream),
+                async () => 
+                {
+                    // BaseStream is Pipe.OutputStream, so for now this is just handling stream
+                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream, stream);
+                    await this.BaseStream.CopyToAsync(stream).ConfigureAwait(false);
+                },
                 leaveOpen: leaveReaderOpen,
-                extraDisposeAction: leaveStreamOpen ? default(Action) : () => stream.Dispose()
+                extraDisposeAction: leaveStreamOpen ? null : stream.Dispose
             );
         }
 
@@ -103,7 +105,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeToAsync(TextWriter writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false)
         {
-            Throw.IfNull(writer, "writer");
+            Throw.IfNull(writer, nameof(writer));
 
             return this.CopyToAsync(writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
         }
@@ -113,11 +115,14 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeToAsync(ICollection<string> lines, bool leaveReaderOpen = false)
         {
-            Throw.IfNull(lines, "lines");
+            Throw.IfNull(lines, nameof(lines));
 
             return this.PipeAsync(
                 async () =>
                 {
+                    // future proofing (for now BaseStream is Pipe.InputStream)
+                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
+
                     string? line;
                     while ((line = await this.ReadLineAsync().ConfigureAwait(false)) != null)
                     {
@@ -151,6 +156,9 @@ namespace Medallion.Shell.Streams
             return this.PipeAsync(
                 async () =>
                 {
+                    // future proofing (for now BaseStream is Pipe.InputStream)
+                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
+
                     var buffer = new char[Constants.CharBufferSize];
                     int bytesRead;
                     while ((bytesRead = await this.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) != 0)
