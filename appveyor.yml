@@ -24,7 +24,11 @@ for:
         - 
           image: "Ubuntu"
     test_script:
+      - echo DOTNET TEST
       - dotnet test MedallionShell.sln -c Release -f net6.0 --no-build
       # test mono via the NUnit console runner
       - nuget install NUnit.Console -Version 3.16.3 -OutputDirectory testrunner -Source https://api.nuget.org/v3/index.json
+      - echo MONO NETCORE
+      - mono ./testrunner/NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net6.0/MedallionShell.Tests.dll
+      - echo MONO NETFRAMEWORK
       - mono ./testrunner/NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ./MedallionShell.Tests/bin/Release/net462/MedallionShell.Tests.dll
