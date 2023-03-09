@@ -153,6 +153,7 @@ namespace SampleCommand
                 @"``\`\\",
                 @"C:\temp\blah",
                 " leading and trailing\twhitespace!  ",
+                @"\""""",
             };
             var command = TestShell.Run(SampleCommandPath, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError());
             var outputLines = command.StandardOutput.GetLines().ToArray();
