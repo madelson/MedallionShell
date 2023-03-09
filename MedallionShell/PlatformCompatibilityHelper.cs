@@ -19,7 +19,7 @@ namespace Medallion.Shell
         /// See https://github.com/dotnet/runtime/issues/81896 and
         /// https://github.com/madelson/MedallionShell/issues/94
         /// </summary>
-        public static bool ProcessStreamsUseSyncIO => IsWindows || IsMono;
+        public static bool ProcessStreamsUseSyncIO => IsWindows;
 
         public static bool ProcessStreamWriteThrowsOnProcessEnd => !IsWindows || IsMono;
 
