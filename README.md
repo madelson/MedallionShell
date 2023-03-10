@@ -1,4 +1,5 @@
-MedallionShell
+MedallionShell [![Tests status](https://appveyor-shields-badge.herokuapp.com/api/api/testResults/madelson/MedallionShell/badge.svg)](https://ci.appveyor.com/project/madelson/MedallionShell)
+
 ==============
 
 MedallionShell vastly simplifies working with processes in .NET. 
