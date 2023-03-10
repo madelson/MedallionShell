@@ -1,6 +1,4 @@
-MedallionShell
-
-==============
+# MedallionShell
 
 MedallionShell vastly simplifies working with processes in .NET. 
 
