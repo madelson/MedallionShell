@@ -74,6 +74,8 @@ namespace Medallion.Shell.Tests
                 await command.Task;
                 command.Result.Success.ShouldEqual(true, "should run on Mono. Got: " + command.Result.StandardError);
             }
+#else
+            await Task.CompletedTask; // make the compiler happy
 #endif
         }
     }
