@@ -5,12 +5,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Medallion.Shell;
 using Medallion.Shell.Signals;
 using NUnit.Framework;
-using SampleCommand;
 
-namespace MedallionShell.Tests
+namespace Medallion.Shell.Tests
 {
     using static Medallion.Shell.Tests.UnitTestHelpers;
 

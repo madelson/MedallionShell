@@ -6,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -38,8 +37,7 @@ namespace Medallion.Shell.Tests
                 | TestShell.Run(SampleCommand, "grep", "c");
 
             var results = command.StandardOutput.GetLines().ToArray();
-
-            results.SequenceEqual(new[] { "abcd", "abc" }).ShouldEqual(true);
+            CollectionAssert.AreEqual(new[] { "abcd", "abc" }, results);
         }
 
         [Test]
