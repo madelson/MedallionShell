@@ -22,7 +22,7 @@ namespace Medallion.Shell.Streams
     {
         private readonly Stream stream;
 
-        private ProcessStreamWrapper(Stream stream) 
+        private ProcessStreamWrapper(Stream stream)
         {
             Debug.Assert(stream is not ProcessStreamWrapper, "No double wrapping");
             this.stream = stream;
@@ -45,16 +45,16 @@ namespace Medallion.Shell.Streams
         public override int WriteTimeout { get => this.stream.WriteTimeout; set => this.stream.WriteTimeout = value; }
 
         // Note: from my testing, try-catching on Flush() appears necessary with .NET core on Linux, but not on Mono
-        public override void Flush() => 
+        public override void Flush() =>
             this.DoWriteOperation(default(bool), static (s, _) => s.Flush());
         public override Task FlushAsync(CancellationToken cancellationToken) =>
             this.DoWriteOperationAsync(
-                default(bool), 
+                default(bool),
                 static (s, _, token) => s.FlushAsync(token),
                 static (s, _) => s.Flush(),
                 cancellationToken);
 
-        public override int Read(byte[] buffer, int offset, int count) => 
+        public override int Read(byte[] buffer, int offset, int count) =>
             this.stream.Read(buffer, offset, count);
 
         public override int ReadByte() => base.ReadByte();
@@ -72,7 +72,7 @@ namespace Medallion.Shell.Streams
 
         public override void Write(byte[] buffer, int offset, int count) =>
             this.DoWriteOperation(
-                (buffer, offset, count), 
+                (buffer, offset, count),
                 static (s, arg) => s.Write(arg.buffer, arg.offset, arg.count));
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
@@ -139,8 +139,6 @@ namespace Medallion.Shell.Streams
 
             static async Task CopyToAsyncHelper(Stream source, Stream destination, int bufferSize, CancellationToken cancellationToken)
             {
-                using var operation = BeginMultiStepIOOperation(source, destination);
-
                 var buffer = new byte[bufferSize];
                 int bytesRead;
                 while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) != 0)
@@ -165,10 +163,10 @@ namespace Medallion.Shell.Streams
         private async Task DoWriteOperationAsync<TArg>(
             TArg arg,
             Func<Stream, TArg, CancellationToken, Task> asyncAction,
-            Action<Stream, TArg> syncAction, 
+            Action<Stream, TArg> syncAction,
             CancellationToken cancellationToken)
         {
-            try 
+            try
             {
                 await this.DoIOAsync(
                     (arg, syncAction, asyncAction),
@@ -199,9 +197,9 @@ namespace Medallion.Shell.Streams
         }
 
         private Task<TResult> DoIOAsync<TArg, TResult>(
-            TArg arg, 
-            Func<Stream, TArg, CancellationToken, Task<TResult>> asyncFunc, 
-            Func<Stream, TArg, TResult> syncFunc, 
+            TArg arg,
+            Func<Stream, TArg, CancellationToken, Task<TResult>> asyncFunc,
+            Func<Stream, TArg, TResult> syncFunc,
             CancellationToken cancellationToken)
         {
             if (!ProcessStreamsUseSyncIO)
@@ -209,110 +207,16 @@ namespace Medallion.Shell.Streams
                 return asyncFunc(this.stream, arg, cancellationToken);
             }
 
-            var syncIOOperation = SyncIOOperation.Current;
-            if (syncIOOperation?.Contains(this) ?? false)
-            {
-                // go fully synchronous if we can to avoid spinning up new threads
-                if (syncIOOperation.IsSyncIOAllowedOnCurrentThread)
-                {
-                    if (cancellationToken.IsCancellationRequested) { return Shims.CanceledTask<TResult>(cancellationToken); }
-                    try { return Task.FromResult(syncFunc(this.stream, arg)); }
-                    catch (Exception ex) { return Shims.FaultedTask<TResult>(ex); }
-                }
-            }
-            else
-            {
-                syncIOOperation = null; // current operation is not relevant
-            }
-
             // avoid doing async IO on the threadpool, which can lead to starvation
-            return Task.Factory.StartNew(
+            return LongRunningTaskScheduler.StartNew(
                 static state =>
                 {
-                    var tupleState = (Tuple<Stream, TArg, Func<Stream, TArg, TResult>, SyncIOOperation?>)state!;
-                    tupleState.Item4?.MarkCurrentThreadForSyncIO();
+                    var tupleState = (Tuple<Stream, TArg, Func<Stream, TArg, TResult>>)state!;
                     return tupleState.Item3(tupleState.Item1, tupleState.Item2);
                 },
-                state: Tuple.Create(this.stream, arg, syncFunc, syncIOOperation),
-                cancellationToken,
-                TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
-                TaskScheduler.Default
+                state: Tuple.Create(this.stream, arg, syncFunc),
+                cancellationToken
             );
-        }
-
-        public static IDisposable? BeginMultiStepIOOperation(Stream? stream1, Stream? stream2 = null) =>
-            ProcessStreamsUseSyncIO ? SyncIOOperation.Start(stream1, stream2) : null;
-
-        private sealed class SyncIOOperation : IDisposable
-        {
-            private static readonly
-#if DEBUG && NETFRAMEWORK // see testing comment in AsyncLocalShim.cs
-                Medallion.Shell.
-#endif
-                AsyncLocal<SyncIOOperation?> AsyncLocalCurrent = new();
-
-            [ThreadStatic]
-            private static SyncIOOperation? threadLocalCurrent;
-
-            private SyncIOOperation? previous;
-            private ProcessStreamWrapper? stream1, stream2;
-            private bool disposed;
-
-            private SyncIOOperation() { }
-
-            public static SyncIOOperation? Current => AsyncLocalCurrent.Value;
-
-            public static SyncIOOperation? Start(Stream? stream1, Stream? stream2)
-            {
-                var wrapperStream1 = stream1 as ProcessStreamWrapper;
-                var wrapperStream2 = stream2 as ProcessStreamWrapper;
-
-                if (wrapperStream1 is null && wrapperStream2 is null) { return null; }
-
-                // If we already have an equivalent current operation, we don't want to overwrite it.
-                // Instead, we simply return null so that it can be used without being disposed an extra time.
-                var current = AsyncLocalCurrent.Value;
-                if (current != null
-                    && (stream1 is null || current.Contains(stream1))
-                    && (stream2 is null || current.Contains(stream2)))
-                {
-                    return null;
-                }
-
-                return AsyncLocalCurrent.Value = new() { stream1 = wrapperStream1, stream2 = wrapperStream2, previous = AsyncLocalCurrent.Value };
-            }
-
-            public bool IsSyncIOAllowedOnCurrentThread => threadLocalCurrent == this;
-
-            public void MarkCurrentThreadForSyncIO()
-            {
-                Debug.Assert(threadLocalCurrent is null, "must be a new thread");
-#if !NETSTANDARD1_3
-                Debug.Assert(!Thread.CurrentThread.IsThreadPoolThread, "must not be a threadpool thread");
-#endif
-                if (!this.disposed) { threadLocalCurrent = this; } 
-            }
-
-            public bool Contains(Stream stream) =>
-                this.stream1 == stream || this.stream2 == stream;
-
-            public void Dispose()
-            {
-                if (this.disposed) { return; }
-                this.disposed = true;
-
-                if (threadLocalCurrent == this)
-                {
-                    threadLocalCurrent = null;
-                }
-                if (AsyncLocalCurrent.Value == this)
-                {
-                    AsyncLocalCurrent.Value = this.previous;
-                }
-
-                this.stream1 = this.stream2 = null;
-                this.previous = null;
-            }
         }
     }
 }

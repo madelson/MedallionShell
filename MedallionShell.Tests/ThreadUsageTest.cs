@@ -6,6 +6,7 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Medallion.Shell.Streams;
 using NUnit.Framework;
 
 namespace Medallion.Shell.Tests;
@@ -24,6 +25,9 @@ internal class ThreadUsageTest
 
         ThreadPool.GetMinThreads(out var originalMinWorkerThreads, out var originalMinCompletionPortThreads);
         ThreadPool.GetMaxThreads(out var originalMaxWorkerThreads, out var originalMaxCompletionPortThreads);
+#if DEBUG
+        var originalThreadsCreated = LongRunningTaskScheduler.ThreadsCreated;
+#endif
         Command? pipeline = null;
         try
         {
@@ -57,6 +61,29 @@ internal class ThreadUsageTest
                 TaskCreationOptions.LongRunning
             );
             Assert.IsTrue(task.Wait(TimeSpan.FromSeconds(10)));
+
+#if DEBUG
+            var threadsCreated = LongRunningTaskScheduler.ThreadsCreated - originalThreadsCreated;
+            if (PlatformCompatibilityHelper.ProcessStreamsUseSyncIO)
+            {
+                if (!Debugger.IsAttached) // can lead to waiting threads timing out and thus more threads created
+                {
+                    // TODO https://github.com/madelson/MedallionShell/issues/102
+                    // 1 std input thread for the first process
+                    // 1 std output thread for the last process
+                    // N-1 piping threads
+                    // N std error threads
+                    // Assert.LessOrEqual(threadsCreated, (2 * ProcessCount) + 1);
+
+                    // 3 IO stream threads per process
+                    Assert.LessOrEqual(threadsCreated, 3 * ProcessCount);
+                }
+            }
+            else
+            {
+                threadsCreated.ShouldEqual(0);
+            }
+#endif
         }
         finally
         {

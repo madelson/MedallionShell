@@ -14,10 +14,6 @@ namespace Medallion.Shell.Streams
             return reader.PipeAsync(
                 async () =>
                 {
-                    var readStream = (reader as ProcessStreamReader)?.BaseStream;
-                    var writeStream = (writer as ProcessStreamWriter)?.BaseStream;
-                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(readStream, writeStream);
-
                     var buffer = new char[Constants.CharBufferSize];
                     int charsRead;
                     while ((charsRead = await reader.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)

@@ -33,8 +33,6 @@ namespace Medallion.Shell.Streams
         {
             try
             {
-                using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.processStream);
-
                 var buffer = new byte[Constants.ByteBufferSize];
                 int bytesRead;
                 while (

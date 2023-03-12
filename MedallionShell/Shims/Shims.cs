@@ -20,17 +20,6 @@ internal static class Shims
         Array.Empty<T>();
 #endif
 
-    public static Task<T> FaultedTask<T>(Exception exception)
-    {
-#if NET45 || (NETFRAMEWORK && DEBUG) // for test coverage
-        TaskCompletionSource<T> taskCompletionSource = new();
-        taskCompletionSource.SetException(exception);
-        return taskCompletionSource.Task;
-#else
-        return Task.FromException<T>(exception);
-#endif
-    }
-
     public static Task<T> CanceledTask<T>(CancellationToken cancellationToken)
     {
 #if NET45 || (NETFRAMEWORK && DEBUG) // for test coverage

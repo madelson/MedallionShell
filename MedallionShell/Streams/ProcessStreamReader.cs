@@ -88,12 +88,7 @@ namespace Medallion.Shell.Streams
             Throw.IfNull(stream, nameof(stream));
 
             return this.PipeAsync(
-                async () => 
-                {
-                    // BaseStream is Pipe.OutputStream, so for now this is just handling stream
-                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream, stream);
-                    await this.BaseStream.CopyToAsync(stream).ConfigureAwait(false);
-                },
+                () => this.BaseStream.CopyToAsync(stream),
                 leaveOpen: leaveReaderOpen,
                 extraDisposeAction: leaveStreamOpen ? null : stream.Dispose
             );
@@ -120,9 +115,6 @@ namespace Medallion.Shell.Streams
             return this.PipeAsync(
                 async () =>
                 {
-                    // future proofing (for now BaseStream is Pipe.InputStream)
-                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
-
                     string? line;
                     while ((line = await this.ReadLineAsync().ConfigureAwait(false)) != null)
                     {
@@ -156,9 +148,6 @@ namespace Medallion.Shell.Streams
             return this.PipeAsync(
                 async () =>
                 {
-                    // future proofing (for now BaseStream is Pipe.InputStream)
-                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
-
                     var buffer = new char[Constants.CharBufferSize];
                     int bytesRead;
                     while ((bytesRead = await this.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) != 0)

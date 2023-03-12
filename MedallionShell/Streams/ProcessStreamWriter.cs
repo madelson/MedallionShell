@@ -55,8 +55,6 @@ namespace Medallion.Shell.Streams
             return this.PipeAsync(
                 async () =>
                 {
-                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(stream, this.BaseStream);
-
                     // flush any content buffered in the writer, since we'll be using the raw stream
                     await this.writer.FlushAsync().ConfigureAwait(false);
                     if (this.AutoFlush)
@@ -87,8 +85,6 @@ namespace Medallion.Shell.Streams
                 // wrap in Task.Run since GetEnumerator() or MoveNext() might block
                 () => Task.Run(async () =>
                 {
-                    using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
-
                     foreach (var line in lines)
                     {
                         await this.WriteLineAsync(line).ConfigureAwait(false);
@@ -133,8 +129,6 @@ namespace Medallion.Shell.Streams
                     // when enumerating, layer on a Task.Run since GetEnumerator() or MoveNext() might block
                     : () => Task.Run(async () =>
                     {
-                        using var operation = ProcessStreamWrapper.BeginMultiStepIOOperation(this.BaseStream);
-
                         var buffer = new char[Constants.CharBufferSize];
                         using var enumerator = chars.GetEnumerator();
                         while (true)
