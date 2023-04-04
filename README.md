@@ -46,9 +46,30 @@ Most APIs create a `Command` instance by starting a new process. However, you ca
 
 ### Standard IO
 
-One of the main ways to interact with a process is via its [standard IO streams](https://en.wikipedia.org/wiki/Standard_streams) (in, out and error). By default, MedallionShell configures the process to enable these streams and captures standard error and standard output in the `Command`'s result.
+One of the main ways to interact with a process is via its [standard IO streams](https://en.wikipedia.org/wiki/Standard_streams) (in, out and error). By default, MedallionShell configures the process to enable these streams and captures standard error and standard output in the `Command`'s result:
+```C#
+var command = Command.Run(...);
+var result = await command.Task;
+Console.WriteLine($"{result.StandardOutput}, {result.StandardError}");
+```
 
-Additionally/alternatively, you can interact with these streams directly via the `Command.StandardInput`, `Command.StandardOutput`, and `Command.StandardError` properties. As with `Process`, these are `TextWriter`/`TextReader` objects that also expose the underlying `Stream`, giving you the option of writing/reading either text or raw bytes.
+If you want to consume the output (stdout and stderr) as a _merged_ stream of lines like you would see in the console, you can use the `GetOutputAndErrorLines()` method:
+```C#
+var command = Command.Run(...);
+foreach (var line in command.GetOutputAndErrorLines())
+{
+    Console.WriteLine(line);
+}
+```
+
+Additionally/alternatively, you can interact with these streams directly via the `Command.StandardInput`, `Command.StandardOutput`, and `Command.StandardError` properties. As with `Process`, these are `TextWriter`/`TextReader` objects that also expose the underlying `Stream`, giving you the option of writing/reading either text or raw bytes:
+```C#
+var command = Command.Run(...);
+command.StandardInput.Write("some text"); // e.g. write as text
+command.StandardInput.BaseStream.Write(new byte[100]); // e.g. write as bytes
+command.StandardOutput.ReadLine(); // e.g. read as text
+command.StandardError.BaseStream.Read(new byte[100]); // e.g. read as bytes
+```
 
 The standard IO streams also contain methods for piping to and from common sinks and sources, including `Stream`s, `TextReader/Writer`s, files, and collections. For example:
 ```C#
@@ -68,6 +89,8 @@ await Command.Run("processingStep1.exe")
 await Command.Run("ProcssingStep1.exe") < new FileInfo("input.txt")
 	| Command.Run("processingStep2.exe") > new FileInfo("output.text");
 ```
+
+Finally, note that **any content you read directly will _not_ end up in the result; the `result.StandardOutput` and `result.StandardError` properties store only content that you have not already consumed via some other mechanism.
 
 ### Stopping a Command
 
