@@ -106,7 +106,7 @@ namespace Medallion.Shell.Tests
                 "Did not time out"
             );
             
-            Assert.IsInstanceOf<TimeoutException>(exception.GetBaseException());
+            Assert.IsInstanceOf<TimeoutException>(exception!.GetBaseException());
         }
     }
 }
