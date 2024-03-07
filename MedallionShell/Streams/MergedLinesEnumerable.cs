@@ -30,7 +30,7 @@ namespace Medallion.Shell.Streams
         {
             this.AssertNoMultipleEnumeration();
 
-            return this.GetAsyncEnumeratorInternal();
+            return this.GetAsyncEnumeratorInternal(cancellationToken);
         }
 #endif
 
@@ -110,7 +110,7 @@ namespace Medallion.Shell.Streams
         }
 
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal()
+        private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal(CancellationToken cancellationToken)
         {
             var tasks = new List<ReaderAndTask>(capacity: 2)
             {
@@ -164,7 +164,11 @@ namespace Medallion.Shell.Streams
             }
 
             // phase 2: finish reading the remaining stream
+#if NET7_0_OR_GREATER
+            while (await remaining.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+#else
             while (remaining.ReadLine() is { } line)
+#endif
             {
                 yield return line;
             }
@@ -173,10 +177,14 @@ namespace Medallion.Shell.Streams
 
         private struct ReaderAndTask : IEquatable<ReaderAndTask>
         {
-            public ReaderAndTask(TextReader reader)
+            public ReaderAndTask(TextReader reader, CancellationToken cancellationToken = default)
             {
                 this.Reader = reader;
+#if NET7_0_OR_GREATER
+                this.Task = reader.ReadLineAsync(cancellationToken);
+#else
                 this.Task = reader.ReadLineAsync();
+#endif
             }
 
             public TextReader Reader { get; }
