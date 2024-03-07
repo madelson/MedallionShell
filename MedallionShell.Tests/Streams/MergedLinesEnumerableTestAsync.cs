@@ -19,7 +19,7 @@ namespace Medallion.Shell.Tests.Streams
             var empty1 = new StringReader(string.Empty);
             var nonEmpty1 = new StringReader("abc\r\ndef\r\nghi\r\njkl");
 
-            IAsyncEnumerable<string> asyncEnumerable1 = new MergedLinesEnumerable(empty1, nonEmpty1);
+            var asyncEnumerable1 = new MergedLinesEnumerable(empty1, nonEmpty1);
             var list1 = await asyncEnumerable1.ToListAsync();
             list1.SequenceEqual(["abc", "def", "ghi", "jkl"])
                 .ShouldEqual(true, string.Join(", ", list1));
