@@ -22,7 +22,7 @@ namespace Medallion.Shell.Streams
                     }
                 },
                 leaveOpen: leaveReaderOpen,
-                extraDisposeAction: leaveWriterOpen ? default(Action) : () => writer.Dispose()
+                extraDisposeAction: leaveWriterOpen ? null : () => writer.Dispose()
             );
         }
 
@@ -89,12 +89,9 @@ namespace Medallion.Shell.Streams
             {
                 await pipeTaskFactory().ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex.IsExpectedPipeException())
             {
-                if (!ex.IsExpectedPipeException())
-                {
-                    throw;
-                }
+                // swallow
             }
             finally
             {

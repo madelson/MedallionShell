@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
@@ -20,10 +21,10 @@ namespace Medallion.Shell.Streams
 
         public InternalProcessStreamReader(StreamReader processStreamReader)
         {
-            this.processStream = processStreamReader.BaseStream;
+            this.processStream = ProcessStreamWrapper.WrapIfNeeded(processStreamReader.BaseStream, isReadStream: true);
             this.pipe = new Pipe();
             this.reader = new StreamReader(this.pipe.OutputStream, processStreamReader.CurrentEncoding);
-            this.Task = Task.Run(() => this.BufferLoop());
+            this.Task = this.BufferLoop();
         }
 
         public Task Task { get; }
@@ -36,21 +37,15 @@ namespace Medallion.Shell.Streams
                 int bytesRead;
                 while (
                     !this.discardContents
-                    && (bytesRead = await this.processStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0
-                )
+                        && (bytesRead = await this.processStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
                 {
                     await this.pipe.InputStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
                 }
             }
             finally
             {
-#if NETSTANDARD1_3
                 this.processStream.Dispose();
                 this.pipe.InputStream.Dispose();
-#else
-                this.processStream.Close();
-                this.pipe.InputStream.Close();
-#endif
             }
         }
 
@@ -110,12 +105,12 @@ namespace Medallion.Shell.Streams
             return this.reader.ReadBlockAsync(buffer, index, count);
         }
 
-        public override string ReadLine()
+        public override string? ReadLine()
         {
             return this.reader.ReadLine();
         }
 
-        public override Task<string> ReadLineAsync()
+        public override Task<string?> ReadLineAsync()
         {
             return this.reader.ReadLineAsync();
         }
@@ -129,6 +124,16 @@ namespace Medallion.Shell.Streams
         {
             return this.reader.ReadToEndAsync();
         }
+
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+        public override int Read(Span<char> buffer) => this.reader.Read(buffer);
+
+        public override int ReadBlock(Span<char> buffer) => this.reader.ReadBlock(buffer);
+
+        public override ValueTask<int> ReadAsync(Memory<char> buffer, CancellationToken cancellationToken = default) => this.reader.ReadAsync(buffer);
+
+        public override ValueTask<int> ReadBlockAsync(Memory<char> buffer, CancellationToken cancellationToken = default) => this.reader.ReadBlockAsync(buffer, cancellationToken);
+#endif
 
         protected override void Dispose(bool disposing)
         {

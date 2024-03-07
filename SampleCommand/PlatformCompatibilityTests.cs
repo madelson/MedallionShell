@@ -21,7 +21,7 @@ namespace SampleCommand
         private static string GetSampleCommandPath()
         {
             var assemblyLocation = typeof(Program).Assembly.Location;
-#if !NETCOREAPP2_2
+#if NETFRAMEWORK
             return assemblyLocation;
 #else
             // needed on .NET Core to make sure the right config files are alongside SampleCommand.dll
@@ -30,13 +30,20 @@ namespace SampleCommand
         }
 
         public static readonly Shell TestShell =
-#if NETCOREAPP2_2
+#if NETCOREAPP
             new Shell(options: o => o.StartInfo(si =>
             {
                 // on .net core, you can't run .net exes directly so instead we invoke them through dotnet
                 if (si.FileName == SampleCommandPath)
                 {
-                    si.Arguments = !string.IsNullOrEmpty(si.Arguments) ? $"{si.FileName} {si.Arguments}" : si.FileName;
+                    if (!string.IsNullOrEmpty(si.Arguments))
+                    {
+                        si.Arguments = $"{si.FileName} {si.Arguments}";
+                    }
+                    else
+                    {
+                        si.ArgumentList.Insert(0, si.FileName);
+                    }
                     si.FileName = DotNetPath;
                 }
             }));
@@ -65,7 +72,7 @@ namespace SampleCommand
         {
             var command = TestShell.Run(SampleCommandPath, "exit", 1);
             command.Wait();
-            string line;
+            string? line;
             if ((line = command.StandardOutput.ReadLine()) != null)
             {
                 throw new InvalidOperationException($"StdOut was '{line}'");
@@ -105,7 +112,7 @@ namespace SampleCommand
 
         public static void TestBadProcessFile()
         {
-            var baseDirectory = Path.GetDirectoryName(SampleCommandPath);
+            var baseDirectory = Path.GetDirectoryName(SampleCommandPath)!;
 
             AssertThrows<Win32Exception>(() => Command.Run(baseDirectory));
             AssertThrows<Win32Exception>(() => Command.Run(Path.Combine(baseDirectory, "DOES_NOT_EXIST.exe")));
@@ -146,6 +153,7 @@ namespace SampleCommand
                 @"``\`\\",
                 @"C:\temp\blah",
                 " leading and trailing\twhitespace!  ",
+                @"\""""",
             };
             var command = TestShell.Run(SampleCommandPath, new[] { "argecho" }.Concat(arguments), o => o.ThrowOnError());
             var outputLines = command.StandardOutput.GetLines().ToArray();

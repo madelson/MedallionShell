@@ -13,21 +13,20 @@ namespace Medallion.Shell
         // see http://www.mono-project.com/docs/faq/technical/
         public static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
 
-        public static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        public static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-        public static CommandLineSyntax GetDefaultCommandLineSyntax()
-        {
-            if (IsMono && !IsWindows)
-            {
-                return new MonoUnixCommandLineSyntax();
-            }
-            return new WindowsCommandLineSyntax();
-        }
+        /// <summary>
+        /// See https://github.com/dotnet/runtime/issues/81896 and
+        /// https://github.com/madelson/MedallionShell/issues/94
+        /// </summary>
+        public static bool ProcessStreamsUseSyncIO => IsWindows;
 
-        public static Stream WrapStandardInputStreamIfNeeded(Stream stream)
-        {
-            return IsMono || !IsWindows ? new CompatibilityStandardInputWrapperStream(stream) : stream;
-        }
+        public static bool ProcessStreamWriteThrowsOnProcessEnd => !IsWindows || IsMono;
+
+        public static readonly CommandLineSyntax DefaultCommandLineSyntax =
+            IsMono && !IsWindows
+                ? new MonoUnixCommandLineSyntax()
+                : new WindowsCommandLineSyntax();
 
         public static int SafeGetExitCode(this Process process)
         {

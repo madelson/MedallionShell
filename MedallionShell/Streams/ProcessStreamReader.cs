@@ -29,10 +29,7 @@ namespace Medallion.Shell.Streams
         /// <summary>
         /// Enumerates each remaining line of output. The enumerable cannot be re-used
         /// </summary>
-        public IEnumerable<string> GetLines()
-        {
-            return new LinesEnumerable(this);
-        }
+        public IEnumerable<string> GetLines() => new LinesEnumerable(this);
 
         private class LinesEnumerable : IEnumerable<string>
         {
@@ -56,7 +53,7 @@ namespace Medallion.Shell.Streams
 
             private IEnumerator<string> GetEnumeratorInternal()
             {
-                string line;
+                string? line;
                 while ((line = this.reader.ReadLine()) != null)
                 {
                     yield return line;
@@ -88,12 +85,12 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeToAsync(Stream stream, bool leaveReaderOpen = false, bool leaveStreamOpen = false)
         {
-            Throw.IfNull(stream, "stream");
+            Throw.IfNull(stream, nameof(stream));
 
             return this.PipeAsync(
                 () => this.BaseStream.CopyToAsync(stream),
                 leaveOpen: leaveReaderOpen,
-                extraDisposeAction: leaveStreamOpen ? default(Action) : () => stream.Dispose()
+                extraDisposeAction: leaveStreamOpen ? null : stream.Dispose
             );
         }
 
@@ -103,7 +100,7 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeToAsync(TextWriter writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false)
         {
-            Throw.IfNull(writer, "writer");
+            Throw.IfNull(writer, nameof(writer));
 
             return this.CopyToAsync(writer, leaveReaderOpen: leaveReaderOpen, leaveWriterOpen: leaveWriterOpen);
         }
@@ -113,12 +110,12 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public Task PipeToAsync(ICollection<string> lines, bool leaveReaderOpen = false)
         {
-            Throw.IfNull(lines, "lines");
+            Throw.IfNull(lines, nameof(lines));
 
             return this.PipeAsync(
                 async () =>
                 {
-                    string line;
+                    string? line;
                     while ((line = await this.ReadLineAsync().ConfigureAwait(false)) != null)
                     {
                         lines.Add(line);

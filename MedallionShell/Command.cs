@@ -490,7 +490,7 @@ namespace Medallion.Shell
         /// </summary>
         protected void ThrowIfDisposed()
         {
-            Throw<ObjectDisposedException>.If(Volatile.Read(ref this._disposed) != 0, () => this.ToString());
+            Throw<ObjectDisposedException>.If(Volatile.Read(ref this._disposed) != 0, () => this.ToString()!);
         }
         #endregion
     }

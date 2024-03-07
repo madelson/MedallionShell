@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,18 +21,17 @@ namespace Medallion.Shell.Streams
         /// helps prevent thrashing if data is being pushed through the pipe at that rate
         /// </summary>
         private const int MaxStableSize = 2 * Constants.ByteBufferSize;
-        private static readonly byte[] Empty = new byte[0];
         private static readonly Task<int> CompletedZeroTask = Task.FromResult(0);
 
-        private readonly SemaphoreSlim bytesAvailableSignal = new SemaphoreSlim(initialCount: 0, maxCount: 1);
-        private readonly object @lock = new object();
+        private readonly AsyncManualResetEvent bytesAvailableSignal = new(initialState: false);
+        private readonly object @lock = new();
         private readonly PipeInputStream input;
         private readonly PipeOutputStream output;
 
-        private byte[] buffer = Empty;
+        private byte[] buffer = Shims.EmptyArray<byte>();
         private int start, count;
         private bool writerClosed, readerClosed;
-        private SemaphoreSlim? spaceAvailableSignal;
+        private AsyncManualResetEvent? spaceAvailableSignal;
         private Task<int> readTask = CompletedZeroTask;
         private Task writeTask = CompletedZeroTask;
 
@@ -40,91 +41,51 @@ namespace Medallion.Shell.Streams
             this.output = new PipeOutputStream(this);
         }
 
-        public Stream InputStream { get { return this.input; } }
-        public Stream OutputStream { get { return this.output; } }
+        public Stream InputStream => this.input;
+        public Stream OutputStream => this.output;
 
         #region ---- Signals ----
         public void SetFixedLength()
         {
             lock (this.@lock)
             {
-                if (this.spaceAvailableSignal == null
+                if (this.spaceAvailableSignal is null
                     && !this.readerClosed
                     && !this.writerClosed)
                 {
-                    this.spaceAvailableSignal = new SemaphoreSlim(
-                        initialCount: this.GetSpaceAvailableNoLock() > 0 ? 1 : 0,
-                        maxCount: 1
-                    );
+                    this.spaceAvailableSignal = new(initialState: this.GetSpaceAvailableNoLock() > 0);
                 }
             }
         }
 
         private int GetSpaceAvailableNoLock()
         {
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+
             return Math.Max(this.buffer.Length, MaxStableSize) - this.count;
         }
 
-        /// <summary>
-        /// MA: I used to have the signals updated in various ways and in various places
-        /// throughout the code. Now I have just one function that sets both signals to the correct
-        /// values. This is called from <see cref="ReadNoLock"/>, <see cref="WriteNoLock"/>,
-        /// <see cref="InternalCloseReadSideNoLock"/>, and <see cref="InternalCloseWriteSideNoLock"/>.
-        ///
-        /// While it may seem like this does extra work, nearly all cases are necessary. For example, we used
-        /// to say "signal bytes available if count > 0" at the end of <see cref="WriteNoLock"/>. The problem is
-        /// that we could have the following sequence of operations:
-        /// 1. <see cref="ReadNoLockAsync"/> blocks on <see cref="bytesAvailableSignal"/>
-        /// 2. <see cref="WriteNoLock"/> writes and signals
-        /// 3. <see cref="ReadNoLockAsync"/> wakes up
-        /// 4. Another <see cref="WriteNoLock"/> call writes and re-signals
-        /// 5. <see cref="ReadNoLockAsync"/> reads ALL content and returns, leaving <see cref="bytesAvailableSignal"/> signaled (invalid)
-        ///
-        /// This new implementation avoids this because the <see cref="ReadNoLock"/> call inside <see cref="ReadNoLockAsync"/> will
-        /// properly unsignal after it consumes ALL the contents
-        /// </summary>
-        private void UpdateSignalsNoLock()
+        private void AssertSignalInvariantsNoLock()
         {
-            // update bytes available
-            switch (this.bytesAvailableSignal.CurrentCount)
-            {
-                case 0:
-                    if (this.count > 0 || this.writerClosed)
-                    {
-                        this.bytesAvailableSignal.Release();
-                    }
-                    break;
-                case 1:
-                    if (this.count == 0 && !this.writerClosed)
-                    {
-                        this.bytesAvailableSignal.Wait();
-                    }
-                    break;
-                default:
-                    throw new InvalidOperationException("Should never get here");
-            }
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+            Debug.Assert(this.bytesAvailableSignal.IsSet == (this.writerClosed || this.count > 0), nameof(this.bytesAvailableSignal));
+            Debug.Assert(
+                this.spaceAvailableSignal is null
+                    || (this.spaceAvailableSignal.IsSet == (this.readerClosed || this.GetSpaceAvailableNoLock() > 0)),
+                nameof(this.spaceAvailableSignal)
+            );
+        }
 
-            // update space available
-            if (this.spaceAvailableSignal != null)
-            {
-                switch (this.spaceAvailableSignal.CurrentCount)
-                {
-                    case 0:
-                        if (this.readerClosed || this.GetSpaceAvailableNoLock() > 0)
-                        {
-                            this.spaceAvailableSignal.Release();
-                        }
-                        break;
-                    case 1:
-                        if (!this.readerClosed && this.GetSpaceAvailableNoLock() == 0)
-                        {
-                            this.spaceAvailableSignal.Wait();
-                        }
-                        break;
-                    default:
-                        throw new InvalidOperationException("Should never get here");
-                }
-            }
+        private static void SetSignal(AsyncManualResetEvent signal)
+        {
+            Debug.Assert(!signal.IsSet, "should be unset");
+            signal.Set();
+        }
+
+        private static void ResetSignal(AsyncManualResetEvent signal)
+        {
+            Debug.Assert(signal.IsSet, "should be set");
+            signal.Reset();
         }
         #endregion
 
@@ -136,7 +97,7 @@ namespace Medallion.Shell.Streams
             // always respect cancellation, even in the sync flow
             if (cancellationToken.IsCancellationRequested)
             {
-                return CreateCanceledTask();
+                return Shims.CanceledTask<bool>(cancellationToken);
             }
 
             if (count == 0)
@@ -156,7 +117,7 @@ namespace Medallion.Shell.Streams
                     return CompletedZeroTask;
                 }
 
-                if (this.spaceAvailableSignal == null
+                if (this.spaceAvailableSignal is null
                     || this.GetSpaceAvailableNoLock() >= count)
                 {
                     // if we're not limited by space, just write and return
@@ -172,6 +133,8 @@ namespace Medallion.Shell.Streams
 
         private async Task WriteNoLockAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
         {
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+
             var remainingCount = count;
             do
             {
@@ -208,7 +171,7 @@ namespace Medallion.Shell.Streams
                     {
                         var countToWrite = Math.Min(this.GetSpaceAvailableNoLock(), remainingCount);
                         this.WriteNoLock(buffer, offset + (count - remainingCount), countToWrite);
-
+                        
                         remainingCount -= countToWrite;
                     }
                 }
@@ -218,11 +181,12 @@ namespace Medallion.Shell.Streams
 
         private void WriteNoLock(byte[] buffer, int offset, int count)
         {
-            if (count <= 0)
-            {
-                throw new InvalidOperationException("Sanity check: WriteNoLock requires positive count");
-            }
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+            Debug.Assert(count > 0, "WriteNoLock requires positive count");
+            Debug.Assert(this.spaceAvailableSignal is null || this.GetSpaceAvailableNoLock() >= count, "Must have space available"); 
 
+            var hadNoBytesAvailable = this.count == 0;
+            
             this.EnsureCapacityNoLock(unchecked(this.count + count));
 
             var writeStart = (this.start + this.count) % this.buffer.Length;
@@ -231,11 +195,15 @@ namespace Medallion.Shell.Streams
             Buffer.BlockCopy(src: buffer, srcOffset: offset + writeStartToEndCount, dst: this.buffer, dstOffset: 0, count: count - writeStartToEndCount);
             this.count += count;
 
-            this.UpdateSignalsNoLock();
+            if (hadNoBytesAvailable) { SetSignal(this.bytesAvailableSignal); }
+            if (this.spaceAvailableSignal != null && this.GetSpaceAvailableNoLock() <= 0) { ResetSignal(this.spaceAvailableSignal); }
+            this.AssertSignalInvariantsNoLock();
         }
 
         private void EnsureCapacityNoLock(int capacity)
         {
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+
             if (capacity < 0)
             {
                 throw new IOException("Pipe stream is too long");
@@ -293,9 +261,9 @@ namespace Medallion.Shell.Streams
 
                 // otherwise, close as a continuation on the write task
                 this.writeTask = this.writeTask.ContinueWith(
-                    (t, state) =>
+                    static (_, state) =>
                     {
-                        var @this = (Pipe)state;
+                        var @this = (Pipe)state!;
                         lock (@this.@lock)
                         {
                             @this.InternalCloseWriteSideNoLock();
@@ -308,95 +276,160 @@ namespace Medallion.Shell.Streams
 
         private void InternalCloseWriteSideNoLock()
         {
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+            
             this.writerClosed = true;
-            this.UpdateSignalsNoLock();
+            
+            // closed writer means reads won't block, so we effectively always have bytes
+            if (this.count == 0) { SetSignal(this.bytesAvailableSignal); }
+            this.AssertSignalInvariantsNoLock();
+
             if (this.readerClosed)
             {
                 // if both sides are now closed, cleanup
-                this.CleanupNoLock();
+                this.CleanUpNoLock();
             }
         }
         #endregion
 
         #region ---- Reading ----
-        private Task<int> ReadAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
+        private int Read(Span<byte> buffer, TimeSpan timeout)
         {
-            Throw.IfInvalidBuffer(buffer, offset, count);
+            // if we didn't want to read anything, return immediately
+            if (buffer.Length == 0)
+            {
+                return 0;
+            }
 
-            // always respect cancellation, even in the sync flow
+            TaskCompletionSource<int>? readTaskCompletionSource = null;
+            int bytesRead;
+            lock (this.@lock)
+            {
+                if (this.TryReadBeforeWaitNoLock(buffer, out bytesRead))
+                {
+                    return bytesRead;
+                }
+
+                // block concurrent reads
+                this.readTask = (readTaskCompletionSource = new()).Task;
+            }
+            try
+            {
+                if (!this.bytesAvailableSignal.Wait(timeout, CancellationToken.None)) { ThrowReadTimeout(); }
+
+                lock (this.@lock)
+                {
+                    return bytesRead = this.PerformReadNoLock(buffer);
+                }
+            }
+            finally // always complete readTask
+            {
+                readTaskCompletionSource.TrySetResult(bytesRead);
+            }
+        }
+
+        private Task<int> ReadAsync(Memory<byte> buffer, TimeSpan timeout, CancellationToken cancellationToken)
+        {
             if (cancellationToken.IsCancellationRequested)
             {
-                return CreateCanceledTask();
+                return Shims.CanceledTask<int>(cancellationToken);
             }
 
             // if we didn't want to read anything, return immediately
-            if (count == 0)
+            if (buffer.Length == 0)
             {
                 return CompletedZeroTask;
             }
 
             lock (this.@lock)
             {
-                Throw<ObjectDisposedException>.If(this.readerClosed, "The read side of the pipe is closed");
-                Throw<InvalidOperationException>.If(!this.readTask.IsCompleted, "Concurrent reads are not allowed");
-
-                // if we have bytes, read them and return synchronously
-                if (this.count > 0)
+                if (this.TryReadBeforeWaitNoLock(buffer.Span, out var bytesRead))
                 {
-                    return Task.FromResult(this.ReadNoLock(buffer, offset, count));
+                    return Task.FromResult(bytesRead);
                 }
 
-                // if we don't have bytes and no more are coming, return 0
-                if (this.writerClosed)
-                {
-                    return CompletedZeroTask;
-                }
-
-                // otherwise, create and return an async read task
-                return this.readTask = this.ReadNoLockAsync(buffer, offset, count, timeout, cancellationToken);
+                return this.readTask = this.WaitAndReadNoLockAsync(buffer, timeout, cancellationToken);
             }
         }
 
-        private async Task<int> ReadNoLockAsync(byte[] buffer, int offset, int count, TimeSpan timeout, CancellationToken cancellationToken)
+        private async Task<int> WaitAndReadNoLockAsync(Memory<byte> buffer, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            var acquired = await this.bytesAvailableSignal.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
-            if (!acquired)
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+
+            if (!await this.bytesAvailableSignal.WaitAsync(timeout, cancellationToken).ConfigureAwait(false))
             {
-                throw new TimeoutException("Timed out reading from the pipe");
+                ThrowReadTimeout();
             }
 
             // we need to reacquire the lock after the await since we might have switched threads
             lock (this.@lock)
             {
-                return this.ReadNoLock(buffer, offset, count);
+                return this.PerformReadNoLock(buffer.Span);
             }
         }
 
-        private int ReadNoLock(byte[] buffer, int offset, int count)
-        {
-            var countToRead = Math.Min(this.count, count);
+        private static void ThrowReadTimeout() => throw new TimeoutException("Timed out reading from the pipe");
 
-            var bytesRead = 0;
-            while (bytesRead < countToRead)
+        private bool TryReadBeforeWaitNoLock(Span<byte> buffer, out int bytesRead)
+        {
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+            Throw<ObjectDisposedException>.If(this.readerClosed, "The read side of the pipe is closed");
+            Throw<InvalidOperationException>.If(!this.readTask.IsCompleted, "Concurrent reads are not allowed");
+
+            if (this.count == 0 && !this.writerClosed)
             {
-                var bytesToRead = Math.Min(countToRead - bytesRead, this.buffer.Length - this.start);
-                Buffer.BlockCopy(src: this.buffer, srcOffset: this.start, dst: buffer, dstOffset: offset + bytesRead, count: bytesToRead);
-                bytesRead += bytesToRead;
-                this.start = (this.start + bytesToRead) % this.buffer.Length;
+                bytesRead = -1;
+                return false;
             }
-            this.count -= countToRead;
+
+            bytesRead = this.PerformReadNoLock(buffer);
+            return true;
+        }
+
+        private int PerformReadNoLock(Span<byte> buffer)
+        {
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+            Debug.Assert(this.count > 0 || this.writerClosed, "Must be called in readable state");
+            
+            var bytesToRead = Math.Min(this.count, buffer.Length);
+
+            // read from end of buffer
+            var bytesToReadFromEnd = Math.Min(bytesToRead, this.buffer.Length - this.start);
+            this.buffer.AsSpan(this.start, bytesToReadFromEnd).CopyTo(buffer);
+            
+            if (bytesToReadFromEnd == bytesToRead)
+            {
+                this.start += bytesToRead;
+            }
+            else
+            {
+                // read from start of buffer
+                var bytesToReadFromStart = bytesToRead - bytesToReadFromEnd;
+                this.buffer.AsSpan(0, bytesToReadFromStart).CopyTo(buffer.Slice(bytesToReadFromEnd));
+                this.start = bytesToReadFromStart;
+            }
+            this.count -= bytesToRead;
 
             // ensure that an empty pipe never stays above the max stable size
-            if (this.count == 0
-                && this.buffer.Length > MaxStableSize)
+            if (this.count == 0)
             {
-                this.start = 0;
-                this.buffer = new byte[MaxStableSize];
+                if (this.buffer.Length > MaxStableSize)
+                {
+                    this.start = 0;
+                    this.buffer = new byte[MaxStableSize];
+                }
+
+                if (!this.writerClosed) { ResetSignal(this.bytesAvailableSignal); }
             }
 
-            this.UpdateSignalsNoLock();
+            if (this.spaceAvailableSignal?.IsSet == false
+                && this.GetSpaceAvailableNoLock() > 0)
+            {
+                SetSignal(this.spaceAvailableSignal);
+            }
+            this.AssertSignalInvariantsNoLock();
 
-            return countToRead;
+            return bytesToRead;
         }
 
         private void CloseReadSide()
@@ -418,9 +451,9 @@ namespace Medallion.Shell.Streams
 
                 // otherwise, close as a continuation on the read task
                 this.readTask = this.readTask.ContinueWith(
-                    (t, state) =>
+                    static (_, state) =>
                     {
-                        var @this = (Pipe)state;
+                        var @this = (Pipe)state!;
                         lock (@this.@lock)
                         {
                             @this.InternalCloseReadSideNoLock();
@@ -434,32 +467,29 @@ namespace Medallion.Shell.Streams
 
         private void InternalCloseReadSideNoLock()
         {
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
+
             this.readerClosed = true;
-            this.UpdateSignalsNoLock();
+
+            // closed reader means new written content gets dropped, so we always have space
+            if (this.spaceAvailableSignal?.IsSet == false) { SetSignal(this.spaceAvailableSignal); }
+            this.AssertSignalInvariantsNoLock();
+            
             if (this.writerClosed)
             {
                 // if both sides are now closed, cleanup
-                this.CleanupNoLock();
+                this.CleanUpNoLock();
             }
         }
         #endregion
 
         #region ---- Dispose ----
-        private void CleanupNoLock()
+        private void CleanUpNoLock()
         {
-            this.buffer = Empty;
-            this.writeTask = this.readTask = CompletedZeroTask;
-            this.bytesAvailableSignal.Dispose();
-            this.spaceAvailableSignal?.Dispose();
-        }
-        #endregion
+            Debug.Assert(Monitor.IsEntered(this.@lock), "NoLock method");
 
-        #region ---- Cancellation ----
-        private static Task<int> CreateCanceledTask()
-        {
-            var taskCompletionSource = new TaskCompletionSource<int>();
-            taskCompletionSource.SetCanceled();
-            return taskCompletionSource.Task;
+            this.buffer = Shims.EmptyArray<byte>();
+            this.writeTask = this.readTask = CompletedZeroTask;
         }
         #endregion
 
@@ -471,12 +501,12 @@ namespace Medallion.Shell.Streams
             public PipeInputStream(Pipe pipe) { this.pipe = pipe; }
 
 #if !NETSTANDARD1_3
-            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 throw WriteOnly();
             }
 
-            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 // according to the docs, the callback is optional
                 var writeTask = this.WriteAsync(buffer, offset, count, CancellationToken.None);
@@ -491,9 +521,9 @@ namespace Medallion.Shell.Streams
 
             private sealed class AsyncWriteResult : IAsyncResult
             {
-                private readonly object state;
+                private readonly object? state;
                 
-                public AsyncWriteResult(object state, Task writeTask, PipeInputStream stream)
+                public AsyncWriteResult(object? state, Task writeTask, PipeInputStream stream)
                 {
                     this.state = state;
                     this.WriteTask = writeTask;
@@ -504,7 +534,7 @@ namespace Medallion.Shell.Streams
 
                 public Stream Stream { get; }
 
-                object IAsyncResult.AsyncState => this.state;
+                object? IAsyncResult.AsyncState => this.state;
 
                 WaitHandle IAsyncResult.AsyncWaitHandle => this.WriteTask.As<IAsyncResult>().AsyncWaitHandle;
 
@@ -603,31 +633,29 @@ namespace Medallion.Shell.Streams
                 throw Throw.NotSupported();
             }
 
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                try
-                {
-                    this.pipe.WriteAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.WriteTimeout), CancellationToken.None).Wait();
-                }
-                catch (AggregateException ex)
-                {
-                    // unwrap aggregate if we can
-                    ExceptionDispatchInfo.Capture(ex.GetBaseException()).Throw();
+            public override void Write(byte[] buffer, int offset, int count) => 
+                // Since Pipes are only written to internally and outside of tests we'll always use async IO,
+                // We don't offer an optimized implementation of sync Write()
+                this.WriteAsync(buffer, offset, count).GetAwaiter().GetResult();
 
-                    throw;
-                }
-            }
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+                this.pipe.WriteAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.WriteTimeout), cancellationToken);
 
-            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            {
-                return this.pipe.WriteAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.WriteTimeout), cancellationToken);
-            }
+            public override void WriteByte(byte value) => base.WriteByte(value);
 
-            public override void WriteByte(byte value)
-            {
-                // the base implementation is inefficient, but I don't think we care
-                base.WriteByte(value);
-            }
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+            public override int Read(Span<byte> buffer) => throw WriteOnly();
+
+            public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken) => throw WriteOnly();
+
+            public override void Write(ReadOnlySpan<byte> buffer) => 
+                // similar to Write(byte[], int, int), we won't call this so we don't bother to optimize
+                base.Write(buffer);
+
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken) =>
+                // see comment in Write(ReadOnlySpan<byte>)
+                base.WriteAsync(buffer, cancellationToken);
+#endif
 
             private int writeTimeout = Timeout.Infinite;
 
@@ -657,7 +685,7 @@ namespace Medallion.Shell.Streams
             public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
 
 #if !NETSTANDARD1_3
-            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 // according to the docs, the callback is optional
                 var readTask = this.ReadAsync(buffer, offset, count, CancellationToken.None);
@@ -672,9 +700,9 @@ namespace Medallion.Shell.Streams
 
             private sealed class AsyncReadResult : IAsyncResult
             {
-                private readonly object state;
+                private readonly object? state;
                 
-                public AsyncReadResult(object state, Task<int> readTask, PipeOutputStream stream)
+                public AsyncReadResult(object? state, Task<int> readTask, PipeOutputStream stream)
                 {
                     this.state = state;
                     this.ReadTask = readTask;
@@ -685,7 +713,7 @@ namespace Medallion.Shell.Streams
 
                 public Stream Stream { get; }
 
-                object IAsyncResult.AsyncState => this.state;
+                object? IAsyncResult.AsyncState => this.state;
 
                 WaitHandle IAsyncResult.AsyncWaitHandle => this.ReadTask.As<IAsyncResult>().AsyncWaitHandle;
 
@@ -695,7 +723,7 @@ namespace Medallion.Shell.Streams
             }
 
 #if !NETSTANDARD1_3
-            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
                 throw ReadOnly();
             }
@@ -762,32 +790,39 @@ namespace Medallion.Shell.Streams
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                try
-                {
-                    return this.pipe.ReadAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.ReadTimeout), CancellationToken.None).Result;
-                }
-                catch (AggregateException ex)
-                {
-                    // unwrap aggregate if we can
-                    if (ex.InnerExceptions.Count == 1)
-                    {
-                        ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-                    }
+                Throw.IfInvalidBuffer(buffer, offset, count);
 
-                    throw;
-                }
+                return this.pipe.Read(buffer.AsSpan(offset, count), TimeSpan.FromMilliseconds(this.readTimeout));
             }
 
             public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
-                return this.pipe.ReadAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.ReadTimeout), cancellationToken);
+                Throw.IfInvalidBuffer(buffer, offset, count);
+
+                return this.pipe.ReadAsync(new(buffer, offset, count), TimeSpan.FromMilliseconds(this.readTimeout), cancellationToken);
             }
+
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+            public override void Write(ReadOnlySpan<byte> buffer) => throw ReadOnly();
+
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken) =>
+                throw ReadOnly();
+
+            public override int Read(Span<byte> buffer) =>
+                this.pipe.Read(buffer, TimeSpan.FromMilliseconds(this.readTimeout));
 
             public override int ReadByte()
             {
-                // this is inefficient, but I think that's ok
-                return base.ReadByte();
+                byte b = 0;
+                int result = this.Read(MemoryMarshal.CreateSpan(ref b, length: 1));
+                return result != 0 ? b : -1;
             }
+
+            public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken) =>
+                new(this.pipe.ReadAsync(buffer, TimeSpan.FromMilliseconds(this.readTimeout), cancellationToken)); 
+#else
+            public override int ReadByte() => base.ReadByte();
+#endif
 
             private int readTimeout = Timeout.Infinite;
 
@@ -838,6 +873,6 @@ namespace Medallion.Shell.Streams
             private static NotSupportedException ReadOnly([CallerMemberName] string memberName = "") =>
                 throw new NotSupportedException(memberName + ": the stream is read only");
         }
-        #endregion
+#endregion
     }
 }

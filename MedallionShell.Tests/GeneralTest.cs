@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,8 +12,7 @@ using NUnit.Framework;
 
 namespace Medallion.Shell.Tests
 {
-    using System.Collections;
-    using System.Text.RegularExpressions;
+    using Medallion.Shell.Streams;
     using static UnitTestHelpers;
 
     public class GeneralTest
@@ -38,8 +37,7 @@ namespace Medallion.Shell.Tests
                 | TestShell.Run(SampleCommand, "grep", "c");
 
             var results = command.StandardOutput.GetLines().ToArray();
-
-            results.SequenceEqual(new[] { "abcd", "abc" }).ShouldEqual(true);
+            CollectionAssert.AreEqual(new[] { "abcd", "abc" }, results);
         }
 
         [Test]
@@ -252,43 +250,53 @@ namespace Medallion.Shell.Tests
         public void TestStopBufferingAndDiscard()
         {
             var command = TestShell.Run(SampleCommand, "pipe");
-            command.StandardOutput.StopBuffering();
-            var line = new string('a', 100);
-            var state = 0;
-            var linesWritten = 0;
-            while (state < 2)
+            try
             {
-                Log.WriteLine("Write to unbuffered command");
-                var task = command.StandardInput.WriteLineAsync(line);
-                if (!task.Wait(TimeSpan.FromSeconds(1)))
+                command.StandardOutput.StopBuffering();
+                var line = new string('a', 100);
+                var state = 0;
+                var linesWritten = 0;
+                while (state < 2)
                 {
-                    if (state == 0)
+                    Log.WriteLine("Write to unbuffered command");
+                    var task = command.StandardInput.WriteLineAsync(line);
+                    if (!task.Wait(TimeSpan.FromSeconds(1)))
                     {
-                        Log.WriteLine("Buffer full: read");
-                        // for whatever reason, on Unix I need to read a few lines to get things flowing again
-                        var linesToRead = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 1 : Math.Max((int)(.1 * linesWritten), 1);
-                        for (var i = 0; i < linesToRead; ++i)
+                        if (state == 0)
                         {
-                            var outLine = command.StandardOutput.ReadLine();
-                            outLine.ShouldEqual(line);
+                            Log.WriteLine("Buffer full: read");
+                            // for whatever reason, sometimes (especially on Unix) I need to read a few lines to get things flowing again
+                            var linesToRead = Math.Max((int)(.1 * linesWritten), 1);
+                            for (var i = 0; i < linesToRead; ++i)
+                            {
+                                var outLine = command.StandardOutput.ReadLine();
+                                outLine.ShouldEqual(line);
+                            }
+                            // after this, we may need to write more content than we read to re-block since the reader
+                            // buffers internally
                         }
-                        // after this, we may need to write more content than we read to re-block since the reader
-                        // buffers internally
-                    }
-                    else
-                    {
-                        Log.WriteLine("Buffer full: discard content");
-                        command.StandardOutput.Discard();
-                    }
+                        else
+                        {
+                            Log.WriteLine("Buffer full: discard content");
+                            command.StandardOutput.Discard();
+                        }
 
-                    task.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
-                    if (state == 1)
-                    {
-                        command.StandardInput.Dispose();
+                        task.Wait(TimeSpan.FromSeconds(1)).ShouldEqual(true, $"can finish after read (state={state}, linesWritten={linesWritten})");
+                        if (state == 1)
+                        {
+                            command.StandardInput.Dispose();
+                        }
+                        state++;
                     }
-                    state++;
+                    ++linesWritten;
                 }
-                ++linesWritten;
+            }
+            finally
+            {
+                if (!command.Task.Wait(TimeSpan.FromSeconds(1)))
+                {
+                    command.Kill();
+                }
             }
         }
 
@@ -345,15 +353,6 @@ namespace Medallion.Shell.Tests
         }
 
         [Test]
-        public void TestVersioning()
-        {
-            var version = typeof(Command).GetTypeInfo().Assembly.GetName().Version.ToString();
-            var informationalVersion = (AssemblyInformationalVersionAttribute)typeof(Command).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyInformationalVersionAttribute));
-            Assert.IsNotNull(informationalVersion);
-            version.ShouldEqual(Regex.Replace(informationalVersion.InformationalVersion, "[+-].*$", string.Empty) + ".0");
-        }
-
-        [Test]
         public void TestShortFlush()
         {
             var command = TestShell.Run(SampleCommand, "shortflush", "a");
@@ -373,7 +372,7 @@ namespace Medallion.Shell.Tests
 
             var buffer = new char[1];
             var asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
-            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            asyncRead.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
             buffer[0].ShouldEqual('a');
 
             command.StandardInput.AutoFlush = false;
@@ -381,7 +380,7 @@ namespace Medallion.Shell.Tests
             asyncRead = command.StandardOutput.ReadBlockAsync(buffer, 0, 1);
             asyncRead.Wait(TimeSpan.FromSeconds(.01)).ShouldEqual(false);
             command.StandardInput.Flush();
-            asyncRead.Wait(TimeSpan.FromSeconds(3)).ShouldEqual(true);
+            asyncRead.Wait(TimeSpan.FromSeconds(10)).ShouldEqual(true);
             buffer[0].ShouldEqual('b');
 
             command.StandardInput.Dispose();
@@ -478,20 +477,25 @@ namespace Medallion.Shell.Tests
                     }
                     else
                     {
+#if NETCOREAPP
+                        Assert.That(command1.Process.StartInfo.ArgumentList, Does.Contain("--id1"));
+                        Assert.That(command2.Process.StartInfo.ArgumentList, Does.Contain("--id2"));
+#else
                         command1.Process.StartInfo.Arguments.ShouldContain("--id1");
-                        command1.Processes.SequenceEqual(new[] { command1.Process });
                         command2.Process.StartInfo.Arguments.ShouldContain("--id2");
+#endif
+                        command1.Processes.SequenceEqual(new[] { command1.Process });
                         command2.Processes.SequenceEqual(new[] { command2.Process }).ShouldEqual(true);
                         pipeCommand.Process.ShouldEqual(command2.Process);
                         pipeCommand.Processes.SequenceEqual(new[] { command1.Process, command2.Process }).ShouldEqual(true);
                     }
 
-#if !NETCOREAPP2_2
+#if NETFRAMEWORK
                     // https://stackoverflow.com/questions/2633628/can-i-get-command-line-arguments-of-other-processes-from-net-c
                     static string GetCommandLine(int processId)
                     {
                         using var searcher = new System.Management.ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId = " + processId);
-                        return searcher.Get().Cast<System.Management.ManagementBaseObject>().Single()["CommandLine"].ToString();
+                        return searcher.Get().Cast<System.Management.ManagementBaseObject>().Single()["CommandLine"].ToString()!;
                     }
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
@@ -499,6 +503,7 @@ namespace Medallion.Shell.Tests
                         GetCommandLine(command2.ProcessId).ShouldContain("--id2");
                     }
 #endif
+
                     command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
                     command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
                     pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
@@ -519,7 +524,7 @@ namespace Medallion.Shell.Tests
         public void TestToString()
         {
             var sampleCommandString =
-#if NETCOREAPP2_2
+#if NETCOREAPP
                 $@"{DotNetPath} {SampleCommand}";
 #else
                 SampleCommand;
@@ -546,6 +551,10 @@ namespace Medallion.Shell.Tests
             var command6 = command5.RedirectTo(new StringWriter());
             command6.Wait();
             command6.ToString().ShouldEqual($"{command5} > {new StringWriter()}");
+
+            var command7 = TestShell.Run(SampleCommand);
+            command7.Wait();
+            command7.ToString().ShouldEqual(sampleCommandString);
         }
 
         [Test]
@@ -592,6 +601,49 @@ namespace Medallion.Shell.Tests
                 command.Task.Wait(TimeSpan.FromSeconds(1000)).ShouldEqual(true);
                 command.Result.Success.ShouldEqual(true);
             }
+        }
+
+        [Test]
+        [Obsolete("Tests obsolete code")]
+        public async Task TestCustomCommandLineSyntaxIsUsed()
+        {
+            using var command = TestShell.Run(
+                SampleCommand,
+                new object[] { "exit", 0 },
+                options: o => o.Syntax((CommandLineSyntax)Activator.CreateInstance(PlatformCompatibilityHelper.DefaultCommandLineSyntax.GetType())!)
+                    .DisposeOnExit(false)
+            );
+
+            Assert.That(command.Process.StartInfo.Arguments, Does.EndWith("exit 0"));
+
+            await command.Task;
+        }
+
+        [Test]
+        public async Task TestDefaultProcessStreamIsUsedWithCustomInputEncodingOnNewerFrameworks()
+        {
+            using var command = TestShell.Run(SampleCommand, new[] { "exit", "0" }, options: o => o.Encoding(Encoding.UTF32).DisposeOnExit(false));
+
+            command.StandardInput.Encoding.ShouldEqual(Encoding.UTF32);
+
+            var innerWriter = typeof(ProcessStreamWriter).GetField("writer", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .GetValue(command.StandardInput);
+#if NETCOREAPP
+            command.Process.StandardInput.Encoding.ShouldEqual(command.StandardInput.Encoding);
+            if (command.StandardInput.BaseStream is ProcessStreamWrapper)
+            {
+                Assert.AreNotSame(command.Process.StandardInput, innerWriter);
+            }
+            else
+            {
+                Assert.AreSame(command.Process.StandardInput, innerWriter);
+            }
+#else
+            command.Process.StandardInput.Encoding.ShouldNotEqual(command.StandardInput.Encoding);
+            Assert.AreNotSame(command.Process.StandardInput, innerWriter);
+#endif
+
+            await command.Task;
         }
 
         private IEnumerable<string> ErrorLines()

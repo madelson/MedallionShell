@@ -103,7 +103,7 @@ namespace Medallion.Shell.Streams
 
             // phase 2: finish reading the remaining stream
 
-            string line;
+            string? line;
             while ((line = remaining.ReadLine()) != null)
             {
                 yield return line;
@@ -181,11 +181,11 @@ namespace Medallion.Shell.Streams
             }
 
             public TextReader Reader { get; }
-            public Task<string> Task { get; }
+            public Task<string?> Task { get; }
 
             public bool Equals(ReaderAndTask that) => this.Reader == that.Reader && this.Task == that.Task;
 
-            public override bool Equals(object obj) => obj is ReaderAndTask that && this.Equals(that);
+            public override bool Equals(object? obj) => obj is ReaderAndTask that && this.Equals(that);
 
             public override int GetHashCode() => this.Reader.GetHashCode() ^ this.Task.GetHashCode();
         }

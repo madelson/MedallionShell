@@ -117,7 +117,7 @@ namespace Medallion.Shell.Signals
         {
             const string SignalerExeNameWithoutExtension = "MedallionShell.ProcessSignaler";
             var exePath = Path.Combine(Path.GetTempPath(), $"{SignalerExeNameWithoutExtension}_{Guid.NewGuid():N}.exe");
-            using (var resourceStream = Helpers.GetMedallionShellAssembly().GetManifestResourceStream(SignalerExeNameWithoutExtension + ".exe"))
+            using (var resourceStream = Helpers.GetMedallionShellAssembly().GetManifestResourceStream(SignalerExeNameWithoutExtension + ".exe")!)
             using (var fileStream = new FileStream(exePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, Constants.ByteBufferSize, useAsync: true))
             {
                 await resourceStream.CopyToAsync(fileStream).ConfigureAwait(false);

@@ -40,9 +40,6 @@ namespace Medallion.Shell
 
             var processStartInfo = new ProcessStartInfo
             {
-                Arguments = arguments != null
-                    ? finalOptions.CommandLineSyntax.CreateArgumentString(arguments.Select(arg => Convert.ToString(arg, CultureInfo.InvariantCulture)))
-                    : string.Empty,
                 CreateNoWindow = true,
                 FileName = executable,
                 RedirectStandardError = true,
@@ -50,9 +47,15 @@ namespace Medallion.Shell
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
             };
+
+            PopulateArguments(processStartInfo, arguments, finalOptions);
+
             if (finalOptions.ProcessStreamEncoding != null)
             {
                 processStartInfo.StandardOutputEncoding = processStartInfo.StandardErrorEncoding = finalOptions.ProcessStreamEncoding;
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+                processStartInfo.StandardInputEncoding = finalOptions.ProcessStreamEncoding;
+#endif
             }
             finalOptions.StartInfoInitializers.ForEach(a => a(processStartInfo));
 
@@ -71,6 +74,30 @@ namespace Medallion.Shell
             }
             
             return command;
+        }
+
+        private static void PopulateArguments(ProcessStartInfo processStartInfo, IEnumerable<object?>? arguments, Options options)
+        {
+            if (arguments is null) { return; }
+
+            var argumentStrings = arguments.Select(
+                arg => Convert.ToString(arg, CultureInfo.InvariantCulture)
+                    ?? throw new ArgumentException("must not contain null", nameof(arguments))
+            );
+
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+            // If using the default command line syntax, prefer to use ArgumentsList rather than encoding ourselves (#95)
+            if (options.CommandLineSyntax == PlatformCompatibilityHelper.DefaultCommandLineSyntax)
+            {
+                foreach (var argumentString in argumentStrings)
+                {
+                    processStartInfo.ArgumentList.Add(argumentString);
+                }
+                return;
+            }
+#endif
+
+            processStartInfo.Arguments = options.CommandLineSyntax.CreateArgumentString(argumentStrings);
         }
 
         /// <summary>
@@ -140,14 +167,14 @@ namespace Medallion.Shell
 
             return this.Run(executable, arguments.AsEnumerable());
         }
-        #endregion
+#endregion
 
-        #region ---- Static API ----
+#region ---- Static API ----
         /// <summary>
         /// A <see cref="Shell"/> that uses default options
         /// </summary>
         public static Shell Default { get; } = new Shell(_ => { });
-        #endregion
+#endregion
 
         private Options GetOptions(Action<Options>? additionalConfiguration)
         {
@@ -157,7 +184,7 @@ namespace Medallion.Shell
             return builder;
         }
 
-        #region ---- Options ----
+#region ---- Options ----
         /// <summary>
         /// Provides a builder interface for configuring the options for creating and executing
         /// a <see cref="Medallion.Shell.Command"/>
@@ -178,7 +205,7 @@ namespace Medallion.Shell
             internal Encoding? ProcessStreamEncoding { get; private set; }
             internal CancellationToken ProcessCancellationToken { get; private set; }
 
-            #region ---- Builder methods ----
+#region ---- Builder methods ----
             /// <summary>
             /// Restores all settings to the default value
             /// </summary>
@@ -186,7 +213,7 @@ namespace Medallion.Shell
             {
                 this.StartInfoInitializers = new List<Action<ProcessStartInfo>>();
                 this.CommandInitializers = new List<Func<Command, Command>>();
-                this.CommandLineSyntax = PlatformCompatibilityHelper.GetDefaultCommandLineSyntax();
+                this.CommandLineSyntax = PlatformCompatibilityHelper.DefaultCommandLineSyntax;
                 this.ThrowExceptionOnError = false;
                 this.DisposeProcessOnExit = true;
                 this.ProcessTimeout = System.Threading.Timeout.InfiniteTimeSpan;
@@ -342,9 +369,9 @@ namespace Medallion.Shell
                 this.ProcessCancellationToken = cancellationToken;
                 return this;
             }
-            #endregion
+#endregion
         }
-        #endregion
+#endregion
 
         private static bool IsIgnorableAttachingException(Exception exception)
         {

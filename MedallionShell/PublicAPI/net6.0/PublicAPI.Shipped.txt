@@ -1,0 +1,153 @@
+﻿#nullable enable
+abstract Medallion.Shell.Command.Kill() -> void
+abstract Medallion.Shell.Command.Process.get -> System.Diagnostics.Process!
+abstract Medallion.Shell.Command.Processes.get -> System.Collections.Generic.IReadOnlyList<System.Diagnostics.Process!>!
+abstract Medallion.Shell.Command.ProcessId.get -> int
+abstract Medallion.Shell.Command.ProcessIds.get -> System.Collections.Generic.IReadOnlyList<int>!
+abstract Medallion.Shell.Command.StandardError.get -> Medallion.Shell.Streams.ProcessStreamReader!
+abstract Medallion.Shell.Command.StandardInput.get -> Medallion.Shell.Streams.ProcessStreamWriter!
+abstract Medallion.Shell.Command.StandardOutput.get -> Medallion.Shell.Streams.ProcessStreamReader!
+abstract Medallion.Shell.Command.Task.get -> System.Threading.Tasks.Task<Medallion.Shell.CommandResult!>!
+abstract Medallion.Shell.CommandLineSyntax.CreateArgumentString(System.Collections.Generic.IEnumerable<string!>! arguments) -> string!
+abstract Medallion.Shell.Streams.ProcessStreamReader.BaseStream.get -> System.IO.Stream!
+abstract Medallion.Shell.Streams.ProcessStreamReader.Discard() -> void
+abstract Medallion.Shell.Streams.ProcessStreamReader.Encoding.get -> System.Text.Encoding!
+abstract Medallion.Shell.Streams.ProcessStreamReader.StopBuffering() -> void
+Medallion.Shell.Command
+Medallion.Shell.Command.GetOutputAndErrorLines() -> System.Collections.Generic.IEnumerable<string!>!
+Medallion.Shell.Command.PipeTo(Medallion.Shell.Command! second) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectFrom(System.Collections.Generic.IEnumerable<char>! chars) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectFrom(System.Collections.Generic.IEnumerable<string!>! lines) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectFrom(System.IO.FileInfo! file) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectFrom(System.IO.Stream! stream) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectFrom(System.IO.TextReader! reader) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectStandardErrorTo(System.Collections.Generic.ICollection<char>! chars) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectStandardErrorTo(System.Collections.Generic.ICollection<string!>! lines) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectStandardErrorTo(System.IO.FileInfo! file) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectStandardErrorTo(System.IO.Stream! stream) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectStandardErrorTo(System.IO.TextWriter! writer) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectTo(System.Collections.Generic.ICollection<char>! chars) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectTo(System.Collections.Generic.ICollection<string!>! lines) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectTo(System.IO.FileInfo! file) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectTo(System.IO.Stream! stream) -> Medallion.Shell.Command!
+Medallion.Shell.Command.RedirectTo(System.IO.TextWriter! writer) -> Medallion.Shell.Command!
+Medallion.Shell.Command.Result.get -> Medallion.Shell.CommandResult!
+Medallion.Shell.Command.TrySignalAsync(Medallion.Shell.CommandSignal! signal) -> System.Threading.Tasks.Task<bool>!
+Medallion.Shell.Command.Wait() -> void
+Medallion.Shell.CommandLineSyntax
+Medallion.Shell.CommandLineSyntax.CommandLineSyntax() -> void
+Medallion.Shell.CommandResult
+Medallion.Shell.CommandResult.ExitCode.get -> int
+Medallion.Shell.CommandResult.StandardError.get -> string!
+Medallion.Shell.CommandResult.StandardOutput.get -> string!
+Medallion.Shell.CommandResult.Success.get -> bool
+Medallion.Shell.CommandSignal
+Medallion.Shell.ErrorExitCodeException
+Medallion.Shell.ErrorExitCodeException.ExitCode.get -> int
+Medallion.Shell.Shell
+Medallion.Shell.Shell.Options
+Medallion.Shell.Shell.Options.CancellationToken(System.Threading.CancellationToken cancellationToken) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.Command(System.Action<Medallion.Shell.Command!>! initializer) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.Command(System.Func<Medallion.Shell.Command!, Medallion.Shell.Command!>! initializer) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.DisposeOnExit(bool value = true) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.Encoding(System.Text.Encoding! encoding) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.EnvironmentVariable(string! name, string! value) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.EnvironmentVariables(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, string!>>! environmentVariables) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.RestoreDefaults() -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.StartInfo(System.Action<System.Diagnostics.ProcessStartInfo!>! initializer) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.Syntax(Medallion.Shell.CommandLineSyntax! syntax) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.ThrowOnError(bool value = true) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.Timeout(System.TimeSpan timeout) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Options.WorkingDirectory(string! path) -> Medallion.Shell.Shell.Options!
+Medallion.Shell.Shell.Run(string! executable, params object![]! arguments) -> Medallion.Shell.Command!
+Medallion.Shell.Shell.Run(string! executable, System.Collections.Generic.IEnumerable<object!>? arguments = null, System.Action<Medallion.Shell.Shell.Options!>? options = null) -> Medallion.Shell.Command!
+Medallion.Shell.Shell.Shell(System.Action<Medallion.Shell.Shell.Options!>! options) -> void
+Medallion.Shell.Shell.TryAttachToProcess(int processId, out Medallion.Shell.Command? attachedCommand) -> bool
+Medallion.Shell.Shell.TryAttachToProcess(int processId, System.Action<Medallion.Shell.Shell.Options!>? options, out Medallion.Shell.Command? attachedCommand) -> bool
+Medallion.Shell.Streams.ProcessStreamReader
+Medallion.Shell.Streams.ProcessStreamReader.GetLines() -> System.Collections.Generic.IEnumerable<string!>!
+Medallion.Shell.Streams.ProcessStreamReader.PipeToAsync(System.Collections.Generic.ICollection<char>! chars, bool leaveReaderOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamReader.PipeToAsync(System.Collections.Generic.ICollection<string!>! lines, bool leaveReaderOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamReader.PipeToAsync(System.IO.FileInfo! file, bool leaveReaderOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamReader.PipeToAsync(System.IO.Stream! stream, bool leaveReaderOpen = false, bool leaveStreamOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamReader.PipeToAsync(System.IO.TextWriter! writer, bool leaveReaderOpen = false, bool leaveWriterOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamWriter
+Medallion.Shell.Streams.ProcessStreamWriter.AutoFlush.get -> bool
+Medallion.Shell.Streams.ProcessStreamWriter.AutoFlush.set -> void
+Medallion.Shell.Streams.ProcessStreamWriter.BaseStream.get -> System.IO.Stream!
+Medallion.Shell.Streams.ProcessStreamWriter.PipeFromAsync(System.Collections.Generic.IEnumerable<char>! chars, bool leaveWriterOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamWriter.PipeFromAsync(System.Collections.Generic.IEnumerable<string!>! lines, bool leaveWriterOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamWriter.PipeFromAsync(System.IO.FileInfo! file, bool leaveWriterOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamWriter.PipeFromAsync(System.IO.Stream! stream, bool leaveWriterOpen = false, bool leaveStreamOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.Streams.ProcessStreamWriter.PipeFromAsync(System.IO.TextReader! reader, bool leaveWriterOpen = false, bool leaveReaderOpen = false) -> System.Threading.Tasks.Task!
+Medallion.Shell.WindowsCommandLineSyntax
+Medallion.Shell.WindowsCommandLineSyntax.WindowsCommandLineSyntax() -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Encoding.get -> System.Text.Encoding!
+override Medallion.Shell.Streams.ProcessStreamWriter.Flush() -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.FlushAsync() -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.FormatProvider.get -> System.IFormatProvider!
+override Medallion.Shell.Streams.ProcessStreamWriter.NewLine.get -> string!
+override Medallion.Shell.Streams.ProcessStreamWriter.NewLine.set -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(bool value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(char value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(char[]? buffer) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(char[]! buffer, int index, int count) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(decimal value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(double value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(float value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(int value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(long value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(object? value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(string! format, object? arg0) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(string! format, object? arg0, object? arg1) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(string! format, object? arg0, object? arg1, object? arg2) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(string! format, params object?[]! arg) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(string? value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(System.ReadOnlySpan<char> buffer) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(uint value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.Write(ulong value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(char value) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(char[]! buffer, int index, int count) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(string? value) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteAsync(System.ReadOnlyMemory<char> buffer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine() -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(bool value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(char value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(char[]? buffer) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(char[]! buffer, int index, int count) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(decimal value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(double value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(float value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(int value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(long value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(object? value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string! format, object? arg0) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string! format, object? arg0, object? arg1) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string! format, object? arg0, object? arg1, object? arg2) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string! format, params object?[]! arg) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(string? value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(System.ReadOnlySpan<char> buffer) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(uint value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLine(ulong value) -> void
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync() -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(char value) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(char[]! buffer, int index, int count) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(string? value) -> System.Threading.Tasks.Task!
+override Medallion.Shell.Streams.ProcessStreamWriter.WriteLineAsync(System.ReadOnlyMemory<char> buffer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+override Medallion.Shell.WindowsCommandLineSyntax.CreateArgumentString(System.Collections.Generic.IEnumerable<string!>! arguments) -> string!
+static Medallion.Shell.Command.operator <(Medallion.Shell.Command! command, System.Collections.Generic.IEnumerable<char>! chars) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator <(Medallion.Shell.Command! command, System.Collections.Generic.IEnumerable<string!>! lines) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator <(Medallion.Shell.Command! command, System.IO.FileInfo! file) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator <(Medallion.Shell.Command! command, System.IO.Stream! stream) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator >(Medallion.Shell.Command! command, System.Collections.Generic.IEnumerable<char>! chars) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator >(Medallion.Shell.Command! command, System.Collections.Generic.IEnumerable<string!>! lines) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator >(Medallion.Shell.Command! command, System.IO.FileInfo! file) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator >(Medallion.Shell.Command! command, System.IO.Stream! stream) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.operator |(Medallion.Shell.Command! first, Medallion.Shell.Command! second) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.Run(string! executable, params object![]! arguments) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.Run(string! executable, System.Collections.Generic.IEnumerable<object!>? arguments = null, System.Action<Medallion.Shell.Shell.Options!>? options = null) -> Medallion.Shell.Command!
+static Medallion.Shell.Command.TryAttachToProcess(int processId, out Medallion.Shell.Command? attachedCommand) -> bool
+static Medallion.Shell.Command.TryAttachToProcess(int processId, System.Action<Medallion.Shell.Shell.Options!>! options, out Medallion.Shell.Command? attachedCommand) -> bool
+static Medallion.Shell.CommandSignal.ControlC.get -> Medallion.Shell.CommandSignal!
+static Medallion.Shell.CommandSignal.FromSystemValue(int signal) -> Medallion.Shell.CommandSignal!
+static Medallion.Shell.Shell.Default.get -> Medallion.Shell.Shell!

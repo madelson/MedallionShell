@@ -31,7 +31,7 @@ namespace Medallion.Shell
         {
             this.disposeOnExit = disposeOnExit;
             this.fileName = startInfo.FileName;
-            this.arguments = startInfo.Arguments;
+            this.arguments = GetArgumentsString(startInfo);
             this.process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 
             var processMonitoringTask = CreateProcessMonitoringTask(this.process);
@@ -51,15 +51,7 @@ namespace Medallion.Shell
             }
             if (processStandardInput != null)
             {
-                // unfortunately, changing the encoding can't be done via ProcessStartInfo so we have to do it manually here.
-                // See https://github.com/dotnet/corefx/issues/20497
-
-                var wrappedStream = PlatformCompatibilityHelper.WrapStandardInputStreamIfNeeded(processStandardInput.BaseStream);
-                var standardInputEncodingToUse = standardInputEncoding ?? processStandardInput.Encoding;
-                var streamWriter = wrappedStream == processStandardInput.BaseStream && Equals(standardInputEncodingToUse, processStandardInput.Encoding)
-                    ? processStandardInput
-                    : new StreamWriter(wrappedStream, standardInputEncodingToUse);
-                this.standardInput = new ProcessStreamWriter(streamWriter);
+                this.standardInput = new ProcessStreamWriter(processStandardInput, standardInputEncoding ?? processStandardInput.Encoding);
             }
 
             // according to https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.process.id?view=netcore-1.1#System_Diagnostics_Process_Id,
@@ -76,6 +68,18 @@ namespace Medallion.Shell
             // While we could avoid starting at all in such cases, that would leave the command in a weird state (no PID, no streams, etc)
             var processTask = ProcessHelper.CreateProcessTask(this.process, processMonitoringTask, throwOnError, timeout, cancellationToken);
             this.task = this.CreateCombinedTask(processTask, ioTasks);
+        }
+
+        private static string GetArgumentsString(ProcessStartInfo startInfo)
+        {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
+            if (startInfo.ArgumentList.Count > 0)
+            {
+                return PlatformCompatibilityHelper.DefaultCommandLineSyntax.CreateArgumentString(startInfo.ArgumentList);
+            }
+#endif
+
+            return startInfo.Arguments;
         }
 
         private async Task<CommandResult> CreateCombinedTask(Task<int> processTask, IReadOnlyList<Task> ioTasks)
@@ -100,7 +104,7 @@ namespace Medallion.Shell
         }
 
         private readonly Process process;
-        public override System.Diagnostics.Process Process
+        public override Process Process
         {
             get
             {
@@ -147,7 +151,8 @@ namespace Medallion.Shell
         private readonly Task<CommandResult> task;
         public override Task<CommandResult> Task { get { return this.task; } }
 
-        public override string ToString() => this.fileName + " " + this.arguments;
+        public override string ToString() => 
+            this.arguments.Length == 0 ? this.fileName : this.fileName + " " + this.arguments;
 
         public override void Kill()
         {

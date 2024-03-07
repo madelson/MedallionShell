@@ -42,25 +42,13 @@ namespace Medallion.Shell
         private IReadOnlyList<int>? processIds;
         public override IReadOnlyList<int> ProcessIds => this.processIds ??= this.first.ProcessIds.Concat(this.second.ProcessIds).ToList().AsReadOnly();
 
-        public override Task<CommandResult> Task
-        {
-            get { return this.task; }
-        }
+        public override Task<CommandResult> Task => this.task;
 
-        public override ProcessStreamWriter StandardInput
-        {
-            get { return this.first.StandardInput; }
-        }
+        public override ProcessStreamWriter StandardInput => this.first.StandardInput;
 
-        public override Streams.ProcessStreamReader StandardOutput
-        {
-            get { return this.second.StandardOutput; }
-        }
+        public override ProcessStreamReader StandardOutput => this.second.StandardOutput;
 
-        public override Streams.ProcessStreamReader StandardError
-        {
-            get { return this.second.StandardError; }
-        }
+        public override ProcessStreamReader StandardError => this.second.StandardError;
 
         public override void Kill()
         {
@@ -68,7 +56,7 @@ namespace Medallion.Shell
             this.second.Kill();
         }
 
-        public override string ToString() => this.first + " | " + this.second;
+        public override string ToString() => $"{this.first} | {this.second}";
 
         protected override void DisposeInternal()
         {

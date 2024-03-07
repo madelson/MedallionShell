@@ -16,7 +16,7 @@ namespace SampleCommand
         {
             Log("started: " + string.Join(", ", args.Select(a => "'" + a + "'")));
 
-            string line;
+            string? line;
             switch (args[0])
             {
                 case "echo":
@@ -91,11 +91,25 @@ namespace SampleCommand
                     }
                     break;
                 case "pipe":
-                    string pipeLine;
+                    string? pipeLine;
                     while ((pipeLine = Console.In.ReadLine()) != null)
                     {
                         Console.Out.WriteLine(pipeLine);
                         Console.Out.Flush();
+                    }
+                    break;
+                case "pipebytes":
+                    using (var standardInput = Console.OpenStandardInput())
+                    using (var standardOutput = Console.OpenStandardOutput())
+                    {
+                        var buffer = new byte[10];
+                        while (true)
+                        {
+                            var bytesRead = standardInput.Read(buffer, 0, buffer.Length);
+                            if (bytesRead == 0) { break; }
+                            standardOutput.Write(buffer, 0, bytesRead);
+                            standardOutput.Flush();
+                        }
                     }
                     break;
                 case "shortflush":
@@ -112,7 +126,7 @@ namespace SampleCommand
                     {
                         while (true)
                         {
-                            string lineToEcho;
+                            string? lineToEcho;
                             lock (Console.In)
                             {
                                 lineToEcho = Console.In.ReadLine(); // no async due to lock
