@@ -3,17 +3,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
     internal sealed class MergedLinesEnumerable : IEnumerable<string>
-#if NETSTANDARD2_0_OR_GREATER
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
 // SA1001 Commas should not be preceded by whitespace.
 #pragma warning disable SA1001
-    , IAsyncEnumerable<string>
+        , IAsyncEnumerable<string>
 #pragma warning restore SA1001
 #endif
     {
@@ -26,13 +25,10 @@ namespace Medallion.Shell.Streams
             this.standardError = standardError;
         }
 
-#if NETSTANDARD2_0_OR_GREATER
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         public IAsyncEnumerator<string> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            Throw<InvalidOperationException>.If(
-                Interlocked.Exchange(ref this.consumed, 1) != 0,
-                "The enumerable returned by GetOutputAndErrorLines() can only be enumerated once"
-            );
+            this.AssertNoMultipleEnumeration();
 
             return this.GetAsyncEnumeratorInternal();
         }
@@ -40,13 +36,16 @@ namespace Medallion.Shell.Streams
 
         public IEnumerator<string> GetEnumerator()
         {
+            this.AssertNoMultipleEnumeration();
+
+            return this.GetEnumeratorInternal();
+        }
+
+        private void AssertNoMultipleEnumeration() =>
             Throw<InvalidOperationException>.If(
                 Interlocked.Exchange(ref this.consumed, 1) != 0,
                 "The enumerable returned by GetOutputAndErrorLines() can only be enumerated once"
             );
-
-            return this.GetEnumeratorInternal();
-        }
 
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
 
@@ -110,7 +109,7 @@ namespace Medallion.Shell.Streams
             }
         }
 
-#if NETSTANDARD2_0_OR_GREATER
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal()
         {
             var tasks = new List<ReaderAndTask>(capacity: 2)
@@ -136,11 +135,11 @@ namespace Medallion.Shell.Streams
                 }
                 else
                 {
-                    var nextCompleted = await Task.WhenAny(tasks.Select(t => t.Task));
+                    var nextCompleted = await Task.WhenAny(tasks.Select(t => t.Task)).ConfigureAwait(false);
                     next = tasks[0].Task == nextCompleted ? tasks[0] : tasks[1];
                 }
 
-                var nextLine = await next.Task;
+                var nextLine = await next.Task.ConfigureAwait(false);
                 tasks.Remove(next);
 
                 if (nextLine != null)
@@ -150,7 +149,7 @@ namespace Medallion.Shell.Streams
                 }
                 else
                 {
-                    var otherAsyncLine = await tasks[0].Task;
+                    var otherAsyncLine = await tasks[0].Task.ConfigureAwait(false);
                     if (otherAsyncLine != null)
                     {
                         yield return otherAsyncLine;

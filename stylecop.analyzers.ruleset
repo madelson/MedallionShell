@@ -6,7 +6,7 @@
     <Rule Id="SA1005" Action="None" />
     <Rule Id="SA1009" Action="None" />
     <!-- This no longer makes sense with the introduction of collection expressions in C# 12. -->
-	  <Rule Id="SA1010" Action="None" />
+    <Rule Id="SA1010" Action="None" />
     <Rule Id="SA1028" Action="None" />
     <Rule Id="SA1108" Action="None" />
     <Rule Id="SA1111" Action="None" />
