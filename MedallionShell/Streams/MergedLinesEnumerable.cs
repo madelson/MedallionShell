@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -8,12 +9,11 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
-    internal sealed class MergedLinesEnumerable : IEnumerable<string>
+    internal sealed class MergedLinesEnumerable :
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-// SA1001 Commas should not be preceded by whitespace.
-#pragma warning disable SA1001
-        , IAsyncEnumerable<string>
-#pragma warning restore SA1001
+        IEnumerable<string>, IAsyncEnumerable<string>
+#else
+        IEnumerable<string>
 #endif
     {
         private readonly TextReader standardOutput, standardError;
@@ -49,7 +49,7 @@ namespace Medallion.Shell.Streams
 
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
 
-        private IEnumerator<string> GetEnumeratorInternal()
+        private IEnumerator<string> GetEnumeratorInternal3()
         {
             var tasks = new List<ReaderAndTask>(capacity: 2);
             tasks.Add(new ReaderAndTask(this.standardOutput));
@@ -108,6 +108,67 @@ namespace Medallion.Shell.Streams
                 yield return line;
             }
         }
+        
+        private IEnumerator<string> GetEnumeratorInternal()
+        {
+            List<ReaderAndTask> tasks = [];
+
+            // phase 1: read both streams simultaneously, alternating between which is given priority.
+            // Stop when both streams are exhausted
+            do
+            {
+                if (this.GetNextLineAsync(tasks).GetAwaiter().GetResult() is { } nextLine)
+                {
+                    yield return nextLine;
+                }
+                else
+                {
+                    yield break;
+                }
+            }
+            while (tasks.Count != 1);
+
+            // phase 2: finish reading the remaining stream
+            var remaining = tasks[0].Reader;
+            while (remaining.ReadLine() is { } line)
+            {
+                yield return line;
+            }
+        }
+
+
+        private async Task<string?> GetNextLineAsync(List<ReaderAndTask> tasks, CancellationToken cancellationToken = default)
+        {
+            Debug.Assert(tasks.Count is 0 or 2, "There should be EITHER nothing OR both stdout and stderr.");
+
+            if (tasks.Count == 0)
+            {
+                tasks = [new(this.standardOutput), new(this.standardError)];
+            }
+            
+            // Figure out which of the 2 tasks is completed. Remove that task and, if the result is not null, replace it
+            // by queueing up the next read. 
+            // If the result is not null, return the result. If the result is null instead await the other task and return its result.
+
+            var nextCompleted = await Task.WhenAny(tasks.Select(t => t.Task)).ConfigureAwait(false);
+            var next = tasks[0].Task == nextCompleted ? tasks[0] : tasks[1];
+
+            var nextLine = await next.Task.ConfigureAwait(false);
+            tasks.Remove(next);
+            if (nextLine is { })
+            {
+                tasks.Add(new ReaderAndTask(next.Reader, cancellationToken));
+                return nextLine;
+            }
+            else if (await tasks[0].Task.ConfigureAwait(false) is { } otherAsyncLine)
+            {
+                return otherAsyncLine;
+            }
+            else
+            {
+                return null;
+            }
+        }
 
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal(CancellationToken cancellationToken)
@@ -164,6 +225,34 @@ namespace Medallion.Shell.Streams
             }
 
             // phase 2: finish reading the remaining stream
+#if NET7_0_OR_GREATER
+            while (await remaining.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+#else
+            while (remaining.ReadLine() is { } line)
+#endif
+            {
+                yield return line;
+            }
+        }
+        
+        private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal2(CancellationToken cancellationToken)
+        {
+            List<ReaderAndTask> tasks = [];
+            do
+            {
+                if (await this.GetNextLineAsync(tasks, cancellationToken).ConfigureAwait(false) is { } nextLine)
+                {
+                    yield return nextLine;
+                }
+                else
+                {
+                    yield break;
+                }
+            }
+            while (tasks.Count != 1); // both readers not done
+
+            // phase 2: finish reading the remaining stream
+            var remaining = tasks[0].Reader;
 #if NET7_0_OR_GREATER
             while (await remaining.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
 #else
