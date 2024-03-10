@@ -4,7 +4,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,12 +38,17 @@ namespace Medallion.Shell
         {
             Throw.If(string.IsNullOrEmpty(executable), "executable is required");
 
+            var executablePath = !executable.Contains(Path.DirectorySeparatorChar)
+                && GetFullPathUsingSystemPathOrDefault(executable) is { } fullPath
+                ? fullPath
+                : executable;
+
             var finalOptions = this.GetOptions(options);
 
             var processStartInfo = new ProcessStartInfo
             {
                 CreateNoWindow = true,
-                FileName = executable,
+                FileName = executablePath,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -74,6 +81,24 @@ namespace Medallion.Shell
             }
             
             return command;
+        }
+
+        // internal for testing
+        internal static string? GetFullPathUsingSystemPathOrDefault(string executable)
+        {
+            var paths = Environment.GetEnvironmentVariable("PATH")!.Split(Path.PathSeparator);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var pathExtensions = Environment.GetEnvironmentVariable("PATHEXT")!
+                    .Split(Path.PathSeparator)
+                    .Concat(new[] { string.Empty })
+                    .ToArray();
+                return paths.SelectMany(path => pathExtensions.Select(pathExtension => Path.Combine(path, executable + pathExtension)))
+                    .FirstOrDefault(File.Exists);
+            }
+
+            return paths.Select(path => Path.Combine(path, executable)).FirstOrDefault(File.Exists);
         }
 
         private static void PopulateArguments(ProcessStartInfo processStartInfo, IEnumerable<object?>? arguments, Options options)
