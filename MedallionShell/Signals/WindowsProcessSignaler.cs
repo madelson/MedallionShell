@@ -34,7 +34,7 @@ namespace Medallion.Shell.Signals
             var exeFile = await DeploySignalerExeAsync().ConfigureAwait(false);
             try
             {
-                var command = Command.Run(exeFile, new object[] { processId, (int)signal });
+                var command = Command.Run(exeFile, [processId, (int)signal]);
                 return (await command.Task.ConfigureAwait(false)).Success;
             }
             finally

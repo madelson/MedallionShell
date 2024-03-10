@@ -144,7 +144,7 @@ namespace SampleCommand
                     {
                         throw new ArgumentException($"Unknown test method '{args[1]}'");
                     }
-                    method.Invoke(null, new object[0]);
+                    method.Invoke(null, []);
                     break;
                 default:
                     Console.Error.WriteLine("Unrecognized mode " + args[0]);

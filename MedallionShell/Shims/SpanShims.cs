@@ -34,13 +34,11 @@ internal readonly struct Memory<T>
         System.Array.Copy(sourceArray: this.Array, sourceIndex: this.Offset, destinationArray: destination.Array, destinationIndex: destination.Offset, length: this.Length);
 }
 
-internal readonly ref struct Span<T>
+internal readonly ref struct Span<T>(Memory<T> memory)
 {
-    public readonly Memory<T> Memory;
+    public readonly Memory<T> Memory = memory;
 
     public int Length => this.Memory.Length;
-
-    public Span(Memory<T> memory) { this.Memory = memory; }
 
     public static implicit operator Span<T>(T[] array) => new(new(array, 0, array.Length));
 

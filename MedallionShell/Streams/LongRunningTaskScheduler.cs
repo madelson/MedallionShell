@@ -80,7 +80,7 @@ internal sealed class LongRunningTaskScheduler : TaskScheduler
         WorkerThreadState.StartNew(this, task);
     }
 
-    protected override IEnumerable<Task> GetScheduledTasks() => Enumerable.Empty<Task>(); // all tasks run immediately
+    protected override IEnumerable<Task> GetScheduledTasks() => []; // all tasks run immediately
 
     protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
     

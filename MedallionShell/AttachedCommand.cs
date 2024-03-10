@@ -42,7 +42,7 @@ namespace Medallion.Shell
                 TaskContinuationOptions.ExecuteSynchronously
             );
 
-            this.processes = new Lazy<ReadOnlyCollection<Process>>(() => new ReadOnlyCollection<Process>(new[] { this.process }));
+            this.processes = new Lazy<ReadOnlyCollection<Process>>(() => new ReadOnlyCollection<Process>([this.process]));
         }
 
         public override Process Process
@@ -77,7 +77,7 @@ namespace Medallion.Shell
             }
         }
 
-        public override IReadOnlyList<int> ProcessIds => new ReadOnlyCollection<int>(new[] { this.ProcessId });
+        public override IReadOnlyList<int> ProcessIds => new ReadOnlyCollection<int>([this.ProcessId]);
 
         public override ProcessStreamWriter StandardInput => throw new InvalidOperationException(StreamPropertyExceptionMessage);
 

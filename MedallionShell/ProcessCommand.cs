@@ -118,7 +118,7 @@ namespace Medallion.Shell
         }
 
         private IReadOnlyList<Process>? processes;
-        public override IReadOnlyList<Process> Processes => this.processes ??= new ReadOnlyCollection<Process>(new[] { this.Process });
+        public override IReadOnlyList<Process> Processes => this.processes ??= new ReadOnlyCollection<Process>([this.Process]);
 
         private readonly object processIdOrExceptionDispatchInfo;
         public override int ProcessId
@@ -137,7 +137,7 @@ namespace Medallion.Shell
         }
 
         private IReadOnlyList<int>? processIds;
-        public override IReadOnlyList<int> ProcessIds => this.processIds ??= new ReadOnlyCollection<int>(new[] { this.ProcessId });
+        public override IReadOnlyList<int> ProcessIds => this.processIds ??= new ReadOnlyCollection<int>([this.ProcessId]);
 
         private readonly ProcessStreamWriter? standardInput;
         public override ProcessStreamWriter StandardInput => this.standardInput ?? throw new InvalidOperationException("Standard input is not redirected");

@@ -9,16 +9,9 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
-    internal sealed class MergedLinesEnumerable : IEnumerable<string>
+    internal sealed class MergedLinesEnumerable(TextReader standardOutput, TextReader standardError) : IEnumerable<string>
     {
-        private readonly TextReader standardOutput, standardError;
         private int consumed;
-
-        public MergedLinesEnumerable(TextReader standardOutput, TextReader standardError)
-        {
-            this.standardOutput = standardOutput;
-            this.standardError = standardError;
-        }
 
         public IEnumerator<string> GetEnumerator()
         {
@@ -35,8 +28,8 @@ namespace Medallion.Shell.Streams
         private IEnumerator<string> GetEnumeratorInternal()
         {
             var tasks = new List<ReaderAndTask>(capacity: 2);
-            tasks.Add(new ReaderAndTask(this.standardOutput));
-            tasks.Add(new ReaderAndTask(this.standardError));
+            tasks.Add(new ReaderAndTask(standardOutput));
+            tasks.Add(new ReaderAndTask(standardError));
 
             // phase 1: read both streams simultaneously, alternating between which is given priority.
             // Stop when one (or both) streams is exhausted
@@ -92,16 +85,10 @@ namespace Medallion.Shell.Streams
             }
         }
 
-        private struct ReaderAndTask : IEquatable<ReaderAndTask>
+        private struct ReaderAndTask(TextReader reader) : IEquatable<ReaderAndTask>
         {
-            public ReaderAndTask(TextReader reader)
-            {
-                this.Reader = reader;
-                this.Task = reader.ReadLineAsync();
-            }
-
-            public TextReader Reader { get; }
-            public Task<string?> Task { get; }
+            public TextReader Reader { get; } = reader;
+            public Task<string?> Task { get; } = reader.ReadLineAsync();
 
             public bool Equals(ReaderAndTask that) => this.Reader == that.Reader && this.Task == that.Task;
 
