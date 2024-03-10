@@ -9,21 +9,14 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
-    internal sealed class MergedLinesEnumerable :
+    internal sealed class MergedLinesEnumerable(TextReader standardOutput, TextReader standardError) :
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         IEnumerable<string>, IAsyncEnumerable<string>
 #else
         IEnumerable<string>
 #endif
     {
-        private readonly TextReader standardOutput, standardError;
         private int consumed;
-
-        public MergedLinesEnumerable(TextReader standardOutput, TextReader standardError)
-        {
-            this.standardOutput = standardOutput;
-            this.standardError = standardError;
-        }
 
         public IEnumerator<string> GetEnumerator()
         {
@@ -42,19 +35,16 @@ namespace Medallion.Shell.Streams
 
         private IEnumerator<string> GetEnumeratorInternal()
         {
-            List<ReaderAndTask> tasks = [new(this.standardOutput), new(this.standardError)];
+            List<ReaderAndTask> tasks = [new(standardOutput), new(standardError)];
 
-            // phase 1: read both streams simultaneously, alternating between which is given priority.
-            // Stop when both streams are exhausted
             do
             {
                 var nextLine = this.GetNextLineOrDefaultAsync(tasks).GetAwaiter().GetResult();
-                if (nextLine is null) { yield break; } // both readers done
+                if (nextLine is null) { yield break; }
                 yield return nextLine;
             }
             while (tasks.Count != 1);
 
-            // phase 2: finish reading the remaining stream
             var remaining = tasks[0].Reader;
             while (remaining.ReadLine() is { } line)
             {
@@ -68,12 +58,8 @@ namespace Medallion.Shell.Streams
 
             if (tasks.Count == 0)
             {
-                tasks = [new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken)];
+                tasks = [new(standardOutput, cancellationToken), new(standardError, cancellationToken)];
             }
-
-            // Figure out which of the 2 tasks is completed. Remove that task and, if the result is not null, replace it
-            // by queueing up the next read. 
-            // If the result is not null, return the result. If the result is null instead await the other task and return its result.
 
             ReaderAndTask next;
             if (tasks[0].Task.IsCompleted)
@@ -102,10 +88,7 @@ namespace Medallion.Shell.Streams
             {
                 return otherAsyncLine;
             }
-            else
-            {
-                return null;
-            }
+            return null;
         }
 
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -118,16 +101,16 @@ namespace Medallion.Shell.Streams
 
         private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal(CancellationToken cancellationToken)
         {
-            var tasks = new List<ReaderAndTask>(capacity: 2) { new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken) };
+            List<ReaderAndTask> tasks = [new(standardOutput, cancellationToken), new(standardError, cancellationToken)];
+
             do
             {
                 var nextLine = await this.GetNextLineOrDefaultAsync(tasks, cancellationToken).ConfigureAwait(false);
-                if (nextLine is null) { yield break; } // both readers done
+                if (nextLine is null) { yield break; }
                 yield return nextLine;
             }
-            while (tasks.Count != 1); // both readers not done
+            while (tasks.Count != 1);
 
-            // phase 2: finish reading the remaining stream
             var remaining = tasks[0].Reader;
 #if NET7_0_OR_GREATER
             while (await remaining.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
@@ -140,7 +123,7 @@ namespace Medallion.Shell.Streams
         }
 #endif
 
-        private struct ReaderAndTask : IEquatable<ReaderAndTask>
+        private readonly struct ReaderAndTask : IEquatable<ReaderAndTask>
         {
             public ReaderAndTask(TextReader reader, CancellationToken cancellationToken = default)
             {

@@ -108,14 +108,14 @@ namespace Medallion.Shell.Tests.Streams
             var strings1 = Enumerable.Range(0, 2000).Select(_ => Guid.NewGuid().ToString()).ToArray();
             var strings2 = Enumerable.Range(0, 2300).Select(_ => Guid.NewGuid().ToString()).ToArray();
 
-            void WriteStrings(IReadOnlyList<string> strings, Pipe pipe)
+            static void WriteStrings(IReadOnlyList<string> strings, Pipe pipe)
             {
                 var spinWait = default(SpinWait);
                 var random = new Random(Guid.NewGuid().GetHashCode());
                 using var writer = new StreamWriter(pipe.InputStream);
                 foreach (var line in strings)
                 {
-                    if (random.Next(10) == 1)
+                    if (random.Next(5) == 1)
                     {
                         spinWait.SpinOnce();
                     }
