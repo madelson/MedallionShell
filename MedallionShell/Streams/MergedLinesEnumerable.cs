@@ -9,15 +9,22 @@ using System.Threading.Tasks;
 
 namespace Medallion.Shell.Streams
 {
-    internal sealed class MergedLinesEnumerable(TextReader standardOutput, TextReader standardError) :
+    internal sealed class MergedLinesEnumerable :
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         IEnumerable<string>, IAsyncEnumerable<string>
 #else
         IEnumerable<string>
 #endif
     {
+        private readonly TextReader standardOutput, standardError;
         private int consumed;
 
+        public MergedLinesEnumerable(TextReader standardOutput, TextReader standardError)
+        {
+            this.standardOutput = standardOutput;
+            this.standardError = standardError;
+        }
+        
         public IEnumerator<string> GetEnumerator()
         {
             this.AssertNoMultipleEnumeration();
@@ -35,7 +42,7 @@ namespace Medallion.Shell.Streams
 
         private IEnumerator<string> GetEnumeratorInternal()
         {
-            List<ReaderAndTask> tasks = [new(standardOutput), new(standardError)];
+            List<ReaderAndTask> tasks = [new(this.standardOutput), new(this.standardError)];
 
             do
             {
@@ -58,7 +65,7 @@ namespace Medallion.Shell.Streams
 
             if (tasks.Count == 0)
             {
-                tasks = [new(standardOutput, cancellationToken), new(standardError, cancellationToken)];
+                tasks = [new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken)];
             }
 
             ReaderAndTask next;
@@ -101,7 +108,7 @@ namespace Medallion.Shell.Streams
 
         private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal(CancellationToken cancellationToken)
         {
-            List<ReaderAndTask> tasks = [new(standardOutput, cancellationToken), new(standardError, cancellationToken)];
+            List<ReaderAndTask> tasks = [new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken)];
 
             do
             {
