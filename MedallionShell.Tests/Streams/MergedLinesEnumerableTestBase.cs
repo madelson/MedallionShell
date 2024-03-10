@@ -132,4 +132,16 @@ namespace Medallion.Shell.Tests.Streams
             CollectionAssert.AreEquivalent(strings1.Concat(strings2).ToList(), await consumeTask);
         }
     }
+    public static class AsyncEnumerableExtensions
+    {
+        public static async Task<List<string>> ToListAsync(this IAsyncEnumerable<string> strings)
+        {
+            List<string> list = [];
+            await foreach (var item in strings)
+            {
+                list.Add(item);
+            }
+            return list;
+        }
+    }
 }
