@@ -16,16 +16,23 @@ public class AsyncEnumerableAdapter : IAsyncEnumerable<string>
     public IAsyncEnumerator<string> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
         new AsyncEnumeratorAdapter(this.strings.GetEnumerator());
 
-    private class AsyncEnumeratorAdapter(IEnumerator<string> enumerator) : IAsyncEnumerator<string>
+    private class AsyncEnumeratorAdapter : IAsyncEnumerator<string>
     {
-        public string Current => enumerator.Current;
+        private readonly IEnumerator<string> enumerator;
+
+        public AsyncEnumeratorAdapter(IEnumerator<string> enumerator)
+        {
+            this.enumerator = enumerator;
+        }
+
+        public string Current => this.enumerator.Current;
 
         public ValueTask DisposeAsync()
         {
-            enumerator.Dispose();
+            this.enumerator.Dispose();
             return new(Task.CompletedTask);
         }
 
-        public ValueTask<bool> MoveNextAsync() => new(enumerator.MoveNext());
+        public ValueTask<bool> MoveNextAsync() => new(this.enumerator.MoveNext());
     }
 }
