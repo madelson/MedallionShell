@@ -26,8 +26,10 @@ namespace Medallion.Shell.Tests
         [TestCase("powershell.exe", @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")]
         [TestCase("explorer.exe", @"C:\Windows\explorer.exe")]
         [TestCase("git.exe", @"C:\Program Files\Git\cmd\git.exe")]
-        [TestCase("echo", null)] // echo is not a program on Windows but an internal command in cmd.exe or powershell.exe
         [TestCase("does.not.exist", null)]
+        // echo is not a program on Windows but an internal command in cmd.exe or powershell.exe.
+        // However, things like git may still install echo (e.g. C:\Program Files\Git\usr\bin\echo.EXE)
+        // so there's no guarantee for echo on Windows.
         public void TestGetFullPathOnWindows(string executable, string? expected)
         {
             StringAssert.AreEqualIgnoringCase(expected, Shell.GetFullPathUsingSystemPathOrDefault(executable));
@@ -40,19 +42,19 @@ namespace Medallion.Shell.Tests
         [Platform("Unix", Reason = "Tests Unix-specific executables")]
         [TestCase("dotnet", "/usr/bin/dotnet")]
         [TestCase("which", "/usr/bin/which")]
-        [TestCase("sh", "/usr/bin/sh")]
-        [TestCase("ls", "/usr/bin/ls")]
-        [TestCase("grep", "/usr/bin/grep")]
         [TestCase("head", "/usr/bin/head")]
-        [TestCase("sleep", "/usr/bin/sleep")]
-        [TestCase("echo", "/usr/bin/echo")]
+        [TestCase("sh", "/bin/sh")]
+        [TestCase("ls", "/bin/ls")]
+        [TestCase("grep", "/bin/grep")]
+        [TestCase("sleep", "/bin/sleep")]
+        [TestCase("echo", "/bin/echo")]
         [TestCase("does.not.exist", null)]
         public void TestGetFullPathOnLinux(string executable, string? expected)
         {
             Shell.GetFullPathUsingSystemPathOrDefault(executable).ShouldEqual(expected);
             var command = Command.Run("which", executable);
             command.StandardOutput.ReadToEnd().Trim().ShouldEqual(
-                expected,
+                expected ?? string.Empty,
                 $"Exit code: {command.Result.ExitCode}, StdErr: '{command.Result.StandardError}'");
         }
 
