@@ -42,7 +42,7 @@ namespace Medallion.Shell.Streams
 
         private IEnumerator<string> GetEnumeratorInternal()
         {
-            List<ReaderAndTask> tasks = [new(this.standardOutput), new(this.standardError)];
+            List<ReaderAndTask> tasks = new(capacity: 2) { new(this.standardOutput), new(this.standardError) };
 
             do
             {
@@ -65,7 +65,7 @@ namespace Medallion.Shell.Streams
 
             if (tasks.Count == 0)
             {
-                tasks = [new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken)];
+                tasks = new(capacity: 2) { new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken) };
             }
 
             ReaderAndTask next;
@@ -108,7 +108,7 @@ namespace Medallion.Shell.Streams
 
         private async IAsyncEnumerator<string> GetAsyncEnumeratorInternal(CancellationToken cancellationToken)
         {
-            List<ReaderAndTask> tasks = [new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken)];
+            List<ReaderAndTask> tasks = new(capacity: 2) { new(this.standardOutput, cancellationToken), new(this.standardError, cancellationToken) };
 
             do
             {

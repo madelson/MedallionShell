@@ -54,8 +54,8 @@ namespace Medallion.Shell.Tests.Streams
         [Test]
         public async Task TestBothArePopulatedDifferenceSizes()
         {
-            var lines1 = string.Join("\n", ["x", "y", "z"]);
-            var lines2 = string.Join("\n", ["1", "2", "3", "4", "5"]);
+            var lines1 = string.Join("\n", new[] { "x", "y", "z" });
+            var lines2 = string.Join("\n", new[] { "1", "2", "3", "4", "5" });
 
             var list1 = await this.Create(new StringReader(lines1), new StringReader(lines2))
                 .ToListAsync();
@@ -136,7 +136,7 @@ namespace Medallion.Shell.Tests.Streams
     {
         public static async Task<List<string>> ToListAsync(this IAsyncEnumerable<string> strings)
         {
-            List<string> list = [];
+            List<string> list = new();
             await foreach (var item in strings)
             {
                 list.Add(item);
