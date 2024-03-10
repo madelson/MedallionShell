@@ -22,14 +22,14 @@ namespace Medallion.Shell.Tests.Streams
 
             var enumerable1 = this.Create(empty1, nonEmpty1);
             var list1 = await enumerable1.ToListAsync();
-            list1.SequenceEqual(["abc", "def", "ghi", "jkl"])
+            list1.SequenceEqual(new[] { "abc", "def", "ghi", "jkl" })
                 .ShouldEqual(true, string.Join(", ", list1));
 
             var empty2 = new StringReader(string.Empty);
             var nonEmpty2 = new StringReader("a\nbb\nccc\n");
             var enumerable2 = this.Create(nonEmpty2, empty2);
             var list2 = await enumerable2.ToListAsync();
-            list2.SequenceEqual(["a", "bb", "ccc"])
+            list2.SequenceEqual(new[] { "a", "bb", "ccc" })
                 .ShouldEqual(true, string.Join(", ", list2));
         }
 
