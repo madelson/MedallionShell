@@ -17,6 +17,51 @@ namespace Medallion.Shell.Tests
 
     public class GeneralTest
     {
+        [Platform("Win", Reason = "Tests Windows-specific executables")]
+        [TestCase("dotnet", @"C:\Program Files\dotnet\dotnet.exe")]
+        [TestCase("dotnet.exe", @"C:\Program Files\dotnet\dotnet.exe")]
+        [TestCase("where.exe", @"C:\Windows\System32\where.exe")]
+        [TestCase("cmd", @"C:\Windows\System32\cmd.exe")]
+        [TestCase("cmd.exe", @"C:\Windows\System32\cmd.exe")]
+        [TestCase("powershell.exe", @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")]
+        [TestCase("explorer.exe", @"C:\Windows\explorer.exe")]
+        [TestCase("git.exe", @"C:\Program Files\Git\cmd\git.exe")]
+        [TestCase("echo", null)] // echo is not a program on Windows but an internal command in cmd.exe or powershell.exe
+        [TestCase("does.not.exist", null)]
+        public void TestGetFullPathOnWindows(string executable, string? expected)
+        {
+            StringAssert.AreEqualIgnoringCase(expected, Shell.GetFullPathUsingSystemPathOrDefault(executable));
+            var command = Command.Run("where", executable);
+            command.StandardOutput.ReadToEnd().Trim().ShouldEqual(
+                expected ?? string.Empty,
+                $"Exit code: {command.Result.ExitCode}, StdErr: '{command.Result.StandardError}'");
+        }
+
+        [Platform("Unix", Reason = "Tests Unix-specific executables")]
+        [TestCase("dotnet", "/usr/bin/dotnet")]
+        [TestCase("which", "/usr/bin/which")]
+        [TestCase("sh", "/usr/bin/sh")]
+        [TestCase("ls", "/usr/bin/ls")]
+        [TestCase("grep", "/usr/bin/grep")]
+        [TestCase("head", "/usr/bin/head")]
+        [TestCase("sleep", "/usr/bin/sleep")]
+        [TestCase("echo", "/usr/bin/echo")]
+        [TestCase("does.not.exist", null)]
+        public void TestGetFullPathOnLinux(string executable, string? expected)
+        {
+            Shell.GetFullPathUsingSystemPathOrDefault(executable).ShouldEqual(expected);
+            var command = Command.Run("which", executable);
+            command.StandardOutput.ReadToEnd().Trim().ShouldEqual(
+                expected,
+                $"Exit code: {command.Result.ExitCode}, StdErr: '{command.Result.StandardError}'");
+        }
+
+        [Test]
+        public void TestCommandWithoutFullyQualifiedPath()
+        {
+            Assert.That(TestShell.Run("git", "--version").StandardOutput.ReadToEnd(), Does.StartWith("git version"));
+        }
+
         [Test]
         public void TestGrep()
         {
