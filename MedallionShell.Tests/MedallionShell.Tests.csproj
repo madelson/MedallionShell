@@ -6,9 +6,9 @@
     <IsPackable>false</IsPackable>
     <LangVersion>Latest</LangVersion>
     <Nullable>enable</Nullable>
-	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
-	  <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
-	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <CodeAnalysisRuleSet>..\stylecop.analyzers.ruleset</CodeAnalysisRuleSet>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
     <RootNamespace>Medallion.Shell.Tests</RootNamespace>
   </PropertyGroup>
@@ -17,15 +17,16 @@
     <PackageReference Include="nunit" Version="3.13.3" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.4.0-beta.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
-	  <PackageReference Include="Moq" Version="4.7.63" />
-	  <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.435">
+    <PackageReference Include="Moq" Version="4.7.63" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.435">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MedallionShell\MedallionShell.csproj" />
-	  <ProjectReference Include="..\SampleCommand\SampleCommand.csproj" />
+    <ProjectReference Include="..\SampleCommand\SampleCommand.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">

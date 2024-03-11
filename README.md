@@ -1,5 +1,4 @@
-MedallionShell
-==============
+# MedallionShell
 
 MedallionShell vastly simplifies working with processes in .NET. 
 
@@ -47,9 +46,30 @@ Most APIs create a `Command` instance by starting a new process. However, you ca
 
 ### Standard IO
 
-One of the main ways to interact with a process is via its [standard IO streams](https://en.wikipedia.org/wiki/Standard_streams) (in, out and error). By default, MedallionShell configures the process to enable these streams and captures standard error and standard output in the `Command`'s result.
+One of the main ways to interact with a process is via its [standard IO streams](https://en.wikipedia.org/wiki/Standard_streams) (in, out and error). By default, MedallionShell configures the process to enable these streams and captures standard error and standard output in the `Command`'s result:
+```C#
+var command = Command.Run(...);
+var result = await command.Task;
+Console.WriteLine($"{result.StandardOutput}, {result.StandardError}");
+```
 
-Additionally/alternatively, you can interact with these streams directly via the `Command.StandardInput`, `Command.StandardOutput`, and `Command.StandardError` properties. As with `Process`, these are `TextWriter`/`TextReader` objects that also expose the underlying `Stream`, giving you the option of writing/reading either text or raw bytes.
+If you want to consume the output (stdout and stderr) as a _merged_ stream of lines like you would see in the console, you can use the `GetOutputAndErrorLines()` method:
+```C#
+var command = Command.Run(...);
+foreach (var line in command.GetOutputAndErrorLines())
+{
+    Console.WriteLine(line);
+}
+```
+
+Additionally/alternatively, you can interact with these streams directly via the `Command.StandardInput`, `Command.StandardOutput`, and `Command.StandardError` properties. As with `Process`, these are `TextWriter`/`TextReader` objects that also expose the underlying `Stream`, giving you the option of writing/reading either text or raw bytes:
+```C#
+var command = Command.Run(...);
+command.StandardInput.Write("some text"); // e.g. write as text
+command.StandardInput.BaseStream.Write(new byte[100]); // e.g. write as bytes
+command.StandardOutput.ReadLine(); // e.g. read as text
+command.StandardError.BaseStream.Read(new byte[100]); // e.g. read as bytes
+```
 
 The standard IO streams also contain methods for piping to and from common sinks and sources, including `Stream`s, `TextReader/Writer`s, files, and collections. For example:
 ```C#
@@ -69,6 +89,8 @@ await Command.Run("processingStep1.exe")
 await Command.Run("ProcssingStep1.exe") < new FileInfo("input.txt")
 	| Command.Run("processingStep2.exe") > new FileInfo("output.text");
 ```
+
+Finally, note that **any content you read directly will _not_ end up in the result; the `result.StandardOutput` and `result.StandardError` properties store only content that you have not already consumed via some other mechanism.
 
 ### Stopping a Command
 
@@ -120,7 +142,7 @@ Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch
 
 ## Release Notes
 - 1.6.2
-	- Add net471 build as workaround for [#75](https://github.com/madelson/MedallionShell/issues/75)
+	- Add net471 build as workaround for [#75](https://github.com/madelson/MedallionShell/issues/75). Thanks [Cloudmersive](https://github.com/Cloudmersive) for reporting the issue and testing the fix!
 - 1.6.1 
 	- Strong-named release [MedallionShell.StrongName](https://www.nuget.org/packages/medallionshell.strongname) ([#65](https://github.com/madelson/MedallionShell/issues/65)). Thanks [ldennington](https://github.com/ldennington)!
 	- Fixes transient error in signaling on Windows machines with slow disks ([#61](https://github.com/madelson/MedallionShell/issues/61))
@@ -135,7 +157,7 @@ Linux: [![Build Status](https://travis-ci.com/madelson/MedallionShell.svg?branch
 	- Add .NET Standard 2.0 and .NET 4.6 build targets so that users of more modern frameworks can take advantage of more modern APIs. The .NET Standard 1.3 and .NET 4.5 targets will likely be retired in the event of a 2.0 release.
 	- Allow for setting piping and redirection via a `Shell` option with the new `Command(Func<Command, Command>)` option ([#39](https://github.com/madelson/MedallionShell/issues/39))
 	- Add CI testing for Mono and .NET Core on Linux
-- 1.5.1 Improves Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting and testing the fix!
+- 1.5.1 Improves Mono.Android compatibility ([#22](https://github.com/madelson/MedallionShell/issues/22)). Thanks [sushihangover](https://github.com/sushihangover) for reporting the issue and testing the fix!
 - 1.5.0
 	- Command overrides `ToString()` to simplify debugging ([#19](https://github.com/madelson/MedallionShell/issues/19)). Thanks [Stephanvs](https://github.com/Stephanvs)!
 	- WindowsCommandLineSyntax no longer quotes arguments that don't require it
