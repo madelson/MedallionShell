@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Medallion.Shell.Streams
 {
     internal sealed class MergedLinesEnumerable :
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_0_OR_GREATER
         IEnumerable<string>, IAsyncEnumerable<string>
 #else
         IEnumerable<string>
@@ -98,7 +98,7 @@ namespace Medallion.Shell.Streams
             return null;
         }
 
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_0_OR_GREATER
         public IAsyncEnumerator<string> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             this.AssertNoMultipleEnumeration();
