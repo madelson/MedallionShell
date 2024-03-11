@@ -110,7 +110,7 @@ namespace Medallion.Shell.Tests
 
             var shell = MakeTestShell(o => o.ThrowOnError());
             var ex = Assert.Throws<AggregateException>(() => shell.Run(SampleCommand, "exit", -1).Task.Wait());
-            ex!.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
+            ex!.InnerExceptions.Select(e => e.GetType()).SequenceEqual([typeof(ErrorExitCodeException)])
                 .ShouldEqual(true);
 
             shell.Run(SampleCommand, "exit", 0).Task.Wait();
@@ -119,16 +119,16 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestThrowOnErrorWithTimeout()
         {
-            var command = TestShell.Run(SampleCommand, new object[] { "exit", 1 }, o => o.ThrowOnError().Timeout(TimeSpan.FromDays(1)));
+            var command = TestShell.Run(SampleCommand, ["exit", 1], o => o.ThrowOnError().Timeout(TimeSpan.FromDays(1)));
             var ex = Assert.Throws<AggregateException>(() => command.Task.Wait());
-            ex!.InnerExceptions.Select(e => e.GetType()).SequenceEqual(new[] { typeof(ErrorExitCodeException) })
+            ex!.InnerExceptions.Select(e => e.GetType()).SequenceEqual([typeof(ErrorExitCodeException)])
                 .ShouldEqual(true);
         }
 
         [Test]
         public void TestTimeout()
         {
-            var willTimeout = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.FromMilliseconds(200)));
+            var willTimeout = TestShell.Run(SampleCommand, ["sleep", 1000000], o => o.Timeout(TimeSpan.FromMilliseconds(200)));
             var ex = Assert.Throws<AggregateException>(() => willTimeout.Task.Wait());
             Assert.IsInstanceOf<TimeoutException>(ex!.InnerException);
         }
@@ -136,7 +136,7 @@ namespace Medallion.Shell.Tests
         [Test]
         public void TestZeroTimeout()
         {
-            var willTimeout = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.Timeout(TimeSpan.Zero));
+            var willTimeout = TestShell.Run(SampleCommand, ["sleep", 1000000], o => o.Timeout(TimeSpan.Zero));
             var ex = Assert.Throws<AggregateException>(() => willTimeout.Task.Wait());
             Assert.IsInstanceOf<TimeoutException>(ex!.InnerException);
         }
@@ -145,7 +145,7 @@ namespace Medallion.Shell.Tests
         public void TestCancellationAlreadyCanceled()
         {
             using var alreadyCanceled = new CancellationTokenSource(millisecondsDelay: 0);
-            var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(alreadyCanceled.Token));
+            var command = TestShell.Run(SampleCommand, ["sleep", 1000000], o => o.CancellationToken(alreadyCanceled.Token));
             Assert.Throws<TaskCanceledException>(() => command.Wait());
             Assert.Throws<TaskCanceledException>(() => command.Result.ToString());
             command.Task.Status.ShouldEqual(TaskStatus.Canceled);
@@ -156,7 +156,7 @@ namespace Medallion.Shell.Tests
         public void TestCancellationNotCanceled()
         {
             using var notCanceled = new CancellationTokenSource();
-            var command = TestShell.Run(SampleCommand, new object[] { "sleep", 1000000 }, o => o.CancellationToken(notCanceled.Token));
+            var command = TestShell.Run(SampleCommand, ["sleep", 1000000], o => o.CancellationToken(notCanceled.Token));
             command.Task.Wait(50).ShouldEqual(false);
             command.Kill();
             command.Task.Wait(1000).ShouldEqual(true);
@@ -168,7 +168,7 @@ namespace Medallion.Shell.Tests
         {
             using var cancellationTokenSource = new CancellationTokenSource();
             var results = new SyncCollection();
-            var command = TestShell.Run(SampleCommand, new object[] { "echo", "--per-char" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+            var command = TestShell.Run(SampleCommand, ["echo", "--per-char"], o => o.CancellationToken(cancellationTokenSource.Token)) > results;
             command.StandardInput.WriteLine("hello");
             var timeout = Task.Delay(TimeSpan.FromSeconds(10));
             while (results.Count == 0 && !timeout.IsCompleted) { }
@@ -202,7 +202,7 @@ namespace Medallion.Shell.Tests
         {
             using var cancellationTokenSource = new CancellationTokenSource();
             var results = new List<string>();
-            var command = TestShell.Run(SampleCommand, new object[] { "echo" }, o => o.CancellationToken(cancellationTokenSource.Token)) > results;
+            var command = TestShell.Run(SampleCommand, ["echo"], o => o.CancellationToken(cancellationTokenSource.Token)) > results;
             command.StandardInput.WriteLine("hello");
             command.StandardInput.Close();
             command.Task.Wait(1000).ShouldEqual(true);
@@ -216,7 +216,7 @@ namespace Medallion.Shell.Tests
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var command = TestShell.Run(
                 SampleCommand,
-                new object[] { "sleep", 1000000 },
+                ["sleep", 1000000],
                 o => o.CancellationToken(cancellationTokenSource.Token)
                     .Timeout(TimeSpan.FromMilliseconds(50))
             );
@@ -229,7 +229,7 @@ namespace Medallion.Shell.Tests
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
             var command = TestShell.Run(
                 SampleCommand,
-                new object[] { "sleep", 1000000 },
+                ["sleep", 1000000],
                 o => o.CancellationToken(cancellationTokenSource.Token)
                     .Timeout(TimeSpan.FromSeconds(5))
             );
@@ -484,10 +484,10 @@ namespace Medallion.Shell.Tests
                         command1.Process.StartInfo.Arguments.ShouldContain("--id1");
                         command2.Process.StartInfo.Arguments.ShouldContain("--id2");
 #endif
-                        command1.Processes.SequenceEqual(new[] { command1.Process });
-                        command2.Processes.SequenceEqual(new[] { command2.Process }).ShouldEqual(true);
+                        command1.Processes.SequenceEqual([command1.Process]);
+                        command2.Processes.SequenceEqual([command2.Process]).ShouldEqual(true);
                         pipeCommand.Process.ShouldEqual(command2.Process);
-                        pipeCommand.Processes.SequenceEqual(new[] { command1.Process, command2.Process }).ShouldEqual(true);
+                        pipeCommand.Processes.SequenceEqual([command1.Process, command2.Process]).ShouldEqual(true);
                     }
 
 #if NETFRAMEWORK
@@ -504,10 +504,10 @@ namespace Medallion.Shell.Tests
                     }
 #endif
 
-                    command1.ProcessIds.SequenceEqual(new[] { command1.ProcessId }).ShouldEqual(true);
-                    command2.ProcessIds.SequenceEqual(new[] { command2.ProcessId }).ShouldEqual(true);
+                    command1.ProcessIds.SequenceEqual([command1.ProcessId]).ShouldEqual(true);
+                    command2.ProcessIds.SequenceEqual([command2.ProcessId]).ShouldEqual(true);
                     pipeCommand.ProcessId.ShouldEqual(command2.ProcessId);
-                    pipeCommand.ProcessIds.SequenceEqual(new[] { command1.ProcessId, command2.ProcessId }).ShouldEqual(true);
+                    pipeCommand.ProcessIds.SequenceEqual([command1.ProcessId, command2.ProcessId]).ShouldEqual(true);
                 }
                 finally
                 {
@@ -609,7 +609,7 @@ namespace Medallion.Shell.Tests
         {
             using var command = TestShell.Run(
                 SampleCommand,
-                new object[] { "exit", 0 },
+                ["exit", 0],
                 options: o => o.Syntax((CommandLineSyntax)Activator.CreateInstance(PlatformCompatibilityHelper.DefaultCommandLineSyntax.GetType())!)
                     .DisposeOnExit(false)
             );

@@ -31,15 +31,9 @@ namespace Medallion.Shell.Streams
         /// </summary>
         public IEnumerable<string> GetLines() => new LinesEnumerable(this);
 
-        private class LinesEnumerable : IEnumerable<string>
+        private class LinesEnumerable(TextReader reader) : IEnumerable<string>
         {
-            private readonly TextReader reader;
             private int consumed;
-
-            public LinesEnumerable(TextReader reader)
-            {
-                this.reader = reader;
-            }
 
             IEnumerator<string> IEnumerable<string>.GetEnumerator()
             {
@@ -54,7 +48,7 @@ namespace Medallion.Shell.Streams
             private IEnumerator<string> GetEnumeratorInternal()
             {
                 string? line;
-                while ((line = this.reader.ReadLine()) != null)
+                while ((line = reader.ReadLine()) != null)
                 {
                     yield return line;
                 }

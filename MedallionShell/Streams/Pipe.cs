@@ -494,12 +494,8 @@ namespace Medallion.Shell.Streams
         #endregion
 
         #region ---- Input Stream ----
-        private sealed class PipeInputStream : Stream
+        private sealed class PipeInputStream(Pipe pipe) : Stream
         {
-            private readonly Pipe pipe;
-
-            public PipeInputStream(Pipe pipe) { this.pipe = pipe; }
-
 #if !NETSTANDARD1_3
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
@@ -519,22 +515,13 @@ namespace Medallion.Shell.Streams
             }
 #endif
 
-            private sealed class AsyncWriteResult : IAsyncResult
+            private sealed class AsyncWriteResult(object? state, Task writeTask, Pipe.PipeInputStream stream) : IAsyncResult
             {
-                private readonly object? state;
-                
-                public AsyncWriteResult(object? state, Task writeTask, PipeInputStream stream)
-                {
-                    this.state = state;
-                    this.WriteTask = writeTask;
-                    this.Stream = stream;
-                }
+                public Task WriteTask { get; } = writeTask;
 
-                public Task WriteTask { get; }
+                public Stream Stream { get; } = stream;
 
-                public Stream Stream { get; }
-
-                object? IAsyncResult.AsyncState => this.state;
+                object? IAsyncResult.AsyncState => state;
 
                 WaitHandle IAsyncResult.AsyncWaitHandle => this.WriteTask.As<IAsyncResult>().AsyncWaitHandle;
 
@@ -564,7 +551,7 @@ namespace Medallion.Shell.Streams
             {
                 if (disposing)
                 {
-                    this.pipe.CloseWriteSide();
+                    pipe.CloseWriteSide();
                 }
             }
 
@@ -639,7 +626,7 @@ namespace Medallion.Shell.Streams
                 this.WriteAsync(buffer, offset, count).GetAwaiter().GetResult();
 
             public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
-                this.pipe.WriteAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.WriteTimeout), cancellationToken);
+                pipe.WriteAsync(buffer, offset, count, TimeSpan.FromMilliseconds(this.WriteTimeout), cancellationToken);
 
             public override void WriteByte(byte value) => base.WriteByte(value);
 
@@ -678,12 +665,8 @@ namespace Medallion.Shell.Streams
         #endregion
 
         #region ---- Output Stream ----
-        private sealed class PipeOutputStream : Stream
+        private sealed class PipeOutputStream(Pipe pipe) : Stream
         {
-            private readonly Pipe pipe;
-
-            public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
-
 #if !NETSTANDARD1_3
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
             {
@@ -698,22 +681,13 @@ namespace Medallion.Shell.Streams
             }
 #endif
 
-            private sealed class AsyncReadResult : IAsyncResult
+            private sealed class AsyncReadResult(object? state, Task<int> readTask, Pipe.PipeOutputStream stream) : IAsyncResult
             {
-                private readonly object? state;
-                
-                public AsyncReadResult(object? state, Task<int> readTask, PipeOutputStream stream)
-                {
-                    this.state = state;
-                    this.ReadTask = readTask;
-                    this.Stream = stream;
-                }
+                public Task<int> ReadTask { get; } = readTask;
 
-                public Task<int> ReadTask { get; }
+                public Stream Stream { get; } = stream;
 
-                public Stream Stream { get; }
-
-                object? IAsyncResult.AsyncState => this.state;
+                object? IAsyncResult.AsyncState => state;
 
                 WaitHandle IAsyncResult.AsyncWaitHandle => this.ReadTask.As<IAsyncResult>().AsyncWaitHandle;
 
@@ -751,7 +725,7 @@ namespace Medallion.Shell.Streams
             {
                 if (disposing)
                 {
-                    this.pipe.CloseReadSide();
+                    pipe.CloseReadSide();
                 }
             }
 
@@ -792,14 +766,14 @@ namespace Medallion.Shell.Streams
             {
                 Throw.IfInvalidBuffer(buffer, offset, count);
 
-                return this.pipe.Read(buffer.AsSpan(offset, count), TimeSpan.FromMilliseconds(this.readTimeout));
+                return pipe.Read(buffer.AsSpan(offset, count), TimeSpan.FromMilliseconds(this.readTimeout));
             }
 
             public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             {
                 Throw.IfInvalidBuffer(buffer, offset, count);
 
-                return this.pipe.ReadAsync(new(buffer, offset, count), TimeSpan.FromMilliseconds(this.readTimeout), cancellationToken);
+                return pipe.ReadAsync(new(buffer, offset, count), TimeSpan.FromMilliseconds(this.readTimeout), cancellationToken);
             }
 
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1
@@ -809,7 +783,7 @@ namespace Medallion.Shell.Streams
                 throw ReadOnly();
 
             public override int Read(Span<byte> buffer) =>
-                this.pipe.Read(buffer, TimeSpan.FromMilliseconds(this.readTimeout));
+                pipe.Read(buffer, TimeSpan.FromMilliseconds(this.readTimeout));
 
             public override int ReadByte()
             {
@@ -819,7 +793,7 @@ namespace Medallion.Shell.Streams
             }
 
             public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken) =>
-                new(this.pipe.ReadAsync(buffer, TimeSpan.FromMilliseconds(this.readTimeout), cancellationToken)); 
+                new(pipe.ReadAsync(buffer, TimeSpan.FromMilliseconds(this.readTimeout), cancellationToken)); 
 #else
             public override int ReadByte() => base.ReadByte();
 #endif

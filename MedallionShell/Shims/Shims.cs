@@ -14,10 +14,10 @@ internal static class Shims
 
     private static class Empty<T>
     {
-        public static readonly T[] Array = new T[0];
+        public static readonly T[] Array = [];
     }
 #else
-        Array.Empty<T>();
+        [];
 #endif
 
     public static Task<T> CanceledTask<T>(CancellationToken cancellationToken)

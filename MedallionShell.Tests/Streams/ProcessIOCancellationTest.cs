@@ -28,7 +28,7 @@ internal class ProcessIOCancellationTest
                 Arguments = "echo",
 #else
                 FileName = PlatformCompatibilityTests.DotNetPath,
-                Arguments = PlatformCompatibilityHelper.DefaultCommandLineSyntax.CreateArgumentString(new[] { PlatformCompatibilityTests.SampleCommandPath, "echo" }),
+                Arguments = PlatformCompatibilityHelper.DefaultCommandLineSyntax.CreateArgumentString([PlatformCompatibilityTests.SampleCommandPath, "echo"]),
 #endif
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -45,7 +45,7 @@ internal class ProcessIOCancellationTest
                 // For write, loop to fill up the buffer; eventually we'll block
                 while (true) { await DoIOWithCancellationAsync(process.StandardInput.BaseStream, cancellationTokenSource.Token); }
             });
-            Task.WaitAny(new[] { readTask, writeTask }, TimeSpan.FromSeconds(0.5)).ShouldEqual(-1);
+            Task.WaitAny([readTask, writeTask], TimeSpan.FromSeconds(0.5)).ShouldEqual(-1);
             
             cancellationTokenSource.Cancel();
 
