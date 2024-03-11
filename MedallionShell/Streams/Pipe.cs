@@ -666,56 +666,6 @@ namespace Medallion.Shell.Streams
 
         #region ---- Output Stream ----
         private sealed class PipeOutputStream(Pipe pipe) : Stream
-
-/* Unmerged change from project 'MedallionShell (net46)'
-Before:
-        {
-            private readonly Pipe pipe;
-
-            public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
-After:
-        {
-*/
-
-/* Unmerged change from project 'MedallionShell (netstandard1.3)'
-Before:
-        {
-            private readonly Pipe pipe;
-
-            public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
-After:
-        {
-*/
-
-/* Unmerged change from project 'MedallionShell (net45)'
-Before:
-        {
-            private readonly Pipe pipe;
-
-            public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
-After:
-        {
-*/
-
-/* Unmerged change from project 'MedallionShell (net471)'
-Before:
-        {
-            private readonly Pipe pipe;
-
-            public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
-After:
-        {
-*/
-
-/* Unmerged change from project 'MedallionShell (netstandard2.0)'
-Before:
-        {
-            private readonly Pipe pipe;
-
-            public PipeOutputStream(Pipe pipe) { this.pipe = pipe; }
-After:
-        {
-*/
         {
 #if !NETSTANDARD1_3
             public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
